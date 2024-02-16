@@ -31,6 +31,12 @@ void array_buf_push(array_buf_t* array, const void* data, size_t n) {
     array->len += n;
 }
 
+void array_buf_pop(array_buf_t* array, void* data, size_t n) {
+    array->len -= n;
+    if (data == NULL) return;
+    memmove(data, array->ptr + array->len, n);
+}
+
 read_file_result_t read_file(FILE* file) {
     int error = 0;
     array_buf_t text = new_array_buf();

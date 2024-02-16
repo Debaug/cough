@@ -1,0 +1,8 @@
+multiply :: fn(a: Int, b: int) -> Int {
+    if a {
+        b
+    } elif 1 {
+        a + b - 1;
+    }
+    1
+}

@@ -1,0 +1,35 @@
+{
+    "(": "LEFT_PAREN",
+    ")": "RIGHT_PAREN",
+    "[": "LEFT_BRACKET",
+    "]": "RIGHT_BRACKET",
+    "{": "LEFT_BRACE",
+    "}": "RIGHT_BRACE",
+
+    "::": "COLON_COLON",
+    ":=": "COLON_EQUAL",
+    "=": "EQUAL",
+
+    ":": "COLON",
+    ";": "SEMICOLON",
+    ",": "COMMA",
+    "->": "RIGHT_ARROW",
+
+    "+": "PLUS",
+    "-": "MINUS",
+    "*": "STAR",
+    "/": "SLASH",
+    "%": "PERCENT",
+
+    "==": "EQUAL_EQUAL",
+    "!=": "BANG_EQUAL",
+    "<": "LESS",
+    "<=": "LESS_EQUAL",
+    ">": "GREATER",
+    ">=": "GREATER_EQUAL",
+
+    "!": "BANG",
+    "&": "AMPERSAND",
+    "|": "TUBE",
+    "^": "CARET"
+}

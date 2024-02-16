@@ -1,1 +1,3 @@
-target_sources(cough PRIVATE array.h array.c)
+target_sources(cough PRIVATE
+    result.h
+    array.h array.c)
