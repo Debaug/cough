@@ -2,6 +2,7 @@
 #include <stdbool.h>
 
 #include "text/text.h"
+#include "diagnostic/diagnostic.h"
 #include "scanner/scanner.h"
 #include "ast/parser.h"
 #include "ast/program.h"
@@ -10,36 +11,28 @@
 
 int test_parse(int argc, const char* argv[]) {
     if (argc >= 3) {
-        fprintf(stderr, "error: too many arguments\n");
-        fprintf(stderr, "USAGE:\n");
-        fprintf(stderr, "    cough <FILE>\t-- scan file\n");
-        fprintf(stderr, "    cough\t\t-- scan from standard input\n");
+        report_error(
+            "too many arguments\n\n"
+            "\tUSAGE:\n"
+            "\t\tcough <FILE>\t scan file\n"
+            "\t\tcough\t\t scan from standard input"
+        );
         return -1;
     }
 
-    FILE* file;
-    bool from_file;
-    if (argc == 2) {
-        file = fopen(argv[1], "r");
-        from_file = true;
-    } else {
-        file = stdin;
-        from_file = false;
-    };
-
-    read_file_result_t text = read_file(file);
-    if (text.error) {
-        fprintf(stderr, "error: failed to read file (error code %d)\n",
-            text.error);
-        if (from_file) {
-            fclose(file);
-        }
-        return -2;
+    const char* path = (argc == 2) ? argv[1] : NULL;
+    source_t source;
+    if (load_source_file(path, &source) != SUCCESS) {
+        report_errno();
+        return EXIT_FAILURE;
     }
+
+    report_system_error("a system error, value: %d", 420);
+    report_error("a regular error, value: %d", 69);
 
     printf("==== TOKENS ====\n");
 
-    scanner_t scanner = new_scanner((const char*)text.text.ptr);
+    scanner_t scanner = new_scanner((const char*)source.text.ptr);
     array_buf_t tokens = scan(&scanner);
     for (token_t* token = tokens.ptr; token->type != TOKEN_EOF; token++) {
         printf("%zu:%zu .. %zu:%zu: [%d] '%.*s'\n",
@@ -65,11 +58,9 @@ int test_parse(int argc, const char* argv[]) {
     ast_debugger_t debugger = new_ast_debugger();
     debug_program(program.ok, &debugger);
 
-    destroy_array_buf(text.text);
-    if (from_file) {
-        fclose(file);
-    }
-    return 0;
+    destroy_array_buf(source.text);
+
+    return EXIT_SUCCESS;
 }
 
 int test_run(int argc, const char* argv[]) {

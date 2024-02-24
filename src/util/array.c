@@ -1,4 +1,6 @@
 #include <string.h>
+#include <stdbool.h>
+#include <errno.h>
 
 #include "util/array.h"
 
@@ -37,21 +39,22 @@ void array_buf_pop(array_buf_t* array, void* data, size_t n) {
     memmove(data, array->ptr + array->len, n);
 }
 
-read_file_result_t read_file(FILE* file) {
-    int error = 0;
-    array_buf_t text = new_array_buf();
-    while (error == 0) {
-        array_buf_reserve(&text, 1);
-        size_t n = fread(text.ptr + text.len, 1, text.capacity - text.len, file);
-        text.len += n;
+void array_buf_align(array_buf_t* array, size_t alignment) {
+    array->ptr = __builtin_align_up(array->ptr, alignment);
+}
+
+errno_t read_file(FILE* file, string_buf_t* dst) {
+    while (true) {
+        array_buf_reserve(dst, 1);
+        size_t n = fread(dst->ptr + dst->len, 1, dst->capacity - dst->len, file);
+        dst->len += n;
 
         if (feof(file)) {
             break;
         }
-        error = ferror(file);
+        if (ferror(file)) {
+            return errno;
+        }
     }
-    char zero = '\0';
-    array_buf_push(&text, &zero, 1);
-
-    return (read_file_result_t){ .error = error, .text = text };
+    return 0;
 }

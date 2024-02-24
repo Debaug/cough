@@ -26,6 +26,9 @@
         "program.h": "c",
         "array.h": "c",
         "parse_result.h": "c",
-        "debug.h": "c"
+        "debug.h": "c",
+        "stdlib.h": "c",
+        "diagnostic.h": "c",
+        "stdbool.h": "c"
     }
 }

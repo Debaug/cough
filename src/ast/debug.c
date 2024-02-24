@@ -1,12 +1,11 @@
 #include <stdio.h>
 
 #include "ast/debug.h"
+#include "diagnostic/diagnostic.h"
 
 ast_debugger_t new_ast_debugger() {
     return (ast_debugger_t){ .depth = 0, .in_field = false };
 }
-
-#define eprintf(...) fprintf(stderr __VA_OPT__(,) __VA_ARGS__)
 
 #define PRINT_INDENTED(debugger, format, ...) \
     eprintf("%*s" format, debugger->depth * 4, "" __VA_OPT__(,) __VA_ARGS__)
