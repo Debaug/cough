@@ -35,7 +35,7 @@ errno_t load_source_file(const char* path, source_t* dst) {
         }
     }
 
-    string_buf_t text = new_array_buf();
+    string_buf_t text = new_array_buf(char);
     if (read_file(input, &text) != SUCCESS) {
         return errno;
     }

@@ -32,9 +32,9 @@ int test_parse(int argc, const char* argv[]) {
 
     printf("==== TOKENS ====\n");
 
-    scanner_t scanner = new_scanner((const char*)source.text.ptr);
-    array_buf_t tokens = scan(&scanner);
-    for (token_t* token = tokens.ptr; token->type != TOKEN_EOF; token++) {
+    scanner_t scanner = new_scanner(source.text.data);
+    token_array_buf_t tokens = scan(&scanner);
+    for (token_t* token = tokens.data; token->type != TOKEN_EOF; token++) {
         printf("%zu:%zu .. %zu:%zu: [%d] '%.*s'\n",
             token->text.start.line + 1,
             token->text.start.column + 1,
@@ -48,17 +48,18 @@ int test_parse(int argc, const char* argv[]) {
 
     printf("\n====== AST ======\n");
 
-    parser_t parser = new_parser((const token_t*)tokens.ptr);
-    parse_program_result_t program = parse_program(&parser);
+    parser_t parser = new_parser(tokens.data);
 
-    if (!program.is_ok) {
-        fprintf(stderr, "error: failed to parse program\n");
+    program_t program;
+    if (parse_program(&parser, &program) != PARSE_SUCCESS) {
+        report_error("failed to parse program");
+        return EXIT_FAILURE;
     }
 
     ast_debugger_t debugger = new_ast_debugger();
-    debug_program(program.ok, &debugger);
+    debug_program(program, parser.storage, &debugger);
 
-    destroy_array_buf(source.text);
+    free_array_buf(source.text);
 
     return EXIT_SUCCESS;
 }
@@ -95,10 +96,16 @@ int test_run(int argc, const char* argv[]) {
     }
     printf("\n\n");
 
-    array_buf_t instruction_buf = new_array_buf();
-    array_buf_push(&instruction_buf, &instructions, sizeof(instructions));
+    instruction_buf_t instruction_buf = new_array_buf(uint32_t);
+    array_buf_extend(
+        &instruction_buf,
+        &instructions,
+        sizeof(instructions) / sizeof(uint32_t),
+        uint32_t
+    );
+
     bytecode_t bytecode = {
-        .rodata = new_array_buf(),
+        .rodata = new_arena(),
         .instructions = instruction_buf,
     };
     vm_t vm = new_vm(bytecode);

@@ -29,6 +29,10 @@
         "debug.h": "c",
         "stdlib.h": "c",
         "diagnostic.h": "c",
-        "stdbool.h": "c"
+        "stdbool.h": "c",
+        "__hash_table": "c",
+        "charconv": "c",
+        "type_traits": "c",
+        "variant": "c"
     }
 }

@@ -19,19 +19,21 @@ typedef struct allocation {
 } allocation_t;
 
 typedef struct gc {
-    array_buf_t /* allocation_t */ allocations;
-    array_buf_t /* size_t */ freed;
-    array_buf_t /* size_t */ roots;
+    // array_buf_t /* allocation_t */ allocations;
+    // array_buf_t /* size_t */ freed;
+    // array_buf_t /* size_t */ roots;
     marker_t garbage_marker;
 } gc_t;
 
 gc_t new_gc();
 
+typedef array_buf_t(uint64_t) uint64_array_buf_t;
+
 typedef struct vm {
     bytecode_t bytecode;
-    array_buf_t variable_stack;
+    uint64_array_buf_t variable_stack;
     size_t variable_frame_index;
-    array_buf_t expression_stack;
+    uint64_array_buf_t expression_stack;
     uint32_t* ip;
     gc_t gc;
 } vm_t;

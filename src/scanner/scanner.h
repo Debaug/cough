@@ -72,6 +72,8 @@ typedef struct scanner {
     text_pos_t text_pos;
 } scanner_t;
 
+typedef array_buf_t(token_t) token_array_buf_t;
+
 typedef enum scan_error_kind {
     SCAN_UNEXPECTED_CHARACTER,
     SCAN_INCOMPLETE_TOKEN,
@@ -93,4 +95,4 @@ scan_result_t scan_integer(scanner_t* scanner);
 scan_result_t scan_identifier_or_keyword(scanner_t* scanner);
 scan_result_t scan_punctuation(scanner_t* scanner);
 scan_result_t scan_one(scanner_t* scanner);
-array_buf_t /* token_t */ scan(scanner_t* scanner);
+token_array_buf_t scan(scanner_t* scanner);

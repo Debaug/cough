@@ -1,13 +1,13 @@
 #include "ast/type.h"
 
-parse_type_name_result_t parse_type_name(parser_t* parser) {
+parse_error_t parse_type_name(parser_t* parser, type_name_t* dst) {
     token_t identifier;
     if (!match_parser(parser, TOKEN_IDENTIFIER, &identifier)) {
-        return RESULT_ERROR(parse_type_name_result_t, PARSE_ERROR);
+        return PARSE_ERROR;
     }
 
-    type_name_t type_name = { .kind = TYPE_NAME_IDENTIFIER, .as = identifier.text };
-    return RESULT_OK(parse_type_name_result_t, type_name);
+    *dst = (type_name_t){ .kind = TYPE_NAME_IDENTIFIER, .as = identifier.text };
+    return PARSE_SUCCESS;
 }
 
 void debug_type(type_t type, ast_debugger_t* debugger) {

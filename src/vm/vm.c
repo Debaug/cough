@@ -2,6 +2,7 @@
 #include <inttypes.h>
 
 #include "vm/vm.h"
+#include "diagnostic/diagnostic.h"
 
 // must be IEEE 754 float64
 typedef double float64_t;
@@ -13,9 +14,9 @@ typedef enum control_flow {
 
 gc_t new_gc() {
     return (gc_t){
-        .allocations = new_array_buf(),
-        .freed = new_array_buf(),
-        .roots = new_array_buf(),
+        // .allocations = new_array_buf(),
+        // .freed = new_array_buf(),
+        // .roots = new_array_buf(),
         .garbage_marker = MARKER_A,
     };
 }
@@ -23,10 +24,10 @@ gc_t new_gc() {
 vm_t new_vm(bytecode_t bytecode) {
     return (vm_t) {
         .bytecode = bytecode,
-        .variable_stack = new_array_buf(),
+        .variable_stack = new_array_buf(uint64_t),
         .variable_frame_index = 0,
-        .expression_stack = new_array_buf(),
-        .ip = bytecode.instructions.ptr,
+        .expression_stack = new_array_buf(uint64_t),
+        .ip = bytecode.instructions.data,
         .gc = new_gc(),
     };
 }
@@ -38,13 +39,13 @@ typedef union value {
 } value_t;
 
 static void push(vm_t* vm, value_t value) {
-    array_buf_push(&vm->expression_stack, &value, sizeof(value));
+    array_buf_push(&vm->expression_stack, value);
 }
 
 static value_t pop(vm_t* vm) {
-    int64_t value;
-    array_buf_pop(&vm->expression_stack, &value, sizeof(value));
-    return (value_t)value;
+    value_t value;
+    array_buf_pop(&vm->expression_stack, &value, value_t);
+    return value;
 }
 
 static control_flow_t run_one(vm_t* vm);
@@ -87,30 +88,31 @@ static control_flow_t run_one(vm_t* vm) {
     case OP_ADD_INT: return op_add_int(vm);
 
     default:
-        fprintf(stderr, "error: invalid instruction 0x%02x\n", 0);
+        report_error("invalid instruction 0x%02x", 0);
         return false;
     }
 }
 
 static control_flow_t op_syscall(vm_t* vm) {
     syscall_t code = (syscall_t)(*(vm->ip++));
+    eprintf("[dbg] syscall %d\n", code);
     switch (code) {
     case SYS_EXIT:
         ;
         int exit_code = (int)(*(vm->ip)++);
-        fprintf(stderr, "exiting with exit code %d\n", exit_code);
+        eprintf("exiting with exit code %d\n", exit_code);
         return FLOW_EXIT;
 
     case SYS_SAY_HI:
-        fprintf(stderr, "hi :)\n");
+        eprintf("hi :)\n");
         return FLOW_CONTINUE;
 
     case SYS_SAY_BYE:
-        fprintf(stderr, "bye :(\n");
+        eprintf("bye :(\n");
         return FLOW_CONTINUE;
 
     default:
-        fprintf(stderr, "error: invalid syscall 0x%02x\n", code);
+        report_error("invalid syscall 0x%02x\n", code);
     }
 
     return FLOW_EXIT;
@@ -124,21 +126,22 @@ typedef struct function_state {
 static control_flow_t op_call(vm_t* vm) {
     size_t dst_ip = (size_t)(*(vm->ip++));
 
+    eprintf("[dbg] call -> %zu\n", dst_ip);
+
     function_state_t state = {
         .variable_frame_index = (uint64_t)(vm->variable_frame_index),
         .ip = (uint64_t)(vm->ip),
     };
-    array_buf_push(&vm->variable_stack, &state, sizeof(state));
+    array_buf_push(&vm->variable_stack, state);
     vm->variable_frame_index = vm->variable_stack.len;
-    vm->ip = (uint32_t*)vm->bytecode.instructions.ptr + dst_ip;
+    vm->ip = vm->bytecode.instructions.data + dst_ip;
     return FLOW_CONTINUE;
 }
 
 static control_flow_t op_enter(vm_t* vm) {
     size_t num_variables = (size_t)(*(vm->ip++));
 
-    array_buf_reserve(&vm->variable_stack, num_variables * sizeof(uint64_t));
-    vm->variable_stack.len += num_variables * sizeof(uint64_t);
+    array_buf_reserve(&vm->variable_stack, num_variables, uint64_t);
     return FLOW_CONTINUE;
 }
 
@@ -147,22 +150,25 @@ static control_flow_t op_return(vm_t* vm) {
     vm->variable_stack.len = vm->variable_frame_index;
     // restore previous function state
     function_state_t state;
-    array_buf_pop(&vm->variable_stack, &state, sizeof(state));
+    array_buf_pop(&vm->variable_stack, &state, function_state_t);
     vm->variable_frame_index = (size_t)state.variable_frame_index;
     vm->ip = (uint32_t*)state.ip;
+
+    eprintf("[dbg] return -> %zi\n", vm->ip - vm->bytecode.instructions.data);
+
     return FLOW_CONTINUE;
 }
 
 static control_flow_t op_scalar(vm_t* vm) {
     uint64_t scalar = (uint64_t)(*(vm->ip++));
     scalar |= ((uint64_t)(*(vm->ip++))) << 32;
-    array_buf_push(&vm->expression_stack, &scalar, sizeof(scalar));
+    array_buf_push(&vm->expression_stack, scalar);
     return FLOW_CONTINUE;
 }
 
 static control_flow_t op_load(vm_t* vm) {
     size_t variable = (size_t)(*(vm->ip++));
-    value_t* variable_ptr = (value_t*)(vm->variable_stack.ptr);
+    value_t* variable_ptr = (value_t*)(vm->variable_stack.data);
     value_t value = variable_ptr[vm->variable_frame_index + variable];
     push(vm, value);
     return FLOW_CONTINUE;
@@ -171,7 +177,7 @@ static control_flow_t op_load(vm_t* vm) {
 static control_flow_t op_store(vm_t* vm) {
     size_t variable = (size_t)(*(vm->ip++));
     value_t value = pop(vm);
-    value_t* variable_ptr = (value_t*)(vm->variable_stack.ptr);
+    value_t* variable_ptr = (value_t*)(vm->variable_stack.data);
     variable_ptr[vm->variable_frame_index + variable] = value;
     return FLOW_CONTINUE;
 }

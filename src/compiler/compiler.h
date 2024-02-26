@@ -1,6 +1,7 @@
 #pragma once
 
 #include "util/array.h"
+#include "util/arena.h"
 
 // structure of an instruction:
 // [opcode] [immediate arguments] [register arguments]
@@ -83,7 +84,9 @@ typedef enum syscall {
 
 typedef size_t vaddr_t;
 
+typedef array_buf_t(uint32_t) instruction_buf_t;
+
 typedef struct bytecode {
-    array_buf_t instructions;
-    array_buf_t rodata;
+    instruction_buf_t instructions;
+    arena_t rodata;
 } bytecode_t;

@@ -1,48 +1,56 @@
 #include "ast/expression.h"
 
-parse_block_result_t parse_block(parser_t* super_parser) {
-    parser_t parser = *super_parser;
-    if (!match_parser(&parser, TOKEN_LEFT_BRACE, NULL)) {
-        return RESULT_ERROR(parse_block_result_t, PARSE_ERROR);
+parse_error_t parse_block(parser_t* parser, block_t* dst) {
+    parser_state_t state = parser_snapshot(*parser);
+
+    if (!match_parser(parser, TOKEN_LEFT_BRACE, NULL)) {
+        PARSER_ERROR_RESTORE(parser, state);
     }
 
-    block_t block = { .statements = new_array_buf(), .has_tail = false };
+    expression_array_buf_t statements = new_array_buf(expression_t);
+    bool has_tail = false;
+    expression_t tail = {0};
     bool last_is_block = false;
-    while (!match_parser(&parser, TOKEN_RIGHT_BRACE, NULL)) {
-        if (match_parser(&parser, TOKEN_SEMICOLON, NULL)) {
-            if (block.has_tail) {
-                array_buf_push(&block.statements, &block.tail, sizeof(block.tail));
-                block.has_tail = false;
+    while (!match_parser(parser, TOKEN_RIGHT_BRACE, NULL)) {
+        if (match_parser(parser, TOKEN_SEMICOLON, NULL)) {
+            if (has_tail) {
+                array_buf_push(&statements, tail);
+                has_tail = false;
             }
             last_is_block = false;
             continue;
         }
 
-        if (!last_is_block && block.has_tail) {
-            return RESULT_ERROR(parse_block_result_t, PARSE_ERROR);
+        if (!last_is_block && has_tail) {
+            free_array_buf(statements);
+            PARSER_ERROR_RESTORE(parser, state);
         }
-        if (block.has_tail) {
-            array_buf_push(&block.statements, &block.tail, sizeof(block.tail));
+        if (has_tail) {
+            array_buf_push(&statements, tail);
         }
 
-        parse_expression_result_t expression = parse_expression(&parser);
-        if (!expression.is_ok) {
-            destroy_array_buf(block.statements);
-            return CAST_ERROR(parse_block_result_t, expression);
+        expression_t expression;
+        if (parse_expression(parser, &expression) != PARSE_SUCCESS) {
+            free_array_buf(statements);
+            PARSER_ERROR_RESTORE(parser, state);
         }
         
-        last_is_block = expression.ok.kind == EXPRESSION_BLOCK
-            || expression.ok.kind == EXPRESSION_CONDITIONAL
-            || expression.ok.kind == EXPRESSION_LOOP
-            || expression.ok.kind == EXPRESSION_WHILE_LOOP;
+        last_is_block = expression.kind == EXPRESSION_BLOCK
+            || expression.kind == EXPRESSION_CONDITIONAL
+            || expression.kind == EXPRESSION_LOOP
+            || expression.kind == EXPRESSION_WHILE_LOOP;
 
-        block.has_tail = true;
-        block.tail = expression.ok;
+        has_tail = true;
+        tail = expression;
     }
+    alloc_stack_push(&parser->storage.allocations, statements.data);
 
-    *super_parser = parser;
-
-    return RESULT_OK(parse_block_result_t, block);
+    *dst = (block_t){
+        .statements = statements,
+        .has_tail = has_tail,
+        .tail = tail
+    };
+    return PARSE_SUCCESS;
 }
 
 // orders of operations:
@@ -84,10 +92,12 @@ static precedence_t next_precedence(precedence_t precedence) {
     return precedence + 1;
 }
 
-static parse_expression_result_t parse_integer(parser_t* super_parser) {
-    parser_t parser = *super_parser;
-    text_view_t text = peek_parser(parser).text;
-    step_parser(&parser);
+static parse_error_t parse_integer(parser_t* parser, expression_t* dst) {
+    parser_state_t state = parser_snapshot(*parser);
+
+    // first token is integer when called
+    text_view_t text = peek_parser(*parser).text;
+    step_parser(parser);
     size_t i = 0;
 
     int64_t signum;
@@ -108,79 +118,81 @@ static parse_expression_result_t parse_integer(parser_t* super_parser) {
     int64_t value = 0;
     for (; i < text.len; i++) {
         if (__builtin_mul_overflow(value, 10, &value)) {
-            return RESULT_ERROR(parse_expression_result_t, PARSE_ERROR);
+            PARSER_ERROR_RESTORE(parser, state);
         }
         int64_t signed_digit = (text.ptr[i] - '0') * signum;
         if (__builtin_add_overflow(value, signed_digit, &value)) {
-                return RESULT_ERROR(parse_expression_result_t, PARSE_ERROR);
+            PARSER_ERROR_RESTORE(parser, state);
         }
     }
 
-    *super_parser = parser;
-    expression_t expression = { .kind = EXPRESSION_INTEGER, .as.integer = value };
-    return RESULT_OK(parse_expression_result_t, expression);
+    *dst = (expression_t){ .kind = EXPRESSION_INTEGER, .as.integer = value };
+    return PARSE_SUCCESS;
 }
 
-static parse_expression_result_t parse_variable(parser_t* parser) {
+static parse_error_t parse_variable(parser_t* parser, expression_t* dst) {
     // when called, first token is an identifier
     text_view_t identifier = peek_parser(*parser).text;
     step_parser(parser);
-    expression_t expression = { .kind = EXPRESSION_VARIABLE, .as.variable = identifier };
-    return RESULT_OK(parse_expression_result_t, expression);
+    *dst = (expression_t){ .kind = EXPRESSION_VARIABLE, .as.variable = identifier };
+    return PARSE_SUCCESS;
 }
 
-static parse_expression_result_t parse_call(parser_t* super_parser, expression_t callee) {
-    parser_t parser = *super_parser;
-    step_parser(&parser); // skip "("
+static parse_error_t
+parse_call(parser_t* parser, expression_t callee, expression_t* dst) {
+    parser_state_t state = parser_snapshot(*parser);
+    step_parser(parser); // skip "("
 
-    // parse arguments.
-    array_buf_t arguments = new_array_buf();
-    while (!match_parser(&parser, TOKEN_RIGHT_PAREN, NULL)) {
-        parse_expression_result_t argument = parse_expression(&parser);
-        if (!argument.is_ok) {
-            return RESULT_ERROR(parse_expression_result_t, PARSE_ERROR);
+    // parse arguments
+    expression_array_buf_t arguments = new_array_buf(expression_t);
+    while (!match_parser(parser, TOKEN_RIGHT_PAREN, NULL)) {
+        expression_t argument;
+        if (parse_expression(parser, &argument) != PARSE_SUCCESS) {
+            free_array_buf(arguments);
+            PARSER_ERROR_RESTORE(parser, state);
         }
-        array_buf_push(&arguments, &argument.ok, sizeof(argument.ok));
+        array_buf_push(&arguments, argument);
 
-        if (!match_parser(&parser, TOKEN_COMMA, NULL)) {
-            if (!match_parser(&parser, TOKEN_RIGHT_PAREN, NULL)) {
-                return RESULT_ERROR(parse_expression_result_t, PARSE_ERROR);
+        if (!match_parser(parser, TOKEN_COMMA, NULL)) {
+            if (!match_parser(parser, TOKEN_RIGHT_PAREN, NULL)) {
+                free_array_buf(arguments);
+                PARSER_ERROR_RESTORE(parser, state);
             }
             break;
         }
     }
+    alloc_stack_push(&parser->storage.allocations, arguments.data);
 
-    *super_parser = parser;
-    call_t call = { .callee = malloc(sizeof(callee)), .arguments = arguments };
-    *call.callee = callee;
-    expression_t expression = { .kind = EXPRESSION_CALL, .as.call = call };
-    return RESULT_OK(parse_expression_result_t, expression);
+    call_t call = {
+        .callee = arena_push(&parser->storage.arena, callee),
+        .arguments = arguments
+    };
+    *dst = (expression_t){ .kind = EXPRESSION_CALL, .as.call = call };
+    return PARSE_SUCCESS;
 }
 
-static parse_expression_result_t parse_index(parser_t* super_parser, expression_t indexee) {
-    parser_t parser = *super_parser;
-    step_parser(&parser); // skip "["
-    parse_expression_result_t index = parse_expression(&parser);
-    if (!index.is_ok) {
-        return index;
+static parse_error_t
+parse_index(parser_t* parser, expression_t indexee, expression_t* dst) {
+    parser_state_t state = parser_snapshot(*parser);
+    step_parser(parser); // skip "["
+    expression_t index;
+    if (parse_expression(parser, &index) != PARSE_SUCCESS) {
+        PARSER_ERROR_RESTORE(parser, state);
     }
-    if (!match_parser(&parser, TOKEN_RIGHT_BRACKET, NULL)) {
-        return RESULT_ERROR(parse_expression_result_t, PARSE_ERROR);
+    if (!match_parser(parser, TOKEN_RIGHT_BRACKET, NULL)) {
+        PARSER_ERROR_RESTORE(parser, state);
     }
 
-    *super_parser = parser;
     binary_operation_t operation = {
         .operator = OPERATOR_INDEX,
-        .left = malloc(sizeof(indexee)),
-        .right = malloc(sizeof(index.ok)),
+        .left = arena_push(&parser->storage.arena, indexee),
+        .right = arena_push(&parser->storage.arena, index),
     };
-    *operation.left = indexee;
-    *operation.right = index.ok;
-    expression_t expression = {
+    *dst = (expression_t){
         .kind = EXPRESSION_BINARY_OPERATION,
         .as.binary_operation = operation
     };
-    return RESULT_OK(parse_expression_result_t, expression);
+    return PARSE_SUCCESS;
 }
 
 static unary_operator_t as_prefix_operator(token_t token) {
@@ -204,36 +216,40 @@ static precedence_t prefix_operator_precedence(unary_operator_t operator) {
     }
 }
 
-static parse_expression_result_t
-parse_expression_precedence(parser_t* super_parser, precedence_t precendence);
+static parse_error_t parse_expression_precedence(
+    parser_t* super_parser,
+    precedence_t precedence,
+    expression_t* dst
+);
 
-static parse_expression_result_t
-parse_prefix(parser_t* super_parser) {
-    parser_t parser = *super_parser;
+static parse_error_t
+parse_prefix(parser_t* parser, expression_t* dst) {
+    parser_state_t state = parser_snapshot(*parser);
 
-    unary_operation_t operation;
-
-    operation.operator = as_prefix_operator(peek_parser(parser));
-    if (operation.operator == -1) {
-        return RESULT_ERROR(parse_expression_result_t, PARSE_ERROR);
+    unary_operator_t operator = as_prefix_operator(peek_parser(*parser));
+    if (operator == -1) {
+        PARSER_ERROR_RESTORE(parser, state);
     }
-    step_parser(&parser);
+    step_parser(parser);
 
-    precedence_t precedence = prefix_operator_precedence(operation.operator);
-    parse_expression_result_t operand =
-        parse_expression_precedence(&parser, precedence);
-    if (!operand.is_ok) {
-        return operand;
+    precedence_t precedence = prefix_operator_precedence(operator);
+    expression_t operand;
+    if (
+        parse_expression_precedence(parser, precedence, &operand)
+        != PARSE_SUCCESS
+    ) {
+        PARSER_ERROR_RESTORE(parser, state);
     }
-    operation.operand = malloc(sizeof(expression_t));
-    *operation.operand = operand.ok;
 
-    *super_parser = parser;
-    expression_t expression = {
+    unary_operation_t operation = {
+        .operator = operator,
+        .operand = arena_push(&parser->storage.arena, operand),
+    };
+    *dst = (expression_t) {
         .kind = EXPRESSION_UNARY_OPERATION,
         .as.unary_operation = operation
     };
-    return RESULT_OK(parse_expression_result_t, expression);
+    return PARSE_SUCCESS;
 }
 
 static binary_operator_t as_infix_operator(token_t token) {
@@ -299,122 +315,118 @@ static precedence_t infix_operator_precedence(binary_operator_t operator) {
     }
 }
 
-static parse_expression_result_t
-parse_infix(parser_t* super_parser, expression_t lhs) {
-    parser_t parser = *super_parser;
-    binary_operator_t operator = as_infix_operator(peek_parser(parser));
-    step_parser(&parser);
-    precedence_t precedence = infix_operator_precedence(operator);
-    parse_expression_result_t rhs =
-        parse_expression_precedence(&parser, next_precedence(precedence));
+static parse_error_t
+parse_infix(parser_t* parser, expression_t lhs, expression_t* dst) {
+    parser_state_t state = parser_snapshot(*parser);
 
-    if (!rhs.is_ok) {
-        return rhs;
+    binary_operator_t operator = as_infix_operator(peek_parser(*parser));
+    step_parser(parser);
+    precedence_t precedence = infix_operator_precedence(operator);
+    expression_t rhs;
+    if (
+        parse_expression_precedence(
+            parser,
+            next_precedence(precedence),
+            &rhs
+        ) != PARSE_SUCCESS
+    ) {
+        PARSER_ERROR_RESTORE(parser, state);
     }
 
-    *super_parser = parser;
-
     binary_operation_t operation = {
-        .left = malloc(sizeof(lhs)),
         .operator = operator,
-        .right = malloc(sizeof(rhs.ok)),
+        .left = arena_push(&parser->storage.arena, lhs),
+        .right = arena_push(&parser->storage.arena, rhs),
     };
-    *operation.left = lhs;
-    *operation.right = rhs.ok;
-    expression_t expression = {
+    *dst = (expression_t){
         .kind = EXPRESSION_BINARY_OPERATION,
         .as.binary_operation = operation
     };
-    return RESULT_OK(parse_expression_result_t, expression);
+    return PARSE_SUCCESS;
 }
 
-static parse_expression_result_t
-parse_binding(parser_t* super_parser) {
-    parser_t parser = *super_parser;
-
-    step_parser(&parser); // skip "let"
+static parse_error_t
+parse_binding(parser_t* parser, expression_t* dst) {
+    parser_state_t state = parser_snapshot(*parser);
+    step_parser(parser); // skip "let"
     
-    bool mutable = match_parser(&parser, TOKEN_MUT, NULL);
+    bool mutable = match_parser(parser, TOKEN_MUT, NULL);
 
     token_t identifier;
-    if (!match_parser(&parser, TOKEN_IDENTIFIER, &identifier)) {
-        return RESULT_ERROR(parse_expression_result_t, PARSE_ERROR);
+    if (!match_parser(parser, TOKEN_IDENTIFIER, &identifier)) {
+        PARSER_ERROR_RESTORE(parser, state);
     }
 
-    if (!match_parser(&parser, TOKEN_COLON, NULL)) {
-        return RESULT_ERROR(parse_expression_result_t, PARSE_ERROR);
+    if (!match_parser(parser, TOKEN_COLON, NULL)) {
+        PARSER_ERROR_RESTORE(parser, state);
     }
-    parse_type_name_result_t type_name = parse_type_name(&parser);
-    if (!type_name.is_ok) {
-        return RESULT_ERROR(parse_expression_result_t, PARSE_ERROR);
+
+    type_name_t type_name;
+    if (parse_type_name(parser, &type_name)) {
+        PARSER_ERROR_RESTORE(parser, state);
     }
-    named_type_t type = NAMED_TYPE_UNRESOLVED(type_name.ok);
+    named_type_t type = NAMED_TYPE_UNRESOLVED(type_name);
     
-    if (!match_parser(&parser, TOKEN_EQUAL, NULL)) {
-        return RESULT_ERROR(parse_expression_result_t, PARSE_ERROR);
+    if (!match_parser(parser, TOKEN_EQUAL, NULL)) {
+        PARSER_ERROR_RESTORE(parser, state);
     }
 
-    parse_expression_result_t value = parse_expression(&parser);
-    if (!value.is_ok) {
-        return value;
+    expression_t value;
+    if (parse_expression(parser, &value) != PARSE_SUCCESS) {
+        PARSER_ERROR_RESTORE(parser, state);
     }
-
-    *super_parser = parser;
 
     binding_t binding = {
         .mutable = mutable,
         .identifier = identifier.text,
         .type = type,
-        .value = malloc(sizeof(value.ok)),
+        .value = arena_push(&parser->storage.arena, value),
     };
-    *binding.value = value.ok;
-    expression_t expression = { .kind = EXPRESSION_BINDING, .as.binding = binding };
-    return RESULT_OK(parse_expression_result_t, expression);
+    *dst = (expression_t){ .kind = EXPRESSION_BINDING, .as.binding = binding };
+    return PARSE_SUCCESS;
 }
 
-static parse_expression_result_t
-parse_conditional(parser_t* super_parser) {
-    parser_t parser = *super_parser;
-    step_parser(&parser); // skip "if" or "elif"
+static parse_error_t
+parse_conditional(parser_t* parser, expression_t* dst) {
+    parser_state_t state = parser_snapshot(*parser);
+    step_parser(parser); // skip "if" or "elif"
 
-    parse_expression_result_t condition = parse_expression(&parser);
-    if (!condition.is_ok) {
-        return condition;
+    expression_t condition;
+    if (parse_expression(parser, &condition) != PARSE_SUCCESS) {
+        PARSER_ERROR_RESTORE(parser, state);
     }
 
-    parse_block_result_t body = parse_block(&parser);
-    if (!body.is_ok) {
-        return CAST_ERROR(parse_expression_result_t, body);
+    block_t body;
+    if (parse_block(parser, &body) != PARSE_SUCCESS) {
+        PARSER_ERROR_RESTORE(parser, state);
     }
 
     conditional_t conditional = {
-        .condition = NULL, // filled out later
-        .body = NULL, // filled out later
         .else_kind = CONDITIONAL_ELSE_NONE,
         .else_as = {0}
     };
     while (true) {
-        switch (peek_parser(parser).type) {
+        switch (peek_parser(*parser).type) {
         case TOKEN_ELSE:
-            step_parser(&parser);
-            parse_block_result_t else_block = parse_block(&parser);
-            if (!else_block.is_ok) {
-                return CAST_ERROR(parse_expression_result_t, else_block);
+            step_parser(parser);
+            block_t else_block;
+            if (parse_block(parser, &else_block) != PARSE_SUCCESS) {
+                PARSER_ERROR_RESTORE(parser, state);
             }
             conditional.else_kind = CONDITIONAL_ELSE_BLOCK;
-            conditional.else_as.block = malloc(sizeof(block_t));
-            *conditional.else_as.block = else_block.ok;
+            conditional.else_as.block =
+                arena_push(&parser->storage.arena, else_block);
             break;
 
         case TOKEN_ELIF:
             ;
-            parse_expression_result_t else_conditional = parse_conditional(&parser);
-            if (!else_conditional.is_ok) {
-                return else_conditional;
+            expression_t else_conditional;
+            if (parse_conditional(parser, &else_conditional) != PARSE_SUCCESS) {
+                PARSER_ERROR_RESTORE(parser, state);
             }
             conditional.else_kind = CONDITIONAL_ELSE_CONDITIONAL;
-            conditional.else_as.conditional = malloc(sizeof(conditional_t));
-            *conditional.else_as.conditional = else_conditional.ok.as.conditional;
+            conditional.else_as.conditional =
+                arena_push(&parser->storage.arena, else_conditional.as.conditional);
             break;
 
         default: goto parse_else_loop_end;
@@ -422,158 +434,151 @@ parse_conditional(parser_t* super_parser) {
     }
 parse_else_loop_end:
 
-    conditional.condition = malloc(sizeof(condition.ok));
-    *conditional.condition = condition.ok;
-    conditional.body = malloc(sizeof(body.ok));
-    *conditional.body = body.ok;
+    conditional.condition = arena_push(&parser->storage.arena, condition);
+    conditional.body = arena_push(&parser->storage.arena, body);
 
-    *super_parser = parser;
-    expression_t expression = {
+    *dst = (expression_t){
         .kind = EXPRESSION_CONDITIONAL,
         .as.conditional = conditional
     };
-    return RESULT_OK(parse_expression_result_t, expression);
+    return PARSE_SUCCESS;
 }
 
-static parse_expression_result_t
-parse_loop(parser_t* super_parser) {
-    parser_t parser = *super_parser;
-    step_parser(&parser); // skip "loop"
+static parse_error_t
+parse_loop(parser_t* parser, expression_t* dst) {
+    parser_state_t state = parser_snapshot(*parser);
+    step_parser(parser); // skip "loop"
 
-    parse_block_result_t body = parse_block(&parser);
-    if (!body.is_ok) {
-        return CAST_ERROR(parse_expression_result_t, body);
+    block_t body;
+    if (parse_block(parser, &body) != PARSE_SUCCESS) {
+        PARSER_ERROR_RESTORE(parser, state);
     }
 
-    *super_parser = parser;
-    loop_t loop = { .body = malloc(sizeof(body.ok)) };
-    *loop.body = body.ok;
-    expression_t expression = { .kind = EXPRESSION_LOOP, .as.loop = loop };
-    return RESULT_OK(parse_expression_result_t, expression);
+    loop_t loop = { .body = arena_push(&parser->storage.arena, body) };
+    *dst = (expression_t){ .kind = EXPRESSION_LOOP, .as.loop = loop };
+    return PARSE_SUCCESS;
 }
 
-static parse_expression_result_t
-parse_while_loop(parser_t* super_parser) {
-    parser_t parser = *super_parser;
-    step_parser(&parser); // skip "while"
+static parse_error_t
+parse_while_loop(parser_t* parser, expression_t* dst) {
+    parser_state_t state = parser_snapshot(*parser);
+    step_parser(parser); // skip "while"
 
-    parse_expression_result_t condition = parse_expression(&parser);
-    if (!condition.is_ok) {
-        return condition;
+    expression_t condition;
+    if (parse_expression(parser, &condition) != PARSE_SUCCESS) {
+        PARSER_ERROR_RESTORE(parser, state);
     }
 
-    parse_block_result_t body = parse_block(&parser);
-    if (!body.is_ok) {
-        return CAST_ERROR(parse_expression_result_t, body);
+    block_t body;
+    if (parse_block(parser, &body) != PARSE_SUCCESS) {
+        PARSER_ERROR_RESTORE(parser, state);
     }
 
-    *super_parser = parser;
     while_loop_t while_loop = {
-        .condition = malloc(sizeof(condition.ok)),
-        .body = malloc(sizeof(body.ok))
+        .condition = arena_push(&parser->storage.arena, condition),
+        .body = arena_push(&parser->storage.arena, body)
     };
-    *while_loop.condition = condition.ok;
-    *while_loop.body = body.ok;
-    expression_t expression = {
+    *dst = (expression_t){
         .kind = EXPRESSION_WHILE_LOOP,
         .as.while_loop = while_loop
     };
-    return RESULT_OK(parse_expression_result_t, expression);
+    return PARSE_SUCCESS;
 }
 
-static parse_expression_result_t
-parse_expression_precedence(parser_t* super_parser, precedence_t precedence) {
-    parser_t parser = *super_parser;
-    parse_expression_result_t expression =
-        RESULT_ERROR(parse_expression_result_t, PARSE_ERROR);
+static parse_error_t parse_expression_precedence(
+    parser_t* parser,
+    precedence_t precedence,
+    expression_t* dst
+) {
+    parser_state_t state = parser_snapshot(*parser);
+    parse_error_t error = PARSE_ERROR;
+    expression_t expression;
 
-    unary_operator_t unary_operator = as_prefix_operator(peek_parser(parser));
+    unary_operator_t unary_operator = as_prefix_operator(peek_parser(*parser));
     if (unary_operator != -1) {
-        expression = parse_prefix(&parser);
-    } else switch (peek_parser(parser).type) {
+        error = parse_prefix(parser, &expression);
+    } else switch (peek_parser(*parser).type) {
     case TOKEN_INTEGER:
-        expression = parse_integer(&parser);
+        error = parse_integer(parser, &expression);
         break;
 
     case TOKEN_IDENTIFIER:
-        expression = parse_variable(&parser);
+        error = parse_variable(parser, &expression);
         break;
 
     case TOKEN_LEFT_PAREN:
-        step_parser(&parser);
-        expression = parse_expression(&parser);
-        if (!expression.is_ok) {
-            return expression;
+        step_parser(parser);
+        if (parse_expression(parser, &expression) != PARSE_SUCCESS) {
+            PARSER_ERROR_RESTORE(parser, state);
         }
-        if (!match_parser(&parser, TOKEN_RIGHT_PAREN, NULL)) {
-            return RESULT_ERROR(parse_expression_result_t, PARSE_ERROR);
+        if (!match_parser(parser, TOKEN_RIGHT_PAREN, NULL)) {
+            PARSER_ERROR_RESTORE(parser, state);
         }
         break;
 
     case TOKEN_LEFT_BRACE:
         ;
-        parse_block_result_t block = parse_block(&parser);
-        if (!block.is_ok) {
-            return CAST_ERROR(parse_expression_result_t, block);
+        block_t block;
+        if (parse_block(parser, &block) != PARSE_SUCCESS) {
+            PARSER_ERROR_RESTORE(parser, state);
         }
-        expression_t block_expression = {
+        error = PARSE_SUCCESS;
+        expression = (expression_t){
             .kind = EXPRESSION_BLOCK,
-            .as.block = malloc(sizeof(block_t)),
+            .as.block = arena_push(&parser->storage.arena, block)
         };
-        *block_expression.as.block = block.ok;
-        expression = RESULT_OK(parse_expression_result_t, block_expression);
         break;
 
     case TOKEN_LET:
-        expression = parse_binding(&parser);
+        error = parse_binding(parser, &expression);
         break;
 
     case TOKEN_IF:
-        expression = parse_conditional(&parser);
+        error = parse_conditional(parser, &expression);
         break;
 
     case TOKEN_LOOP:
-        expression = parse_loop(&parser);
+        error = parse_loop(parser, &expression);
         break;
 
     case TOKEN_WHILE:
-        expression = parse_while_loop(&parser);
+        error = parse_while_loop(parser, &expression);
         break;
 
     default: break;
     }
 
-    if (!expression.is_ok) {
-        return RESULT_ERROR(parse_expression_result_t, PARSE_ERROR);
+    if (error != PARSE_SUCCESS) {
+        PARSER_ERROR_RESTORE(parser, state);
     }
 
     while (true) {
-        switch (peek_parser(parser).type) {
+        switch (peek_parser(*parser).type) {
         case TOKEN_LEFT_PAREN:
-            expression = parse_call(&parser, expression.ok);
+            error = parse_call(parser, expression, &expression);
             break;
         case TOKEN_LEFT_BRACKET:
-            expression = parse_index(&parser, expression.ok);
+            error = parse_index(parser, expression, &expression);
             break;
         default:
             goto parse_call_or_index_loop_end;
         }
 
-        if (!expression.is_ok) {
-            return RESULT_ERROR(parse_expression_result_t, PARSE_ERROR);
+        if (error != PARSE_SUCCESS) {
+            PARSER_ERROR_RESTORE(parser, state);
         }
     }
 parse_call_or_index_loop_end:
 
     while (true) {
-        binary_operator_t binary_operator = as_infix_operator(peek_parser(parser));
+        binary_operator_t binary_operator = as_infix_operator(peek_parser(*parser));
         if (binary_operator == -1) {
             break;
         }
         precedence_t operator_precedence = infix_operator_precedence(binary_operator);
 
         if (!precedence_compatible(precedence, operator_precedence)) {
-            return RESULT_ERROR(parse_expression_result_t, PARSE_ERROR);
+            PARSER_ERROR_RESTORE(parser, state);
         }
 
         if (precedence == PRECEDENCE_BITWISE_OR_ADDITION) {
@@ -588,21 +593,25 @@ parse_call_or_index_loop_end:
             break;
         }
 
-        expression = parse_infix(&parser, expression.ok);
-        if (!expression.is_ok) {
-            return RESULT_ERROR(parse_expression_result_t, PARSE_ERROR);
+        error = parse_infix(parser, expression, &expression);
+        if (error != PARSE_SUCCESS) {
+            PARSER_ERROR_RESTORE(parser, state);
         }
     }
 
-    *super_parser = parser;
-    return expression;
+    *dst = expression;
+    return PARSE_SUCCESS;
 }
 
-parse_expression_result_t parse_expression(parser_t* parser) {
-    return parse_expression_precedence(parser, PRECEDENCE_NONE);
+parse_error_t parse_expression(parser_t* parser, expression_t* dst) {
+    return parse_expression_precedence(parser, PRECEDENCE_NONE, dst);
 }
 
-void debug_unary_operation(unary_operation_t operation, ast_debugger_t* debugger) {
+void debug_unary_operation(
+    unary_operation_t operation,
+    ast_storage_t storage,
+    ast_debugger_t* debugger
+) {
     ast_debug_start(debugger, "unary_operation");
     ast_debug_key(debugger, "operator");
     switch (operation.operator) {
@@ -612,11 +621,19 @@ void debug_unary_operation(unary_operation_t operation, ast_debugger_t* debugger
     case OPERATOR_BREAK: ast_debug_string(debugger, "break"); break;
     }
     ast_debug_key(debugger, "operand");
-    debug_expression(*operation.operand, debugger);
+    debug_expression(
+        arena_get(storage.arena, operation.operand, expression_t),
+        storage,
+        debugger
+    );
     ast_debug_end(debugger);
 }
 
-void debug_binary_operation(binary_operation_t operation, ast_debugger_t* debugger) {
+void debug_binary_operation(
+    binary_operation_t operation,
+    ast_storage_t storage,
+    ast_debugger_t* debugger
+) {
     ast_debug_start(debugger, "binary_operation");
     ast_debug_key(debugger, "operator");
     switch (operation.operator) {
@@ -645,26 +662,46 @@ void debug_binary_operation(binary_operation_t operation, ast_debugger_t* debugg
     case OPERATOR_ASSIGN: ast_debug_char(debugger, '='); break;
     }
     ast_debug_key(debugger, "lhs");
-    debug_expression(*operation.left, debugger);
+    debug_expression(
+        arena_get(storage.arena, operation.left, expression_t),
+        storage,
+        debugger
+    );
     ast_debug_key(debugger, "rhs");
-    debug_expression(*operation.right, debugger);
+    debug_expression(
+        arena_get(storage.arena, operation.right, expression_t),
+        storage,
+        debugger
+    );
     ast_debug_end(debugger);
 }
 
-void debug_call(call_t call, ast_debugger_t* debugger) {
+void debug_call(
+    call_t call,
+    ast_storage_t storage,
+    ast_debugger_t* debugger
+) {
     ast_debug_start(debugger, "call");
     ast_debug_key(debugger, "callee");
-    debug_expression(*call.callee, debugger);
+    debug_expression(
+        arena_get(storage.arena, call.callee, expression_t),
+        storage,
+        debugger
+    );
     ast_debug_key(debugger, "arguments");
     ast_debug_start_sequence(debugger);
-    for (size_t i = 0; i * sizeof(expression_t) < call.arguments.len; i++) {
-        debug_expression(((expression_t*)(call.arguments.ptr))[i], debugger);
+    for (size_t i = 0; i < call.arguments.len; i++) {
+        debug_expression(call.arguments.data[i], storage, debugger);
     }
     ast_debug_end_sequence(debugger);
     ast_debug_end(debugger);
 }
 
-void debug_binding(binding_t binding, ast_debugger_t* debugger) {
+void debug_binding(
+    binding_t binding,
+    ast_storage_t storage,
+    ast_debugger_t* debugger
+) {
     ast_debug_start(debugger, "binding");
     if (binding.mutable) {
         ast_debug_flag(debugger, "mutable");
@@ -674,63 +711,119 @@ void debug_binding(binding_t binding, ast_debugger_t* debugger) {
     ast_debug_key(debugger, "type");
     debug_named_type(binding.type, debugger);
     ast_debug_key(debugger, "value");
-    debug_expression(*binding.value, debugger);
+    debug_expression(
+        arena_get(storage.arena, binding.value, expression_t),
+        storage,
+        debugger
+    );
     ast_debug_end(debugger);
 }
 
-void debug_block(block_t block, ast_debugger_t* debugger) {
+void debug_block(
+    block_t block,
+    ast_storage_t storage,
+    ast_debugger_t* debugger
+) {
     ast_debug_start(debugger, "block");
     ast_debug_key(debugger, "statements");
     ast_debug_start_sequence(debugger);
-    for (size_t i = 0; i * sizeof(expression_t) < block.statements.len; i++) {
-        debug_expression(((expression_t*)block.statements.ptr)[i], debugger);
+    for (size_t i = 0; i < block.statements.len; i++) {
+        debug_expression(block.statements.data[i], storage, debugger);
     }
     ast_debug_end_sequence(debugger);
     if (block.has_tail) {
         ast_debug_key(debugger, "tail");
-        debug_expression(block.tail, debugger);
+        debug_expression(block.tail, storage, debugger);
     }
     ast_debug_end(debugger);
 }
 
-void debug_conditional(conditional_t conditional, ast_debugger_t* debugger) {
+void debug_conditional(
+    conditional_t conditional,
+    ast_storage_t storage,
+    ast_debugger_t* debugger
+) {
     ast_debug_start(debugger, "conditional");
+
     ast_debug_key(debugger, "condition");
-    debug_expression(*conditional.condition, debugger);
+    debug_expression(
+        arena_get(storage.arena, conditional.condition, expression_t),
+        storage,
+        debugger
+    );
+
     ast_debug_key(debugger, "body");
-    debug_block(*conditional.body, debugger);
+    debug_block(
+        arena_get(storage.arena, conditional.body, block_t),
+        storage,
+        debugger
+    );
+
     switch (conditional.else_kind) {
     case CONDITIONAL_ELSE_NONE:
         break;
     case CONDITIONAL_ELSE_BLOCK:
         ast_debug_key(debugger, "else");
-        debug_block(*conditional.else_as.block, debugger);
+        debug_block(
+            arena_get(storage.arena, conditional.else_as.block, block_t),
+            storage,
+            debugger
+        );
         break;
     case CONDITIONAL_ELSE_CONDITIONAL:
         ast_debug_key(debugger, "else");
-        debug_conditional(*conditional.else_as.conditional, debugger);
+        debug_conditional(
+            arena_get(storage.arena, conditional.else_as.conditional, conditional_t),
+            storage,
+            debugger
+        );
         break;
     }
+
     ast_debug_end(debugger);
 }
 
-void debug_loop(loop_t loop, ast_debugger_t* debugger) {
+void debug_loop(
+    loop_t loop,
+    ast_storage_t storage,
+    ast_debugger_t* debugger
+) {
     ast_debug_start(debugger, "loop");
     ast_debug_key(debugger, "body");
-    debug_block(*loop.body, debugger);
+    debug_block(
+        arena_get(storage.arena, loop.body, block_t),
+        storage,
+        debugger
+    );
     ast_debug_end(debugger);
 }
 
-void debug_while_loop(while_loop_t while_loop, ast_debugger_t* debugger) {
+void debug_while_loop(
+    while_loop_t while_loop,
+    ast_storage_t storage,
+    ast_debugger_t* debugger
+) {
     ast_debug_start(debugger, "while_loop");
     ast_debug_key(debugger, "condition");
-    debug_expression(*while_loop.condition, debugger);
+    debug_expression(
+        arena_get(storage.arena, while_loop.condition, expression_t),
+        storage,
+        debugger
+    );
     ast_debug_key(debugger, "body");
-    debug_block(*while_loop.body, debugger);
+    debug_block(
+        arena_get(storage.arena, while_loop.body, block_t),
+        storage,
+        debugger
+    );
     ast_debug_end(debugger);
 }
 
-void debug_expression(expression_t expression, ast_debugger_t* debugger) {
+void debug_expression(
+    expression_t expression,
+    ast_storage_t storage,
+    ast_debugger_t* debugger
+) {
     switch (expression.kind) {
     case EXPRESSION_INTEGER:
         ast_debug_int(debugger, expression.as.integer);
@@ -739,28 +832,32 @@ void debug_expression(expression_t expression, ast_debugger_t* debugger) {
         ast_debug_string_view(debugger, STRING_VIEW(expression.as.variable));
         break;
     case EXPRESSION_BLOCK:
-        debug_block(*expression.as.block, debugger);
+        debug_block(
+            arena_get(storage.arena, expression.as.block, block_t),
+            storage,
+            debugger
+        );
         break;
     case EXPRESSION_UNARY_OPERATION:
-        debug_unary_operation(expression.as.unary_operation, debugger);
+        debug_unary_operation(expression.as.unary_operation, storage, debugger);
         break;
     case EXPRESSION_BINARY_OPERATION:
-        debug_binary_operation(expression.as.binary_operation, debugger);
+        debug_binary_operation(expression.as.binary_operation, storage, debugger);
         break;
     case EXPRESSION_CALL:
-        debug_call(expression.as.call, debugger);
+        debug_call(expression.as.call, storage, debugger);
         break;
     case EXPRESSION_BINDING:
-        debug_binding(expression.as.binding, debugger);
+        debug_binding(expression.as.binding, storage, debugger);
         break;
     case EXPRESSION_CONDITIONAL:
-        debug_conditional(expression.as.conditional, debugger);
+        debug_conditional(expression.as.conditional, storage, debugger);
         break;
     case EXPRESSION_LOOP:
-        debug_loop(expression.as.loop, debugger);
+        debug_loop(expression.as.loop, storage, debugger);
         break;
     case EXPRESSION_WHILE_LOOP:
-        debug_while_loop(expression.as.while_loop, debugger);
+        debug_while_loop(expression.as.while_loop, storage, debugger);
         break;
     }
 }

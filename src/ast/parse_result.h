@@ -3,6 +3,7 @@
 #include "util/result.h"
 
 typedef enum parse_error {
+    PARSE_SUCCESS,
     PARSE_ERROR,
 } parse_error_t;
 

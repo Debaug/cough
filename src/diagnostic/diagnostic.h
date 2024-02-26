@@ -26,6 +26,6 @@
     )
 
 typedef int errno_t;
-#define SUCCESS 0
+#define SUCCESS ((errno_t)0)
 
 void report_errno(void);

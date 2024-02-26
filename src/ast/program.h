@@ -19,16 +19,22 @@ typedef struct item_declaration {
     } as;
 } item_declaration_t;
 
-DEFINE_PARSE_RESULT(parse_item_declaration_result, item_declaration_t)
-parse_item_declaration_result_t parse_item_declaration(parser_t* parser);
+parse_error_t parse_item_declaration(parser_t* parser, item_declaration_t* dst);
 
-void debug_item_declaration(item_declaration_t item_declaration, ast_debugger_t* debugger);
-
+typedef array_buf_t(item_declaration_t) item_declaration_array_buf_t;
 typedef struct program {
-    array_buf_t /* item_declaration_t */ item_declarations;
+    item_declaration_array_buf_t item_declarations;
 } program_t;
 
-DEFINE_PARSE_RESULT(parse_program_result, program_t);
-parse_program_result_t parse_program(parser_t* parser);
+parse_error_t parse_program(parser_t* parser, program_t* program);
 
-void debug_program(program_t program, ast_debugger_t* debugger);
+void debug_program(
+    program_t program,
+    ast_storage_t storage,
+    ast_debugger_t* debugger
+);
+void debug_item_declaration(
+    item_declaration_t item_declaration,
+    ast_storage_t storage,
+    ast_debugger_t* debugger
+);

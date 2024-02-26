@@ -156,12 +156,13 @@ scan_result_t scan_one(scanner_t* scanner) {
     }
 }
 
-array_buf_t scan(scanner_t* scanner) {
-    array_buf_t tokens = new_array_buf();
+token_array_buf_t scan(scanner_t* scanner) {
+    token_array_buf_t tokens = new_array_buf(token_t);
     while (true) {
         scan_result_t result = scan_one(scanner);
+
         if (result.is_ok) {
-            array_buf_push(&tokens, &result.ok, sizeof(token_t));
+            array_buf_push(&tokens, result.ok);
         } else {
             const char* message;
             switch (result.error.kind) {
@@ -172,9 +173,12 @@ array_buf_t scan(scanner_t* scanner) {
                 message = "incomplete token";
                 break;
             }
-            fprintf(stderr, "error at %zu:%zu: %s\n",
-                result.error.pos.line + 1, result.error.pos.column + 1,
-                message);
+            report_error(
+                "%s at %zu:%zu",
+                message,
+                result.error.pos.line + 1,
+                result.error.pos.column + 1
+            );
             step_scanner(scanner);
         }
 

@@ -1,63 +1,74 @@
 #include "ast/program.h"
 #include "ast/debug.h"
 
-parse_item_declaration_result_t parse_item_declaration(parser_t* super_parser) {
-    parser_t parser = *super_parser;
+parse_error_t parse_item_declaration(parser_t* parser, item_declaration_t* dst) {
+    parser_state_t state = parser_snapshot(*parser);
 
     token_t identifier;
-    if (!match_parser(&parser, TOKEN_IDENTIFIER, &identifier)) {
-        return RESULT_ERROR(parse_item_declaration_result_t, PARSE_ERROR);
+    if (!match_parser(parser, TOKEN_IDENTIFIER, &identifier)) {
+        PARSER_ERROR_RESTORE(parser, state);
     }
 
-    if (!match_parser(&parser, TOKEN_COLON_COLON, NULL)) {
-        return RESULT_ERROR(parse_item_declaration_result_t, PARSE_ERROR);
+    if (!match_parser(parser, TOKEN_COLON_COLON, NULL)) {
+        PARSER_ERROR_RESTORE(parser, state);
     }
 
-    parse_function_result_t function = parse_function(&parser);
-    if (function.is_ok) {
-        *super_parser = parser;
-        item_declaration_t item_declaration = {
-            .identifier = identifier.text,
-            .kind = FUNCTION_DECLARATION,
-            .as = function.ok,
-        };
-        return RESULT_OK(parse_item_declaration_result_t, item_declaration);
+    function_t function;
+    if (parse_function(parser, &function) != PARSE_SUCCESS) {
+        PARSER_ERROR_RESTORE(parser, state);
     }
-
-    return RESULT_ERROR(parse_item_declaration_result_t, PARSE_ERROR);
+    *dst = (item_declaration_t){
+        .identifier = identifier.text,
+        .kind = FUNCTION_DECLARATION,
+        .as.function = function,
+    };
+    return PARSE_SUCCESS;
 }
 
-parse_program_result_t parse_program(parser_t* parser) {
-    array_buf_t item_declarations = new_array_buf();
+parse_error_t parse_program(parser_t* parser, program_t* program) {
+    item_declaration_array_buf_t item_declarations = new_array_buf(item_declaration_t);
     while (!parser_is_eof(*parser)) {
-        parse_item_declaration_result_t item_declaration = parse_item_declaration(parser);
-        if (!item_declaration.is_ok) {
-            return RESULT_ERROR(parse_program_result_t, PARSE_ERROR);
+        item_declaration_t item_declaration;
+        if (parse_item_declaration(parser, &item_declaration) != PARSE_SUCCESS) {
+            return PARSE_ERROR;
         }
-        array_buf_push(&item_declarations, &item_declaration.ok, sizeof(item_declaration.ok));
+        array_buf_push(&item_declarations, item_declaration);
     }
-    program_t program = { .item_declarations = item_declarations };
-    return RESULT_OK(parse_program_result_t, program);
+    alloc_stack_push(&parser->storage.allocations, item_declarations.data);
+    *program = (program_t){ .item_declarations = item_declarations };
+    return PARSE_SUCCESS;
 }
 
-void debug_item_declaration(item_declaration_t item_declaration, ast_debugger_t* debugger) {
+void debug_item_declaration(
+    item_declaration_t item_declaration,
+    ast_storage_t storage,
+    ast_debugger_t* debugger
+) {
     ast_debug_start(debugger, "item_declaration");
 
     ast_debug_key(debugger, "identifier");
     ast_debug_string_view(debugger, STRING_VIEW(item_declaration.identifier));
 
     ast_debug_key(debugger, "function");
-    debug_function(item_declaration.as.function, debugger);
+    debug_function(item_declaration.as.function, storage, debugger);
 
     ast_debug_end(debugger);
 }
 
-void debug_program(program_t program, ast_debugger_t* debugger) {
+void debug_program(
+    program_t program,
+    ast_storage_t storage,
+    ast_debugger_t* debugger
+) {
     ast_debug_start(debugger, "program");
     ast_debug_key(debugger, "item_declarations");
     ast_debug_start_sequence(debugger);
-    for (size_t i = 0; i * sizeof(item_declaration_t) < program.item_declarations.len; i++) {
-        debug_item_declaration(((item_declaration_t*)program.item_declarations.ptr)[i], debugger);
+    for (size_t i = 0; i < program.item_declarations.len; i++) {
+        debug_item_declaration(
+            program.item_declarations.data[i],
+            storage,
+            debugger
+        );
     }
     ast_debug_end_sequence(debugger);
     ast_debug_end(debugger);

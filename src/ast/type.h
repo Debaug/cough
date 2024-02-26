@@ -29,8 +29,7 @@ typedef struct type_name {
     } as;
 } type_name_t;
 
-DEFINE_PARSE_RESULT(parse_type_name_result, type_name_t)
-parse_type_name_result_t parse_type_name(parser_t* parser);
+parse_error_t parse_type_name(parser_t* parser, type_name_t* dst);
 
 typedef struct named_type {
     type_t type;

@@ -16,6 +16,20 @@ void step_parser_by(parser_t* parser, size_t steps) {
     parser->pos += steps;
 }
 
+parser_state_t parser_snapshot(parser_t parser) {
+    return (parser_state_t){
+        .pos = parser.pos,
+        .arena_state = arena_snapshot(parser.storage.arena),
+        .allocations_state = alloc_stack_snapshot(parser.storage.allocations)
+    };
+}
+
+void parser_restore(parser_t* parser, parser_state_t state) {
+    parser->pos = state.pos;
+    arena_restore(&parser->storage.arena, state.arena_state);
+    alloc_stack_restore(&parser->storage.allocations, state.allocations_state);
+}
+
 bool match_parser(parser_t* parser, token_type_t pattern, token_t* dst) {
     return (bool)match_parser_sequence(parser, &pattern, dst, 1);
 }
