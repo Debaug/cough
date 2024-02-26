@@ -6,8 +6,8 @@
 #include "scanner/scanner.h"
 #include "ast/parser.h"
 #include "ast/program.h"
-// #include "compiler/compiler.h"
-// #include "vm/vm.h"
+#include "compiler/compiler.h"
+#include "vm/vm.h"
 
 int test_parse(int argc, const char* argv[]) {
     if (argc >= 3) {
@@ -66,8 +66,6 @@ int test_parse(int argc, const char* argv[]) {
     return EXIT_SUCCESS;
 }
 
-#if 0
-
 int test_run(int argc, const char* argv[]) {
     uint32_t instructions[] = {
         [0] =
@@ -108,10 +106,7 @@ int test_run(int argc, const char* argv[]) {
         uint32_t
     );
 
-    bytecode_t bytecode = {
-        .rodata = new_arena(),
-        .instructions = instruction_buf,
-    };
+    bytecode_t bytecode = { .instructions = instruction_buf };
     vm_t vm = new_vm(bytecode);
 
     printf("== PROGRAM OUTPUT ==\n");
@@ -121,10 +116,8 @@ int test_run(int argc, const char* argv[]) {
     return 0;
 }
 
-#endif
-
 int main(int argc, const char* argv[]) {
-#if 1
+#if 0
     return test_parse(argc, argv);
 #else
     return test_run(argc, argv);

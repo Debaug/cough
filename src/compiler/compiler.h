@@ -1,7 +1,6 @@
 #pragma once
 
 #include "util/array.h"
-#include "util/arena.h"
 
 // structure of an instruction:
 // [opcode] [immediate arguments] [register arguments]
@@ -88,5 +87,4 @@ typedef array_buf_t(uint32_t) instruction_buf_t;
 
 typedef struct bytecode {
     instruction_buf_t instructions;
-    arena_t rodata;
 } bytecode_t;

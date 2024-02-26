@@ -56,6 +56,7 @@ parse_error_t parse_function(parser_t* parser, function_t* dst) {
         if (parse_type_name(parser, &return_type_name) != PARSE_SUCCESS) {
             PARSER_ERROR_RESTORE(parser, state);
         }
+        return_type = NAMED_TYPE_UNRESOLVED(return_type_name);
     }
 
     block_t body;

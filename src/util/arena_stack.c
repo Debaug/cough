@@ -7,10 +7,10 @@
 #define ARENA_ALIGNMENT 2048
 
 typedef struct arena {
-    arena_t* previous;
+    dyn_arena_t* previous;
     void* end;
     // data...
-} arena_t;
+} dyn_arena_t;
 
 arena_stack_t new_arena_stack(void) {
     return (arena_stack_t){
@@ -20,16 +20,16 @@ arena_stack_t new_arena_stack(void) {
 
 void free_arena_stack(arena_stack_t stack) {
     while (stack.top != NULL) {
-        arena_t* arena_ptr = stack.top;
+        dyn_arena_t* arena_ptr = stack.top;
         stack.top = arena_ptr->previous;
         free(arena_ptr);
     }
 }
 
 static void push_arena(arena_stack_t* stack) {
-    arena_t* arena = aligned_alloc(ARENA_ALIGNMENT, ARENA_SIZE);
+    dyn_arena_t* arena = aligned_alloc(ARENA_ALIGNMENT, ARENA_SIZE);
     arena->previous = stack->top;
-    arena->end = arena + sizeof(arena_t);
+    arena->end = arena + sizeof(dyn_arena_t);
     stack->top = arena;
 }
 
@@ -68,7 +68,7 @@ arena_stack_state_t arena_stack_snapshot(arena_stack_t stack) {
 
 void arena_stack_restore(arena_stack_t* stack, arena_stack_state_t state) {
     while (stack->top != state.top) {
-        arena_t* top_arena = stack->top;
+        dyn_arena_t* top_arena = stack->top;
         stack->top = top_arena->previous;
         free(top_arena);
     }
