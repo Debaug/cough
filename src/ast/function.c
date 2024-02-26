@@ -84,11 +84,7 @@ void debug_parameter(parameter_t parameter, ast_debugger_t* debugger) {
     ast_debug_end(debugger);
 }
 
-void debug_function(
-    function_t function,
-    ast_storage_t storage,
-    ast_debugger_t* debugger
-) {
+void debug_function(function_t function, ast_debugger_t* debugger) {
     ast_debug_start(debugger, "function");
     ast_debug_key(debugger, "parameters");
 
@@ -104,7 +100,7 @@ void debug_function(
     }
 
     ast_debug_key(debugger, "body");
-    debug_block(function.body, storage, debugger);
+    debug_block(function.body, debugger);
 
     ast_debug_end(debugger);
 }

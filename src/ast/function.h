@@ -26,8 +26,4 @@ typedef struct function {
 
 parse_error_t parse_function(parser_t* parser, function_t* dst);
 
-void debug_function(
-    function_t function,
-    ast_storage_t storage,
-    ast_debugger_t* debugger
-);
+void debug_function(function_t function, ast_debugger_t* debugger);

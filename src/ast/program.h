@@ -28,13 +28,8 @@ typedef struct program {
 
 parse_error_t parse_program(parser_t* parser, program_t* program);
 
-void debug_program(
-    program_t program,
-    ast_storage_t storage,
-    ast_debugger_t* debugger
-);
+void debug_program(program_t program, ast_debugger_t* debugger);
 void debug_item_declaration(
     item_declaration_t item_declaration,
-    ast_storage_t storage,
     ast_debugger_t* debugger
 );

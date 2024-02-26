@@ -41,7 +41,6 @@ parse_error_t parse_program(parser_t* parser, program_t* program) {
 
 void debug_item_declaration(
     item_declaration_t item_declaration,
-    ast_storage_t storage,
     ast_debugger_t* debugger
 ) {
     ast_debug_start(debugger, "item_declaration");
@@ -50,14 +49,13 @@ void debug_item_declaration(
     ast_debug_string_view(debugger, STRING_VIEW(item_declaration.identifier));
 
     ast_debug_key(debugger, "function");
-    debug_function(item_declaration.as.function, storage, debugger);
+    debug_function(item_declaration.as.function, debugger);
 
     ast_debug_end(debugger);
 }
 
 void debug_program(
     program_t program,
-    ast_storage_t storage,
     ast_debugger_t* debugger
 ) {
     ast_debug_start(debugger, "program");
@@ -66,7 +64,6 @@ void debug_program(
     for (size_t i = 0; i < program.item_declarations.len; i++) {
         debug_item_declaration(
             program.item_declarations.data[i],
-            storage,
             debugger
         );
     }

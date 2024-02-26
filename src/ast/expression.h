@@ -20,7 +20,7 @@ typedef enum unary_operator {
 
 typedef struct unary_operation {
     unary_operator_t operator;
-    handle_t /* expression_t */ operand;
+    expression_t* operand;
 } unary_operation_t;
 
 typedef enum binary_operator {
@@ -51,14 +51,14 @@ typedef enum binary_operator {
 
 typedef struct binary_operation {
     binary_operator_t operator;
-    handle_t /* expression_t */ left;
-    handle_t /* expression_t */ right;
+    expression_t* left;
+    expression_t* right;
 } binary_operation_t;
 
 typedef array_buf_t(expression_t) expression_array_buf_t;
 
 typedef struct call {
-    handle_t /* expression_t */ callee;
+    expression_t* callee;
     expression_array_buf_t arguments;
 } call_t;
 
@@ -66,7 +66,7 @@ typedef struct binding {
     bool mutable;
     text_view_t identifier;
     named_type_t type;
-    handle_t /* expression_t */ value;
+    expression_t* value;
 } binding_t;
 
 typedef struct block block_t;
@@ -78,22 +78,22 @@ typedef enum conditional_else_kind {
 } conditional_else_kind_t;
 
 typedef struct conditional {
-    handle_t /* expression_t */ condition;
-    handle_t /* block_t */ body;
+    expression_t* condition;
+    block_t* body;
     conditional_else_kind_t else_kind;
     union {
-        handle_t /* block_t */ block;
-        handle_t /* conditional_t */ conditional;
+        block_t* block;
+        struct conditional* conditional;
     } else_as;
 } conditional_t;
 
 typedef struct loop {
-    handle_t /* block_t */ body;
+    block_t* body;
 } loop_t;
 
 typedef struct while_loop {
-    handle_t /* expression_t */ condition;
-    handle_t /* block_t */ body;
+    expression_t* condition;
+    block_t* body;
 } while_loop_t;
 
 typedef enum expression_kind {
@@ -115,7 +115,7 @@ typedef struct expression {
     union {
         int64_t integer;
         text_view_t variable;
-        handle_t /* block_t */ block;
+        block_t* block;
         unary_operation_t unary_operation;
         binary_operation_t binary_operation;
         call_t call;
@@ -136,48 +136,12 @@ typedef struct block {
 
 parse_error_t parse_block(parser_t* parser, block_t* dst);
 
-void debug_unary_operation(
-    unary_operation_t operation,
-    ast_storage_t storage,
-    ast_debugger_t* debugger
-);
-void debug_binary_operation(
-    binary_operation_t operation,
-    ast_storage_t storage,
-    ast_debugger_t* debugger
-);
-void debug_call(
-    call_t call,
-    ast_storage_t storage,
-    ast_debugger_t* debugger
-);
-void debug_binding(
-    binding_t binding,
-    ast_storage_t storage,
-    ast_debugger_t* debugger
-);
-void debug_block(
-    block_t block,
-    ast_storage_t storage,
-    ast_debugger_t* debugger
-);
-void debug_conditional(
-    conditional_t conditional,
-    ast_storage_t storage,
-    ast_debugger_t* debugger
-);
-void debug_loop(
-    loop_t loop,
-    ast_storage_t storage,
-    ast_debugger_t* debugger
-);
-void debug_while_loop(
-    while_loop_t while_loop,
-    ast_storage_t storage,
-    ast_debugger_t* debugger
-);
-void debug_expression(
-    expression_t expression,
-    ast_storage_t storage,
-    ast_debugger_t* debugger
-);
+void debug_unary_operation(unary_operation_t operation, ast_debugger_t* debugger);
+void debug_binary_operation(binary_operation_t operation, ast_debugger_t* debugger);
+void debug_call(call_t call, ast_debugger_t* debugger);
+void debug_binding(binding_t binding, ast_debugger_t* debugger);
+void debug_block(block_t block, ast_debugger_t* debugger);
+void debug_conditional(conditional_t conditional, ast_debugger_t* debugger);
+void debug_loop(loop_t loop, ast_debugger_t* debugger);
+void debug_while_loop(while_loop_t while_loop, ast_debugger_t* debugger);
+void debug_expression(expression_t expression, ast_debugger_t* debugger);

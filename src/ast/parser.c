@@ -19,14 +19,14 @@ void step_parser_by(parser_t* parser, size_t steps) {
 parser_state_t parser_snapshot(parser_t parser) {
     return (parser_state_t){
         .pos = parser.pos,
-        .arena_state = arena_snapshot(parser.storage.arena),
+        .arena_stack_state = arena_stack_snapshot(parser.storage.arena_stack),
         .allocations_state = alloc_stack_snapshot(parser.storage.allocations)
     };
 }
 
 void parser_restore(parser_t* parser, parser_state_t state) {
     parser->pos = state.pos;
-    arena_restore(&parser->storage.arena, state.arena_state);
+    arena_stack_restore(&parser->storage.arena_stack, state.arena_stack_state);
     alloc_stack_restore(&parser->storage.allocations, state.allocations_state);
 }
 

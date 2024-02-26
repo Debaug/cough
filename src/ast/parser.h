@@ -6,13 +6,15 @@
 
 #include "ast/parse_result.h"
 
-#include "util/arena.h"
+#include "util/arena_stack.h"
 #include "util/alloc_stack.h"
 
 typedef struct ast_storage {
-    arena_t arena;
+    arena_stack_t arena_stack;
     alloc_stack_t allocations;
 } ast_storage_t;
+
+#define ast_box(storage, val) arena_stack_push(&(storage)->arena_stack, val)
 
 typedef struct parser {
     const token_t* tokens;
@@ -28,7 +30,7 @@ void step_parser_by(parser_t* parser, size_t steps);
 
 typedef struct parser_state {
     size_t pos;
-    size_t arena_state;
+    arena_stack_state_t arena_stack_state;
     size_t allocations_state;
 } parser_state_t;
 

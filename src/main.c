@@ -6,8 +6,8 @@
 #include "scanner/scanner.h"
 #include "ast/parser.h"
 #include "ast/program.h"
-#include "compiler/compiler.h"
-#include "vm/vm.h"
+// #include "compiler/compiler.h"
+// #include "vm/vm.h"
 
 int test_parse(int argc, const char* argv[]) {
     if (argc >= 3) {
@@ -57,12 +57,16 @@ int test_parse(int argc, const char* argv[]) {
     }
 
     ast_debugger_t debugger = new_ast_debugger();
-    debug_program(program, parser.storage, &debugger);
+    debug_program(program, &debugger);
 
+    free_arena_stack(parser.storage.arena_stack);
+    free_alloc_stack(parser.storage.allocations);
     free_array_buf(source.text);
 
     return EXIT_SUCCESS;
 }
+
+#if 0
 
 int test_run(int argc, const char* argv[]) {
     uint32_t instructions[] = {
@@ -116,6 +120,8 @@ int test_run(int argc, const char* argv[]) {
     printf("variable stack index: %zu\n", vm.variable_frame_index);
     return 0;
 }
+
+#endif
 
 int main(int argc, const char* argv[]) {
 #if 1

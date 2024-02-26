@@ -164,7 +164,7 @@ parse_call(parser_t* parser, expression_t callee, expression_t* dst) {
     alloc_stack_push(&parser->storage.allocations, arguments.data);
 
     call_t call = {
-        .callee = arena_push(&parser->storage.arena, callee),
+        .callee = ast_box(&parser->storage, callee),
         .arguments = arguments
     };
     *dst = (expression_t){ .kind = EXPRESSION_CALL, .as.call = call };
@@ -185,8 +185,8 @@ parse_index(parser_t* parser, expression_t indexee, expression_t* dst) {
 
     binary_operation_t operation = {
         .operator = OPERATOR_INDEX,
-        .left = arena_push(&parser->storage.arena, indexee),
-        .right = arena_push(&parser->storage.arena, index),
+        .left = ast_box(&parser->storage, indexee),
+        .right = ast_box(&parser->storage, index),
     };
     *dst = (expression_t){
         .kind = EXPRESSION_BINARY_OPERATION,
@@ -243,7 +243,7 @@ parse_prefix(parser_t* parser, expression_t* dst) {
 
     unary_operation_t operation = {
         .operator = operator,
-        .operand = arena_push(&parser->storage.arena, operand),
+        .operand = ast_box(&parser->storage, operand),
     };
     *dst = (expression_t) {
         .kind = EXPRESSION_UNARY_OPERATION,
@@ -335,8 +335,8 @@ parse_infix(parser_t* parser, expression_t lhs, expression_t* dst) {
 
     binary_operation_t operation = {
         .operator = operator,
-        .left = arena_push(&parser->storage.arena, lhs),
-        .right = arena_push(&parser->storage.arena, rhs),
+        .left = ast_box(&parser->storage, lhs),
+        .right = ast_box(&parser->storage, rhs),
     };
     *dst = (expression_t){
         .kind = EXPRESSION_BINARY_OPERATION,
@@ -380,7 +380,7 @@ parse_binding(parser_t* parser, expression_t* dst) {
         .mutable = mutable,
         .identifier = identifier.text,
         .type = type,
-        .value = arena_push(&parser->storage.arena, value),
+        .value = ast_box(&parser->storage, value),
     };
     *dst = (expression_t){ .kind = EXPRESSION_BINDING, .as.binding = binding };
     return PARSE_SUCCESS;
@@ -414,8 +414,7 @@ parse_conditional(parser_t* parser, expression_t* dst) {
                 PARSER_ERROR_RESTORE(parser, state);
             }
             conditional.else_kind = CONDITIONAL_ELSE_BLOCK;
-            conditional.else_as.block =
-                arena_push(&parser->storage.arena, else_block);
+            conditional.else_as.block = ast_box(&parser->storage, else_block);
             break;
 
         case TOKEN_ELIF:
@@ -426,7 +425,7 @@ parse_conditional(parser_t* parser, expression_t* dst) {
             }
             conditional.else_kind = CONDITIONAL_ELSE_CONDITIONAL;
             conditional.else_as.conditional =
-                arena_push(&parser->storage.arena, else_conditional.as.conditional);
+                ast_box(&parser->storage, else_conditional.as.conditional);
             break;
 
         default: goto parse_else_loop_end;
@@ -434,8 +433,8 @@ parse_conditional(parser_t* parser, expression_t* dst) {
     }
 parse_else_loop_end:
 
-    conditional.condition = arena_push(&parser->storage.arena, condition);
-    conditional.body = arena_push(&parser->storage.arena, body);
+    conditional.condition = ast_box(&parser->storage, condition);
+    conditional.body = ast_box(&parser->storage, body);
 
     *dst = (expression_t){
         .kind = EXPRESSION_CONDITIONAL,
@@ -454,7 +453,7 @@ parse_loop(parser_t* parser, expression_t* dst) {
         PARSER_ERROR_RESTORE(parser, state);
     }
 
-    loop_t loop = { .body = arena_push(&parser->storage.arena, body) };
+    loop_t loop = { .body = ast_box(&parser->storage, body) };
     *dst = (expression_t){ .kind = EXPRESSION_LOOP, .as.loop = loop };
     return PARSE_SUCCESS;
 }
@@ -475,8 +474,8 @@ parse_while_loop(parser_t* parser, expression_t* dst) {
     }
 
     while_loop_t while_loop = {
-        .condition = arena_push(&parser->storage.arena, condition),
-        .body = arena_push(&parser->storage.arena, body)
+        .condition = ast_box(&parser->storage, condition),
+        .body = ast_box(&parser->storage, body)
     };
     *dst = (expression_t){
         .kind = EXPRESSION_WHILE_LOOP,
@@ -525,7 +524,7 @@ static parse_error_t parse_expression_precedence(
         error = PARSE_SUCCESS;
         expression = (expression_t){
             .kind = EXPRESSION_BLOCK,
-            .as.block = arena_push(&parser->storage.arena, block)
+            .as.block = ast_box(&parser->storage, block)
         };
         break;
 
@@ -607,11 +606,7 @@ parse_error_t parse_expression(parser_t* parser, expression_t* dst) {
     return parse_expression_precedence(parser, PRECEDENCE_NONE, dst);
 }
 
-void debug_unary_operation(
-    unary_operation_t operation,
-    ast_storage_t storage,
-    ast_debugger_t* debugger
-) {
+void debug_unary_operation(unary_operation_t operation, ast_debugger_t* debugger) {
     ast_debug_start(debugger, "unary_operation");
     ast_debug_key(debugger, "operator");
     switch (operation.operator) {
@@ -621,19 +616,11 @@ void debug_unary_operation(
     case OPERATOR_BREAK: ast_debug_string(debugger, "break"); break;
     }
     ast_debug_key(debugger, "operand");
-    debug_expression(
-        arena_get(storage.arena, operation.operand, expression_t),
-        storage,
-        debugger
-    );
+    debug_expression(*operation.operand, debugger);
     ast_debug_end(debugger);
 }
 
-void debug_binary_operation(
-    binary_operation_t operation,
-    ast_storage_t storage,
-    ast_debugger_t* debugger
-) {
+void debug_binary_operation(binary_operation_t operation, ast_debugger_t* debugger) {
     ast_debug_start(debugger, "binary_operation");
     ast_debug_key(debugger, "operator");
     switch (operation.operator) {
@@ -662,46 +649,26 @@ void debug_binary_operation(
     case OPERATOR_ASSIGN: ast_debug_char(debugger, '='); break;
     }
     ast_debug_key(debugger, "lhs");
-    debug_expression(
-        arena_get(storage.arena, operation.left, expression_t),
-        storage,
-        debugger
-    );
+    debug_expression(*operation.left, debugger);
     ast_debug_key(debugger, "rhs");
-    debug_expression(
-        arena_get(storage.arena, operation.right, expression_t),
-        storage,
-        debugger
-    );
+    debug_expression(*operation.right, debugger);
     ast_debug_end(debugger);
 }
 
-void debug_call(
-    call_t call,
-    ast_storage_t storage,
-    ast_debugger_t* debugger
-) {
+void debug_call(call_t call, ast_debugger_t* debugger) {
     ast_debug_start(debugger, "call");
     ast_debug_key(debugger, "callee");
-    debug_expression(
-        arena_get(storage.arena, call.callee, expression_t),
-        storage,
-        debugger
-    );
+    debug_expression(*call.callee, debugger);
     ast_debug_key(debugger, "arguments");
     ast_debug_start_sequence(debugger);
     for (size_t i = 0; i < call.arguments.len; i++) {
-        debug_expression(call.arguments.data[i], storage, debugger);
+        debug_expression(call.arguments.data[i], debugger);
     }
     ast_debug_end_sequence(debugger);
     ast_debug_end(debugger);
 }
 
-void debug_binding(
-    binding_t binding,
-    ast_storage_t storage,
-    ast_debugger_t* debugger
-) {
+void debug_binding(binding_t binding, ast_debugger_t* debugger) {
     ast_debug_start(debugger, "binding");
     if (binding.mutable) {
         ast_debug_flag(debugger, "mutable");
@@ -711,119 +678,67 @@ void debug_binding(
     ast_debug_key(debugger, "type");
     debug_named_type(binding.type, debugger);
     ast_debug_key(debugger, "value");
-    debug_expression(
-        arena_get(storage.arena, binding.value, expression_t),
-        storage,
-        debugger
-    );
+    debug_expression(*binding.value, debugger);
     ast_debug_end(debugger);
 }
 
-void debug_block(
-    block_t block,
-    ast_storage_t storage,
-    ast_debugger_t* debugger
-) {
+void debug_block(block_t block, ast_debugger_t* debugger) {
     ast_debug_start(debugger, "block");
     ast_debug_key(debugger, "statements");
     ast_debug_start_sequence(debugger);
     for (size_t i = 0; i < block.statements.len; i++) {
-        debug_expression(block.statements.data[i], storage, debugger);
+        debug_expression(block.statements.data[i], debugger);
     }
     ast_debug_end_sequence(debugger);
     if (block.has_tail) {
         ast_debug_key(debugger, "tail");
-        debug_expression(block.tail, storage, debugger);
+        debug_expression(block.tail, debugger);
     }
     ast_debug_end(debugger);
 }
 
-void debug_conditional(
-    conditional_t conditional,
-    ast_storage_t storage,
-    ast_debugger_t* debugger
-) {
+void debug_conditional(conditional_t conditional, ast_debugger_t* debugger) {
     ast_debug_start(debugger, "conditional");
 
     ast_debug_key(debugger, "condition");
-    debug_expression(
-        arena_get(storage.arena, conditional.condition, expression_t),
-        storage,
-        debugger
-    );
+    debug_expression(*conditional.condition, debugger);
 
     ast_debug_key(debugger, "body");
-    debug_block(
-        arena_get(storage.arena, conditional.body, block_t),
-        storage,
-        debugger
-    );
+    debug_block(*conditional.body, debugger);
 
     switch (conditional.else_kind) {
     case CONDITIONAL_ELSE_NONE:
         break;
     case CONDITIONAL_ELSE_BLOCK:
         ast_debug_key(debugger, "else");
-        debug_block(
-            arena_get(storage.arena, conditional.else_as.block, block_t),
-            storage,
-            debugger
-        );
+        debug_block(*conditional.else_as.block, debugger);
         break;
     case CONDITIONAL_ELSE_CONDITIONAL:
         ast_debug_key(debugger, "else");
-        debug_conditional(
-            arena_get(storage.arena, conditional.else_as.conditional, conditional_t),
-            storage,
-            debugger
-        );
+        debug_conditional(*conditional.else_as.conditional, debugger);
         break;
     }
 
     ast_debug_end(debugger);
 }
 
-void debug_loop(
-    loop_t loop,
-    ast_storage_t storage,
-    ast_debugger_t* debugger
-) {
+void debug_loop(loop_t loop, ast_debugger_t* debugger) {
     ast_debug_start(debugger, "loop");
     ast_debug_key(debugger, "body");
-    debug_block(
-        arena_get(storage.arena, loop.body, block_t),
-        storage,
-        debugger
-    );
+    debug_block(*loop.body, debugger);
     ast_debug_end(debugger);
 }
 
-void debug_while_loop(
-    while_loop_t while_loop,
-    ast_storage_t storage,
-    ast_debugger_t* debugger
-) {
+void debug_while_loop(while_loop_t while_loop, ast_debugger_t* debugger) {
     ast_debug_start(debugger, "while_loop");
     ast_debug_key(debugger, "condition");
-    debug_expression(
-        arena_get(storage.arena, while_loop.condition, expression_t),
-        storage,
-        debugger
-    );
+    debug_expression(*while_loop.condition, debugger);
     ast_debug_key(debugger, "body");
-    debug_block(
-        arena_get(storage.arena, while_loop.body, block_t),
-        storage,
-        debugger
-    );
+    debug_block(*while_loop.body, debugger);
     ast_debug_end(debugger);
 }
 
-void debug_expression(
-    expression_t expression,
-    ast_storage_t storage,
-    ast_debugger_t* debugger
-) {
+void debug_expression(expression_t expression, ast_debugger_t* debugger) {
     switch (expression.kind) {
     case EXPRESSION_INTEGER:
         ast_debug_int(debugger, expression.as.integer);
@@ -832,32 +747,28 @@ void debug_expression(
         ast_debug_string_view(debugger, STRING_VIEW(expression.as.variable));
         break;
     case EXPRESSION_BLOCK:
-        debug_block(
-            arena_get(storage.arena, expression.as.block, block_t),
-            storage,
-            debugger
-        );
+        debug_block(*expression.as.block, debugger);
         break;
     case EXPRESSION_UNARY_OPERATION:
-        debug_unary_operation(expression.as.unary_operation, storage, debugger);
+        debug_unary_operation(expression.as.unary_operation,  debugger);
         break;
     case EXPRESSION_BINARY_OPERATION:
-        debug_binary_operation(expression.as.binary_operation, storage, debugger);
+        debug_binary_operation(expression.as.binary_operation,  debugger);
         break;
     case EXPRESSION_CALL:
-        debug_call(expression.as.call, storage, debugger);
+        debug_call(expression.as.call,  debugger);
         break;
     case EXPRESSION_BINDING:
-        debug_binding(expression.as.binding, storage, debugger);
+        debug_binding(expression.as.binding,  debugger);
         break;
     case EXPRESSION_CONDITIONAL:
-        debug_conditional(expression.as.conditional, storage, debugger);
+        debug_conditional(expression.as.conditional,  debugger);
         break;
     case EXPRESSION_LOOP:
-        debug_loop(expression.as.loop, storage, debugger);
+        debug_loop(expression.as.loop,  debugger);
         break;
     case EXPRESSION_WHILE_LOOP:
-        debug_while_loop(expression.as.while_loop, storage, debugger);
+        debug_while_loop(expression.as.while_loop,  debugger);
         break;
     }
 }
