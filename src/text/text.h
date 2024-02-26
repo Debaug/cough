@@ -5,7 +5,6 @@
 
 #include "util/array.h"
 #include "diagnostic/diagnostic.h"
-#include "util/result.h"
 
 typedef struct text_pos {
     size_t line;    // 0-indexed

@@ -18,7 +18,7 @@ void step_scanner(scanner_t* scanner) {
     scanner->text++;
 }
 
-bool is_unary_operator(token_t token) {
+static bool is_unary_operator(token_t token) {
     switch (token.type) {
     case TOKEN_PLUS:
     case TOKEN_MINUS:
@@ -29,13 +29,13 @@ bool is_unary_operator(token_t token) {
     }
 }
 
-scan_result_t scan_string(scanner_t* scanner) {
+static scan_result_t scan_string(scanner_t* scanner, token_t* dst) {
     text_pos_t start = scanner->text_pos;
     const char* text = scanner->text;
     step_scanner(scanner); // '"' character
     while (peek_scanner(*scanner) != '"') {
         if (peek_scanner(*scanner) == '\0') {
-            return RESULT_ERROR(scan_result_t, SCAN_INCOMPLETE_TOKEN);
+            return SCAN_INCOMPLETE_TOKEN;
         }
         if (peek_scanner(*scanner) == '\\') {
             step_scanner(scanner);
@@ -50,11 +50,11 @@ scan_result_t scan_string(scanner_t* scanner) {
         .start = start,
         .end = scanner->text_pos
     };
-    token_t token = { .type = TOKEN_STRING, .text = view };
-    return RESULT_OK(scan_result_t, token);
+    *dst = (token_t){ .type = TOKEN_STRING, .text = view };
+    return SCAN_SUCCESS;
 }
 
-scan_result_t scan_integer(scanner_t* scanner) {
+static scan_result_t scan_integer(scanner_t* scanner, token_t* dst) {
     text_pos_t start = scanner->text_pos;
     const char* text = scanner->text;
 
@@ -71,8 +71,8 @@ scan_result_t scan_integer(scanner_t* scanner) {
         .start = start,
         .end = scanner->text_pos
     };
-    token_t token = { .type = TOKEN_INTEGER, .text = view };
-    return RESULT_OK(scan_result_t, token);
+    *dst = (token_t){ .type = TOKEN_INTEGER, .text = view };
+    return SCAN_SUCCESS;
 }
 
 typedef struct keyword {
@@ -95,7 +95,7 @@ static keyword_t keywords[] = {
     { "return", TOKEN_RETURN },
 };
 
-scan_result_t scan_identifier_or_keyword(scanner_t* scanner) {
+static scan_result_t scan_identifier_or_keyword(scanner_t* scanner, token_t* dst) {
     text_pos_t start = scanner->text_pos;
     const char* text = scanner->text;
     step_scanner(scanner); // first character
@@ -121,10 +121,11 @@ scan_result_t scan_identifier_or_keyword(scanner_t* scanner) {
         }
     }
 
-    return RESULT_OK(scan_result_t, token);
+    *dst = token;
+    return SCAN_SUCCESS;
 }
 
-scan_result_t scan_one(scanner_t* scanner) {
+static scan_result_t scan_one(scanner_t* scanner, token_t* dst) {
     while (isspace(peek_scanner(*scanner))) {
         step_scanner(scanner);
     }
@@ -135,54 +136,51 @@ scan_result_t scan_one(scanner_t* scanner) {
             .start = scanner->text_pos,
             .end = scanner->text_pos,
         };
-        token_t token = { .type = TOKEN_EOF, .text = view };
-        return RESULT_OK(scan_result_t, token);
+        *dst = (token_t){ .type = TOKEN_EOF, .text = view };
+        return SCAN_SUCCESS;
     }
 
     char first_char = peek_scanner(*scanner);
     if (first_char == '"') {
-        return scan_string(scanner);
+        return scan_string(scanner, dst);
     } else if (isdigit(first_char)) {
-        return scan_integer(scanner);
+        return scan_integer(scanner, dst);
     } else if (isalpha(first_char)) {
-        return scan_identifier_or_keyword(scanner);
+        return scan_identifier_or_keyword(scanner, dst);
     } else if (first_char == '-') {
         if (isdigit(scanner->text[1])) {
-            return scan_integer(scanner);
+            return scan_integer(scanner, dst);
         }
-        return scan_punctuation(scanner);
+        return scan_punctuation(scanner, dst);
     } else {
-        return scan_punctuation(scanner);
+        return scan_punctuation(scanner, dst);
     }
 }
+
+static const char* scan_error_messages[] = {
+    [SCAN_UNEXPECTED_CHARACTER] = "unexpected character",
+    [SCAN_INCOMPLETE_TOKEN] = "incomplete token",
+};
 
 token_array_buf_t scan(scanner_t* scanner) {
     token_array_buf_t tokens = new_array_buf(token_t);
     while (true) {
-        scan_result_t result = scan_one(scanner);
+        token_t token;
+        scan_result_t result = scan_one(scanner, &token);
 
-        if (result.is_ok) {
-            array_buf_push(&tokens, result.ok);
-        } else {
-            const char* message;
-            switch (result.error.kind) {
-            case SCAN_UNEXPECTED_CHARACTER:
-                message = "unexpected character";
-                break;
-            case SCAN_INCOMPLETE_TOKEN:
-                message = "incomplete token";
-                break;
-            }
+        if (result != SCAN_SUCCESS) {
             report_error(
                 "%s at %zu:%zu",
-                message,
-                result.error.pos.line + 1,
-                result.error.pos.column + 1
+                scan_error_messages[result],
+                scanner->text_pos.line + 1,
+                scanner->text_pos.column + 1
             );
             step_scanner(scanner);
+            continue;
         }
 
-        if (result.ok.type == TOKEN_EOF) {
+        array_buf_push(&tokens, token);
+        if (token.type == TOKEN_EOF) {
             break;
         }
     }

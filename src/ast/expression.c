@@ -1,6 +1,6 @@
 #include "ast/expression.h"
 
-parse_error_t parse_block(parser_t* parser, block_t* dst) {
+parse_result_t parse_block(parser_t* parser, block_t* dst) {
     parser_state_t state = parser_snapshot(*parser);
 
     if (!match_parser(parser, TOKEN_LEFT_BRACE, NULL)) {
@@ -92,7 +92,7 @@ static precedence_t next_precedence(precedence_t precedence) {
     return precedence + 1;
 }
 
-static parse_error_t parse_integer(parser_t* parser, expression_t* dst) {
+static parse_result_t parse_integer(parser_t* parser, expression_t* dst) {
     parser_state_t state = parser_snapshot(*parser);
 
     // first token is integer when called
@@ -130,7 +130,7 @@ static parse_error_t parse_integer(parser_t* parser, expression_t* dst) {
     return PARSE_SUCCESS;
 }
 
-static parse_error_t parse_variable(parser_t* parser, expression_t* dst) {
+static parse_result_t parse_variable(parser_t* parser, expression_t* dst) {
     // when called, first token is an identifier
     text_view_t identifier = peek_parser(*parser).text;
     step_parser(parser);
@@ -138,7 +138,7 @@ static parse_error_t parse_variable(parser_t* parser, expression_t* dst) {
     return PARSE_SUCCESS;
 }
 
-static parse_error_t
+static parse_result_t
 parse_call(parser_t* parser, expression_t callee, expression_t* dst) {
     parser_state_t state = parser_snapshot(*parser);
     step_parser(parser); // skip "("
@@ -171,7 +171,7 @@ parse_call(parser_t* parser, expression_t callee, expression_t* dst) {
     return PARSE_SUCCESS;
 }
 
-static parse_error_t
+static parse_result_t
 parse_index(parser_t* parser, expression_t indexee, expression_t* dst) {
     parser_state_t state = parser_snapshot(*parser);
     step_parser(parser); // skip "["
@@ -216,13 +216,13 @@ static precedence_t prefix_operator_precedence(unary_operator_t operator) {
     }
 }
 
-static parse_error_t parse_expression_precedence(
+static parse_result_t parse_expression_precedence(
     parser_t* super_parser,
     precedence_t precedence,
     expression_t* dst
 );
 
-static parse_error_t
+static parse_result_t
 parse_prefix(parser_t* parser, expression_t* dst) {
     parser_state_t state = parser_snapshot(*parser);
 
@@ -315,7 +315,7 @@ static precedence_t infix_operator_precedence(binary_operator_t operator) {
     }
 }
 
-static parse_error_t
+static parse_result_t
 parse_infix(parser_t* parser, expression_t lhs, expression_t* dst) {
     parser_state_t state = parser_snapshot(*parser);
 
@@ -345,7 +345,7 @@ parse_infix(parser_t* parser, expression_t lhs, expression_t* dst) {
     return PARSE_SUCCESS;
 }
 
-static parse_error_t
+static parse_result_t
 parse_binding(parser_t* parser, expression_t* dst) {
     parser_state_t state = parser_snapshot(*parser);
     step_parser(parser); // skip "let"
@@ -386,7 +386,7 @@ parse_binding(parser_t* parser, expression_t* dst) {
     return PARSE_SUCCESS;
 }
 
-static parse_error_t
+static parse_result_t
 parse_conditional(parser_t* parser, expression_t* dst) {
     parser_state_t state = parser_snapshot(*parser);
     step_parser(parser); // skip "if" or "elif"
@@ -443,7 +443,7 @@ parse_else_loop_end:
     return PARSE_SUCCESS;
 }
 
-static parse_error_t
+static parse_result_t
 parse_loop(parser_t* parser, expression_t* dst) {
     parser_state_t state = parser_snapshot(*parser);
     step_parser(parser); // skip "loop"
@@ -458,7 +458,7 @@ parse_loop(parser_t* parser, expression_t* dst) {
     return PARSE_SUCCESS;
 }
 
-static parse_error_t
+static parse_result_t
 parse_while_loop(parser_t* parser, expression_t* dst) {
     parser_state_t state = parser_snapshot(*parser);
     step_parser(parser); // skip "while"
@@ -484,13 +484,13 @@ parse_while_loop(parser_t* parser, expression_t* dst) {
     return PARSE_SUCCESS;
 }
 
-static parse_error_t parse_expression_precedence(
+static parse_result_t parse_expression_precedence(
     parser_t* parser,
     precedence_t precedence,
     expression_t* dst
 ) {
     parser_state_t state = parser_snapshot(*parser);
-    parse_error_t error = PARSE_ERROR;
+    parse_result_t error = PARSE_ERROR;
     expression_t expression;
 
     unary_operator_t unary_operator = as_prefix_operator(peek_parser(*parser));
@@ -602,7 +602,7 @@ parse_call_or_index_loop_end:
     return PARSE_SUCCESS;
 }
 
-parse_error_t parse_expression(parser_t* parser, expression_t* dst) {
+parse_result_t parse_expression(parser_t* parser, expression_t* dst) {
     return parse_expression_precedence(parser, PRECEDENCE_NONE, dst);
 }
 

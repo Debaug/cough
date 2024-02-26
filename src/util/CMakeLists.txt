@@ -1,5 +1,4 @@
 target_sources(cough PRIVATE
-    result.h
     alloc.h
     array.h array.c
     alloc_stack.h alloc_stack.c

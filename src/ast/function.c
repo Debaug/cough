@@ -1,6 +1,6 @@
 #include "ast/function.h"
 
-parse_error_t parse_parameter(parser_t* parser, parameter_t* dst) {
+parse_result_t parse_parameter(parser_t* parser, parameter_t* dst) {
     parser_state_t state = parser_snapshot(*parser);
 
     token_t identifier;
@@ -22,7 +22,7 @@ parse_error_t parse_parameter(parser_t* parser, parameter_t* dst) {
     return PARSE_SUCCESS;
 }
 
-parse_error_t parse_function(parser_t* parser, function_t* dst) {
+parse_result_t parse_function(parser_t* parser, function_t* dst) {
     parser_state_t state = parser_snapshot(*parser);
 
     token_type_t start_pattern[2] = { TOKEN_FN, TOKEN_LEFT_PAREN };

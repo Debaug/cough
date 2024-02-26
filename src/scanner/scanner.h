@@ -4,7 +4,6 @@
 
 #include "text/text.h"
 #include "util/array.h"
-#include "util/result.h"
 
 typedef enum token_type {
     TOKEN_LEFT_PAREN,
@@ -74,25 +73,14 @@ typedef struct scanner {
 
 typedef array_buf_t(token_t) token_array_buf_t;
 
-typedef enum scan_error_kind {
+typedef enum scan_result {
+    SCAN_SUCCESS,
     SCAN_UNEXPECTED_CHARACTER,
     SCAN_INCOMPLETE_TOKEN,
-} scan_error_kind_t;
-
-typedef struct scan_error {
-    scan_error_kind_t kind;
-    text_pos_t pos;
-} scan_error_t;
-
-DEFINE_RESULT(scan_result, token_t, scan_error_t);
+} scan_result_t;
 
 scanner_t new_scanner(const char* text);
 char peek_scanner(scanner_t scanner);
 void step_scanner(scanner_t* scanner);
-
-scan_result_t scan_string(scanner_t* scanner);
-scan_result_t scan_integer(scanner_t* scanner);
-scan_result_t scan_identifier_or_keyword(scanner_t* scanner);
-scan_result_t scan_punctuation(scanner_t* scanner);
-scan_result_t scan_one(scanner_t* scanner);
+scan_result_t scan_punctuation(scanner_t* scanner, token_t* dst);
 token_array_buf_t scan(scanner_t* scanner);

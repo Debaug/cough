@@ -1,7 +1,7 @@
 #include "ast/program.h"
 #include "ast/debug.h"
 
-parse_error_t parse_item_declaration(parser_t* parser, item_declaration_t* dst) {
+parse_result_t parse_item_declaration(parser_t* parser, item_declaration_t* dst) {
     parser_state_t state = parser_snapshot(*parser);
 
     token_t identifier;
@@ -25,7 +25,7 @@ parse_error_t parse_item_declaration(parser_t* parser, item_declaration_t* dst) 
     return PARSE_SUCCESS;
 }
 
-parse_error_t parse_program(parser_t* parser, program_t* program) {
+parse_result_t parse_program(parser_t* parser, program_t* program) {
     item_declaration_array_buf_t item_declarations = new_array_buf(item_declaration_t);
     while (!parser_is_eof(*parser)) {
         item_declaration_t item_declaration;

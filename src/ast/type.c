@@ -1,6 +1,6 @@
 #include "ast/type.h"
 
-parse_error_t parse_type_name(parser_t* parser, type_name_t* dst) {
+parse_result_t parse_type_name(parser_t* parser, type_name_t* dst) {
     token_t identifier;
     if (!match_parser(parser, TOKEN_IDENTIFIER, &identifier)) {
         return PARSE_ERROR;

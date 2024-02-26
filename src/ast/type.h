@@ -3,7 +3,6 @@
 #include <stddef.h>
 
 #include "text/text.h"
-#include "ast/parse_result.h"
 #include "ast/parser.h"
 #include "ast/debug.h"
 
@@ -29,7 +28,7 @@ typedef struct type_name {
     } as;
 } type_name_t;
 
-parse_error_t parse_type_name(parser_t* parser, type_name_t* dst);
+parse_result_t parse_type_name(parser_t* parser, type_name_t* dst);
 
 typedef struct named_type {
     type_t type;

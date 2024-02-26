@@ -48,7 +48,7 @@ def main():
 
 #include "scanner/scanner.h"
 
-scan_result_t scan_punctuation(scanner_t* scanner) {
+scan_result_t scan_punctuation(scanner_t* scanner, token_t* dst) {
     bool error = false;
     token_type_t type;
     text_pos_t start = scanner->text_pos;
@@ -59,11 +59,7 @@ scan_result_t scan_punctuation(scanner_t* scanner) {
 
     string += """
     if (error) {
-        scan_error_t error = {
-            .kind = SCAN_UNEXPECTED_CHARACTER,
-            .pos = scanner->text_pos,
-        };
-        return RESULT_ERROR(scan_result_t, error);
+        return SCAN_UNEXPECTED_CHARACTER;
     } else {
         text_view_t view = {
             .ptr = text,
@@ -71,8 +67,8 @@ scan_result_t scan_punctuation(scanner_t* scanner) {
             .start = start,
             .end = scanner->text_pos,
         };
-        token_t token = { .type = type, .text = view };
-        return RESULT_OK(scan_result_t, token);
+        *dst = (token_t){ .type = type, .text = view };
+        return SCAN_SUCCESS;
     }
 }"""
 

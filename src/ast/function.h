@@ -1,7 +1,6 @@
 #pragma once
 
 #include "ast/parser.h"
-#include "ast/parse_result.h"
 #include "ast/type.h"
 #include "ast/expression.h"
 #include "ast/debug.h"
@@ -11,7 +10,7 @@ typedef struct parameter {
     named_type_t type;
 } parameter_t;
 
-parse_error_t parse_parameter(parser_t* parser, parameter_t* dst);
+parse_result_t parse_parameter(parser_t* parser, parameter_t* dst);
 
 void debug_parameter(parameter_t parameter, ast_debugger_t* debugger);
 
@@ -24,6 +23,6 @@ typedef struct function {
     block_t body;
 } function_t;
 
-parse_error_t parse_function(parser_t* parser, function_t* dst);
+parse_result_t parse_function(parser_t* parser, function_t* dst);
 
 void debug_function(function_t function, ast_debugger_t* debugger);

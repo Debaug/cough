@@ -4,8 +4,6 @@
 
 #include "scanner/scanner.h"
 
-#include "ast/parse_result.h"
-
 #include "util/arena_stack.h"
 #include "util/alloc_stack.h"
 
@@ -15,6 +13,11 @@ typedef struct ast_storage {
 } ast_storage_t;
 
 #define ast_box(storage, val) arena_stack_push(&(storage)->arena_stack, val)
+
+typedef enum parse_result {
+    PARSE_SUCCESS,
+    PARSE_ERROR,
+} parse_result_t;
 
 typedef struct parser {
     const token_t* tokens;

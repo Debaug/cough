@@ -117,7 +117,7 @@ int test_run(int argc, const char* argv[]) {
 }
 
 int main(int argc, const char* argv[]) {
-#if 0
+#if 1
     return test_parse(argc, argv);
 #else
     return test_run(argc, argv);
