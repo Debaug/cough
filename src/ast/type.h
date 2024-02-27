@@ -15,8 +15,6 @@ typedef size_t type_t;
 #define TYPE_INT ((type_t)2)
 #define TYPE_FLOAT ((type_t)3)
 
-void debug_type(type_t type, ast_debugger_t* debugger);
-
 typedef enum type_name_kind {
     TYPE_NAME_IDENTIFIER,
 } type_name_kind_t;
@@ -28,8 +26,6 @@ typedef struct type_name {
     } as;
 } type_name_t;
 
-parse_result_t parse_type_name(parser_t* parser, type_name_t* dst);
-
 typedef struct named_type {
     type_t type;
     type_name_t name;
@@ -38,4 +34,7 @@ typedef struct named_type {
 #define NAMED_TYPE_UNRESOLVED(name_) \
     (named_type_t){ .name = name_, .type = TYPE_UNRESOLVED}
 
+parse_result_t parse_type_name(parser_t* parser, type_name_t* dst);
+
+void debug_type(type_t type, ast_debugger_t* debugger);
 void debug_named_type(named_type_t type, ast_debugger_t* debugger);

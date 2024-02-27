@@ -47,7 +47,7 @@ parse_result_t parse_function(parser_t* parser, function_t* dst) {
             break;
         }
     }
-    alloc_stack_push(&parser->storage.alloc_stack, parameters.data);
+    ast_push_alloc(&parser->storage, parameters.data);
 
     bool has_return_type = match_parser(parser, TOKEN_RIGHT_ARROW, NULL);
     named_type_t return_type = {0};

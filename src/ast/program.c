@@ -30,11 +30,12 @@ parse_result_t parse_program(parser_t* parser, program_t* program) {
     while (!parser_is_eof(*parser)) {
         item_declaration_t item_declaration;
         if (parse_item_declaration(parser, &item_declaration) != PARSE_SUCCESS) {
+            free_array_buf(item_declarations);
             return PARSE_ERROR;
         }
         array_buf_push(&item_declarations, item_declaration);
     }
-    alloc_stack_push(&parser->storage.alloc_stack, item_declarations.data);
+    ast_push_alloc(&parser->storage, item_declarations.data);
     *program = (program_t){ .item_declarations = item_declarations };
     return PARSE_SUCCESS;
 }
