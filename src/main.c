@@ -3,9 +3,8 @@
 
 #include "text/text.h"
 #include "diagnostic/diagnostic.h"
-#include "scanner/scanner.h"
+#include "tokens/scanner.h"
 #include "ast/ast.h"
-#include "ast/program.h"
 #include "compiler/compiler.h"
 #include "vm/vm.h"
 

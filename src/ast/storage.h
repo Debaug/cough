@@ -9,7 +9,7 @@ typedef struct ast_storage {
 } ast_storage_t;
 
 #define ast_box(storage, val) arena_stack_push(&(storage)->arena_stack, val)
-#define ast_push_alloc(storage, val) ast_push_alloc(&(storage)->alloc_stack, val)
+#define ast_push_alloc(storage, val) alloc_stack_push(&(storage)->alloc_stack, val)
 
 ast_storage_t new_ast_storage(void);
 void free_ast_storage(ast_storage_t storage);

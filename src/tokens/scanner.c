@@ -3,7 +3,7 @@
 #include <stdbool.h>
 #include <string.h>
 
-#include "scanner/scanner.h"
+#include "tokens/scanner.h"
 
 scanner_t new_scanner(const char* text) {
     return (scanner_t){ .text = text, .text_pos = {0} };

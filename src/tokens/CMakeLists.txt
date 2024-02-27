@@ -8,5 +8,9 @@ add_custom_command(
 )
 add_custom_target(scan_exact_chars DEPENDS scan_exact_chars.c)
 
-target_sources(cough PRIVATE scanner.h scanner.c ${CMAKE_CURRENT_BINARY_DIR}/scan_exact_chars.c)
+target_sources(cough PRIVATE
+    token.h
+    scanner.h scanner.c
+    ${CMAKE_CURRENT_BINARY_DIR}/scan_exact_chars.c
+)
 add_dependencies(cough scan_exact_chars)

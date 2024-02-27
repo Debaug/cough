@@ -2,9 +2,7 @@
 
 #include <stdbool.h>
 
-#include "alloc/arena_stack.h"
-#include "alloc/alloc_stack.h"
-#include "scanner/scanner.h"
+#include "tokens/scanner.h"
 #include "ast/storage.h"
 
 typedef struct parser {
