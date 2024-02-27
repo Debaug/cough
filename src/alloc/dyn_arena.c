@@ -1,5 +1,5 @@
-#include "util/dyn_arena.h"
-#include "util/array.h"
+#include "alloc/dyn_arena.h"
+#include "alloc/array.h"
 
 dyn_arena_t new_dyn_arena(void) {
     return (dyn_arena_t){ .data = NULL, .end = 0, .capacity = 0 };

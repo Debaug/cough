@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <limits.h>
 
-#include "util/array.h"
+#include "alloc/array.h"
 #include "diagnostic/diagnostic.h"
 
 typedef struct text_pos {

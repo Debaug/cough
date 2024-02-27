@@ -4,7 +4,7 @@
 #include "ast/parser.h"
 #include "ast/debug.h"
 
-#include "util/array.h"
+#include "alloc/array.h"
 
 typedef enum item_declaration_kind {
     FUNCTION_DECLARATION,
@@ -18,13 +18,12 @@ typedef struct item_declaration {
     } as;
 } item_declaration_t;
 
-parse_result_t parse_item_declaration(parser_t* parser, item_declaration_t* dst);
-
 typedef array_buf_t(item_declaration_t) item_declaration_array_buf_t;
 typedef struct program {
     item_declaration_array_buf_t item_declarations;
 } program_t;
 
+parse_result_t parse_item_declaration(parser_t* parser, item_declaration_t* dst);
 parse_result_t parse_program(parser_t* parser, program_t* program);
 
 void debug_program(program_t program, ast_debugger_t* debugger);

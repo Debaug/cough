@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <stdalign.h>
 
-#include "util/alloc.h"
+#include "alloc/alloc.h"
 
 typedef struct arena dyn_arena_t;
 

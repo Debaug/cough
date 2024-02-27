@@ -1,6 +1,6 @@
 #pragma once
 
-#include "util/array.h"
+#include "alloc/array.h"
 #include "compiler/compiler.h"
 #include "ast/type.h"
 

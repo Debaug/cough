@@ -1,6 +1,10 @@
 target_sources(cough PRIVATE
-    debug.h debug.c
     parser.h parser.c
+    debug.h debug.c
+
+    storage.h
+    storage.c
+    ast.h ast.c
     type.h type.c
     program.h program.c
     function.h function.c

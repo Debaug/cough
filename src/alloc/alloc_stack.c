@@ -1,4 +1,4 @@
-#include "util/alloc_stack.h"
+#include "alloc/alloc_stack.h"
 
 alloc_stack_t new_alloc_stack(void) {
     return (alloc_stack_t){ .allocations = new_array_buf(pointer_t) };

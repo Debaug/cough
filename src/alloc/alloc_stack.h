@@ -1,6 +1,6 @@
 #pragma once
 
-#include "util/array.h"
+#include "alloc/array.h"
 
 typedef void* pointer_t;
 typedef array_buf_t(pointer_t) pointer_array_buf_t;

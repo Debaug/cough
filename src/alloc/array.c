@@ -2,7 +2,7 @@
 #include <stdbool.h>
 #include <errno.h>
 
-#include "util/array.h"
+#include "alloc/array.h"
 #include "diagnostic/diagnostic.h"
 
 void raw_array_buf_reserve(

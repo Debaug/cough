@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "util/array.h"
+#include "alloc/array.h"
 
 typedef struct ast_debugger {
     unsigned int depth;

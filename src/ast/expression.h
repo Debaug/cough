@@ -6,7 +6,7 @@
 #include "ast/parser.h"
 #include "ast/debug.h"
 #include "ast/type.h"
-#include "util/array.h"
+#include "alloc/array.h"
 
 typedef struct expression expression_t;
 
@@ -125,14 +125,13 @@ typedef struct expression {
     } as;
 } expression_t;
 
-parse_result_t parse_expression(parser_t* parser, expression_t* dst);
-
 typedef struct block {
     expression_array_buf_t statements;
     bool has_tail : 1;
     expression_t tail;
 } block_t;
 
+parse_result_t parse_expression(parser_t* parser, expression_t* dst);
 parse_result_t parse_block(parser_t* parser, block_t* dst);
 
 void debug_unary_operation(unary_operation_t operation, ast_debugger_t* debugger);

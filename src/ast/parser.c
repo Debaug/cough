@@ -1,7 +1,7 @@
 #include "ast/parser.h"
 
 parser_t new_parser(const token_t* tokens) {
-    return (parser_t){ .tokens = tokens, .pos = 0 };
+    return (parser_t){ .tokens = tokens, .pos = 0, .storage = new_ast_storage() };
 }
 
 token_t peek_parser(parser_t parser) {
@@ -20,14 +20,14 @@ parser_state_t parser_snapshot(parser_t parser) {
     return (parser_state_t){
         .pos = parser.pos,
         .arena_stack_state = arena_stack_snapshot(parser.storage.arena_stack),
-        .allocations_state = alloc_stack_snapshot(parser.storage.allocations)
+        .allocations_state = alloc_stack_snapshot(parser.storage.alloc_stack)
     };
 }
 
 void parser_restore(parser_t* parser, parser_state_t state) {
     parser->pos = state.pos;
     arena_stack_restore(&parser->storage.arena_stack, state.arena_stack_state);
-    alloc_stack_restore(&parser->storage.allocations, state.allocations_state);
+    alloc_stack_restore(&parser->storage.alloc_stack, state.allocations_state);
 }
 
 bool match_parser(parser_t* parser, token_type_t pattern, token_t* dst) {

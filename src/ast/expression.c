@@ -43,7 +43,7 @@ parse_result_t parse_block(parser_t* parser, block_t* dst) {
         has_tail = true;
         tail = expression;
     }
-    alloc_stack_push(&parser->storage.allocations, statements.data);
+    alloc_stack_push(&parser->storage.alloc_stack, statements.data);
 
     *dst = (block_t){
         .statements = statements,
@@ -161,7 +161,7 @@ parse_call(parser_t* parser, expression_t callee, expression_t* dst) {
             break;
         }
     }
-    alloc_stack_push(&parser->storage.allocations, arguments.data);
+    alloc_stack_push(&parser->storage.alloc_stack, arguments.data);
 
     call_t call = {
         .callee = ast_box(&parser->storage, callee),

@@ -1,6 +1,6 @@
 #include <string.h>
 
-#include "util/arena_stack.h"
+#include "alloc/arena_stack.h"
 
 // should fit in a page
 #define ARENA_SIZE 2048

@@ -3,7 +3,7 @@
 #include <stdbool.h>
 
 #include "text/text.h"
-#include "util/array.h"
+#include "alloc/array.h"
 
 typedef enum token_type {
     TOKEN_LEFT_PAREN,

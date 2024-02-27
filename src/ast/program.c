@@ -34,7 +34,7 @@ parse_result_t parse_program(parser_t* parser, program_t* program) {
         }
         array_buf_push(&item_declarations, item_declaration);
     }
-    alloc_stack_push(&parser->storage.allocations, item_declarations.data);
+    alloc_stack_push(&parser->storage.alloc_stack, item_declarations.data);
     *program = (program_t){ .item_declarations = item_declarations };
     return PARSE_SUCCESS;
 }

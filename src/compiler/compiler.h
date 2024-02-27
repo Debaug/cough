@@ -1,6 +1,6 @@
 #pragma once
 
-#include "util/array.h"
+#include "alloc/array.h"
 
 // structure of an instruction:
 // [opcode] [immediate arguments] [register arguments]
