@@ -1,7 +1,6 @@
 #pragma once
 
 #include "text/text.h"
-#include "ast/function.h"
 #include "ast/type.h"
 
 typedef enum symbol_kind {
@@ -9,6 +8,8 @@ typedef enum symbol_kind {
     SYMBOL_FUNCTION,
     SYMBOL_VARIABLE,
 } symbol_kind_t;
+
+typedef struct function function_t;
 
 typedef struct symbol {
     text_view_t name;

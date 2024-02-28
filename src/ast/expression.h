@@ -4,6 +4,7 @@
 #include <stdbool.h>
 
 #include "ast/parser.h"
+#include "ast/analyzer.h"
 #include "ast/debug.h"
 #include "ast/type.h"
 #include "alloc/array.h"
@@ -129,6 +130,7 @@ typedef struct block {
     expression_array_buf_t statements;
     bool has_tail : 1;
     expression_t tail;
+    scope_t* scope;
 } block_t;
 
 parse_result_t parse_expression(parser_t* parser, expression_t* dst);

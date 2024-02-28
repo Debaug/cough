@@ -48,7 +48,8 @@ parse_result_t parse_block(parser_t* parser, block_t* dst) {
     *dst = (block_t){
         .statements = statements,
         .has_tail = has_tail,
-        .tail = tail
+        .tail = tail,
+        .scope = NULL,
     };
     return PARSE_SUCCESS;
 }
