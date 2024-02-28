@@ -1,27 +1,5 @@
 #include "ast/function.h"
 
-parse_result_t parse_parameter(parser_t* parser, parameter_t* dst) {
-    parser_state_t state = parser_snapshot(*parser);
-
-    token_t identifier;
-    if (!match_parser(parser, TOKEN_IDENTIFIER, &identifier)) {
-        PARSER_ERROR_RESTORE(parser, state);
-    }
-
-    if (!match_parser(parser, TOKEN_COLON, NULL)) {
-        PARSER_ERROR_RESTORE(parser, state);
-    }
-
-    type_name_t type_name;
-    if (parse_type_name(parser, &type_name) != PARSE_SUCCESS) {
-        PARSER_ERROR_RESTORE(parser, state);
-    }
-
-    named_type_t type = NAMED_TYPE_UNRESOLVED(type_name);
-    *dst = (parameter_t){ .identifier = identifier.text, .type = type };
-    return PARSE_SUCCESS;
-}
-
 parse_result_t parse_function(parser_t* parser, function_t* dst) {
     parser_state_t state = parser_snapshot(*parser);
 
@@ -30,10 +8,10 @@ parse_result_t parse_function(parser_t* parser, function_t* dst) {
         PARSER_ERROR_RESTORE(parser, state);
     }
 
-    parameter_array_buf_t parameters = new_array_buf(parameter_t);
+    variable_array_buf_t parameters = new_array_buf(variable_t);
     while (!match_parser(parser, TOKEN_RIGHT_PAREN, NULL)) {
-        parameter_t parameter;
-        if (parse_parameter(parser, &parameter) != PARSE_SUCCESS) {
+        variable_t parameter;
+        if (parse_variable(parser, &parameter) != PARSE_SUCCESS) {
             free_array_buf(parameters);
             PARSER_ERROR_RESTORE(parser, state);
         }
@@ -52,11 +30,9 @@ parse_result_t parse_function(parser_t* parser, function_t* dst) {
     bool has_return_type = match_parser(parser, TOKEN_RIGHT_ARROW, NULL);
     named_type_t return_type = {0};
     if (has_return_type) {
-        type_name_t return_type_name;
-        if (parse_type_name(parser, &return_type_name) != PARSE_SUCCESS) {
+        if (parse_type_name(parser, &return_type) != PARSE_SUCCESS) {
             PARSER_ERROR_RESTORE(parser, state);
         }
-        return_type = NAMED_TYPE_UNRESOLVED(return_type_name);
     }
 
     block_t body;
@@ -73,25 +49,13 @@ parse_result_t parse_function(parser_t* parser, function_t* dst) {
     return PARSE_SUCCESS;
 }
 
-void debug_parameter(parameter_t parameter, ast_debugger_t* debugger) {
-    ast_debug_start(debugger, "parameter");
-
-    ast_debug_key(debugger, "identifier");
-    ast_debug_string_view(debugger, STRING_VIEW(parameter.identifier));
-
-    ast_debug_key(debugger, "type");
-    debug_named_type(parameter.type, debugger);
-
-    ast_debug_end(debugger);
-}
-
 void debug_function(function_t function, ast_debugger_t* debugger) {
     ast_debug_start(debugger, "function");
     ast_debug_key(debugger, "parameters");
 
     ast_debug_start_sequence(debugger);
     for (size_t i = 0; i < function.parameters.len; i++) {
-        debug_parameter(function.parameters.data[i], debugger);
+        debug_variable(function.parameters.data[i], debugger);
     }
     ast_debug_end_sequence(debugger);
 

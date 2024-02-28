@@ -43,6 +43,8 @@ typedef enum token_type {
     TOKEN_IDENTIFIER,
 
     TOKEN_MUT,
+    TOKEN_STRUCT,
+    TOKEN_VARIANT,
     TOKEN_FN,
     TOKEN_AND,
     TOKEN_OR,

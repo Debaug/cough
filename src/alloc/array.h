@@ -11,13 +11,12 @@
     size_t capacity_bytes;                      \
 }
 
-#define new_array_buf(T) (      \
-    (struct array_buf__ ## T) { \
-        .data = NULL,           \
-        .len = 0,               \
-        .capacity_bytes = 0     \
-    }                           \
-)
+#define new_array_buf(...)                              \
+    __VA_OPT__((struct array_buf__ ## __VA_ARGS__)) {   \
+        .data = NULL,                                   \
+        .len = 0,                                       \
+        .capacity_bytes = 0                             \
+    }
 
 #define free_array_buf(array) free((array).data)
 
@@ -89,10 +88,10 @@ void raw_array_buf_pop(
 typedef array_buf_t(char) string_buf_t;
 
 typedef struct string_view {
-    const char* ptr;
+    const char* data;
     size_t len;
 } string_view_t;
 
-#define STRING_VIEW(src) (string_view_t){ .ptr = src.ptr, .len = src.len }
+#define STRING_VIEW(src) (string_view_t){ .data = src.data, .len = src.len }
 
 errno_t read_file(FILE* file, string_buf_t* dst);

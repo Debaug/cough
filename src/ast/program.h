@@ -7,14 +7,17 @@
 #include "alloc/array.h"
 
 typedef enum item_declaration_kind {
-    FUNCTION_DECLARATION,
-} top_declaration_kind_t;
+    ITEM_FUNCTION,
+    ITEM_STRUCT,
+    ITEM_VARIANT,
+} item_declaration_kind_t;
 
 typedef struct item_declaration {
     text_view_t identifier;
-    top_declaration_kind_t kind;
+    item_declaration_kind_t kind;
     union {
         function_t function;
+        composite_type_t composite;
     } as;
 } item_declaration_t;
 

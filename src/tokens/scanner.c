@@ -45,7 +45,7 @@ static scan_result_t scan_string(scanner_t* scanner, token_t* dst) {
         }
     }
     text_view_t view = {
-        .ptr = text,
+        .data = text,
         .len = scanner->text - text,
         .start = start,
         .end = scanner->text_pos
@@ -66,7 +66,7 @@ static scan_result_t scan_integer(scanner_t* scanner, token_t* dst) {
         step_scanner(scanner);
     }
     text_view_t view = {
-        .ptr = text,
+        .data = text,
         .len = scanner->text - text,
         .start = start,
         .end = scanner->text_pos
@@ -82,6 +82,8 @@ typedef struct keyword {
 
 static keyword_t keywords[] = {
     { "mut", TOKEN_MUT },
+    { "struct", TOKEN_STRUCT },
+    { "variant", TOKEN_VARIANT },
     { "fn", TOKEN_FN },
     { "and", TOKEN_AND },
     { "or", TOKEN_OR },
@@ -103,7 +105,7 @@ static scan_result_t scan_identifier_or_keyword(scanner_t* scanner, token_t* dst
         step_scanner(scanner);
     }
     text_view_t view = {
-        .ptr = text,
+        .data = text,
         .len = scanner->text - text,
         .start = start,
         .end = scanner->text_pos,
@@ -115,7 +117,7 @@ static scan_result_t scan_identifier_or_keyword(scanner_t* scanner, token_t* dst
         if (strlen(keyword.text) != view.len) {
             continue;
         }
-        if (strncmp(keyword.text, view.ptr, view.len) == 0) {
+        if (strncmp(keyword.text, view.data, view.len) == 0) {
             token.type = keyword.token_type;
             break;
         }
@@ -131,7 +133,7 @@ static scan_result_t scan_one(scanner_t* scanner, token_t* dst) {
     }
     if (peek_scanner(*scanner) == '\0') {
         text_view_t view = {
-            .ptr = scanner->text,
+            .data = scanner->text,
             .len = 0,
             .start = scanner->text_pos,
             .end = scanner->text_pos,

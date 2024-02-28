@@ -5,36 +5,50 @@
 #include "text/text.h"
 #include "ast/parser.h"
 #include "ast/debug.h"
+#include "alloc/array.h"
 
-typedef size_t type_t;
-#define TYPE_UNRESOLVED ((type_t)(-1))
+typedef struct composite_type composite_type_t;
 
-// primitive types
-#define TYPE_UNIT ((type_t)0)
-#define TYPE_BOOL ((type_t)1)
-#define TYPE_INT ((type_t)2)
-#define TYPE_FLOAT ((type_t)3)
+typedef enum element_type_kind {
+    TYPE_NEVER,
+    TYPE_UNIT,
+    TYPE_BOOL,
+    TYPE_INT,
+    TYPE_FLOAT,
+    TYPE_STRUCT,
+    TYPE_VARIANT,
+} element_type_kind_t;
 
-typedef enum type_name_kind {
-    TYPE_NAME_IDENTIFIER,
-} type_name_kind_t;
-
-typedef struct type_name {
-    type_name_kind_t kind;
+typedef struct element_type {
+    element_type_kind_t kind;
     union {
-        text_view_t identifier;
+        composite_type_t* composite;
     } as;
-} type_name_t;
+} element_type_t;
 
 typedef struct named_type {
-    type_t type;
-    type_name_t name;
+    size_t array_depth;
+    text_view_t element_type_name;
+    element_type_t element_type;
 } named_type_t;
 
-#define NAMED_TYPE_UNRESOLVED(name_) \
-    (named_type_t){ .name = name_, .type = TYPE_UNRESOLVED}
+typedef struct variable {
+    bool mutable;
+    named_type_t type;
+    text_view_t name;
+} variable_t;
+typedef array_buf_t(variable_t) variable_array_buf_t;
 
-parse_result_t parse_type_name(parser_t* parser, type_name_t* dst);
+typedef struct composite_type {
+    variable_array_buf_t fields;
+} composite_type_t;
 
-void debug_type(type_t type, ast_debugger_t* debugger);
+parse_result_t parse_type_name(parser_t* parser, named_type_t* dst);
+parse_result_t parse_variable(parser_t* parser, variable_t* dst);
+parse_result_t parse_struct(parser_t* parser, composite_type_t* dst);
+parse_result_t parse_variant(parser_t* parser, composite_type_t* dst);
+
 void debug_named_type(named_type_t type, ast_debugger_t* debugger);
+void debug_variable(variable_t variable, ast_debugger_t* debugger);
+void debug_struct(composite_type_t struct_, ast_debugger_t* debugger);
+void debug_variant(composite_type_t variant, ast_debugger_t* debugger);

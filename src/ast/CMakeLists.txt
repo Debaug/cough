@@ -1,9 +1,9 @@
 target_sources(cough PRIVATE
     parser.h parser.c
+    analyzer.h analyzer.c
     debug.h debug.c
 
-    storage.h
-    storage.c
+    storage.h storage.c
     ast.h ast.c
     type.h type.c
     program.h program.c

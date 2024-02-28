@@ -42,7 +42,7 @@ void ast_debug_string(ast_debugger_t* debugger, const char* value) {
 }
 
 void ast_debug_string_view(ast_debugger_t* debugger, string_view_t value) {
-    DEBUG(debugger, "'%.*s'\n", (int)value.len, value.ptr);
+    DEBUG(debugger, "'%.*s'\n", (int)value.len, value.data);
 }
 
 void ast_debug_char(ast_debugger_t* debugger, char value) {

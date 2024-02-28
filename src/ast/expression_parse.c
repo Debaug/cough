@@ -101,7 +101,7 @@ static parse_result_t parse_integer(parser_t* parser, expression_t* dst) {
     size_t i = 0;
 
     int64_t signum;
-    switch (text.ptr[i]) {
+    switch (text.data[i]) {
     case '-':
         signum = -1;
         i++;
@@ -120,7 +120,7 @@ static parse_result_t parse_integer(parser_t* parser, expression_t* dst) {
         if (__builtin_mul_overflow(value, 10, &value)) {
             PARSER_ERROR_RESTORE(parser, state);
         }
-        int64_t signed_digit = (text.ptr[i] - '0') * signum;
+        int64_t signed_digit = (text.data[i] - '0') * signum;
         if (__builtin_add_overflow(value, signed_digit, &value)) {
             PARSER_ERROR_RESTORE(parser, state);
         }
@@ -130,7 +130,7 @@ static parse_result_t parse_integer(parser_t* parser, expression_t* dst) {
     return PARSE_SUCCESS;
 }
 
-static parse_result_t parse_variable(parser_t* parser, expression_t* dst) {
+static parse_result_t parse_variable_expression(parser_t* parser, expression_t* dst) {
     // when called, first token is an identifier
     text_view_t identifier = peek_parser(*parser).text;
     step_parser(parser);
@@ -361,11 +361,10 @@ parse_binding(parser_t* parser, expression_t* dst) {
         PARSER_ERROR_RESTORE(parser, state);
     }
 
-    type_name_t type_name;
-    if (parse_type_name(parser, &type_name)) {
+    named_type_t type;
+    if (parse_type_name(parser, &type)) {
         PARSER_ERROR_RESTORE(parser, state);
     }
-    named_type_t type = NAMED_TYPE_UNRESOLVED(type_name);
     
     if (!match_parser(parser, TOKEN_EQUAL, NULL)) {
         PARSER_ERROR_RESTORE(parser, state);
@@ -502,7 +501,7 @@ static parse_result_t parse_expression_precedence(
         break;
 
     case TOKEN_IDENTIFIER:
-        error = parse_variable(parser, &expression);
+        error = parse_variable_expression(parser, &expression);
         break;
 
     case TOKEN_LEFT_PAREN:

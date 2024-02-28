@@ -14,7 +14,7 @@ typedef struct text_pos {
 text_pos_t text_pos_next(text_pos_t pos, const char* text);
 
 typedef struct text_view {
-    const char* ptr;
+    const char* data;
     size_t len;
     text_pos_t start;
     text_pos_t end;

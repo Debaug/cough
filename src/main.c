@@ -41,7 +41,7 @@ int test_parse(int argc, const char* argv[]) {
             token->text.end.column + 1,
             token->type,
             (int)token->text.len,
-            token->text.ptr
+            token->text.data
         );
     }
 

@@ -8,20 +8,33 @@ parse_result_t parse_item_declaration(parser_t* parser, item_declaration_t* dst)
     if (!match_parser(parser, TOKEN_IDENTIFIER, &identifier)) {
         PARSER_ERROR_RESTORE(parser, state);
     }
+    dst->identifier = identifier.text;
 
     if (!match_parser(parser, TOKEN_COLON_COLON, NULL)) {
         PARSER_ERROR_RESTORE(parser, state);
     }
 
-    function_t function;
-    if (parse_function(parser, &function) != PARSE_SUCCESS) {
+    parse_result_t result;
+    switch (peek_parser(*parser).type) {
+    case TOKEN_FN:
+        dst->kind = ITEM_FUNCTION;
+        result = parse_function(parser, &dst->as.function);
+        break;
+    case TOKEN_STRUCT:
+        dst->kind = ITEM_STRUCT;
+        result = parse_struct(parser, &dst->as.composite);
+        break;
+    case TOKEN_VARIANT:
+        dst->kind = ITEM_VARIANT;
+        result = parse_variant(parser, &dst->as.composite);
+        break;
+    default: result = PARSE_ERROR;
+    }
+
+    if (result != PARSE_SUCCESS) {
         PARSER_ERROR_RESTORE(parser, state);
     }
-    *dst = (item_declaration_t){
-        .identifier = identifier.text,
-        .kind = FUNCTION_DECLARATION,
-        .as.function = function,
-    };
+
     return PARSE_SUCCESS;
 }
 
@@ -49,8 +62,17 @@ void debug_item_declaration(
     ast_debug_key(debugger, "identifier");
     ast_debug_string_view(debugger, STRING_VIEW(item_declaration.identifier));
 
-    ast_debug_key(debugger, "function");
-    debug_function(item_declaration.as.function, debugger);
+#define DEBUG_ITEM_DECLARATION_CASE(kind, dbg, name, str)   \
+    case kind:                                              \
+        ast_debug_key(debugger, str);                       \
+        dbg (item_declaration.as.name, debugger);           \
+        break;
+
+    switch (item_declaration.kind) {
+    DEBUG_ITEM_DECLARATION_CASE(ITEM_FUNCTION, debug_function, function, "function")
+    DEBUG_ITEM_DECLARATION_CASE(ITEM_STRUCT, debug_struct, composite, "struct")
+    DEBUG_ITEM_DECLARATION_CASE(ITEM_VARIANT, debug_variant, composite, "variant")
+    }
 
     ast_debug_end(debugger);
 }
