@@ -91,7 +91,7 @@ static keyword_t keywords[] = {
     { "if", TOKEN_IF },
     { "elif", TOKEN_ELIF },
     { "else", TOKEN_ELSE },
-    { "loop", TOKEN_LOOP, },
+    { "infinite_loop", TOKEN_LOOP, },
     { "while", TOKEN_WHILE },
     { "break", TOKEN_BREAK },
     { "return", TOKEN_RETURN },

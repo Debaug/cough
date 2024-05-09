@@ -8,5 +8,5 @@ target_sources(cough PRIVATE
     type.h type.c
     program.h program.c
     function.h function.c
-    expression.h expression_parse.c expression_debug.c
+    expression.h expression_parse.c expression_analyze.c expression_debug.c
 )

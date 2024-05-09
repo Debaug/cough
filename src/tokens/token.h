@@ -18,6 +18,7 @@ typedef enum token_type {
     TOKEN_SEMICOLON,
     TOKEN_COMMA,
     TOKEN_RIGHT_ARROW,
+    TOKEN_DOT,
 
     TOKEN_PLUS,
     TOKEN_MINUS,

@@ -13,7 +13,7 @@ typedef enum item_declaration_kind {
 } item_declaration_kind_t;
 
 typedef struct item_declaration {
-    text_view_t identifier;
+    text_view_t name;
     item_declaration_kind_t kind;
     union {
         function_t function;
@@ -28,6 +28,9 @@ typedef struct program {
 
 parse_result_t parse_item_declaration(parser_t* parser, item_declaration_t* dst);
 parse_result_t parse_program(parser_t* parser, program_t* program);
+
+analyze_result_t analyze_unordered_symbols(analyzer_t* analyzer, program_t* program);
+analyze_result_t analyze_expressions(analyzer_t* analyzer, program_t* program);
 
 void debug_program(program_t program, ast_debugger_t* debugger);
 void debug_item_declaration(

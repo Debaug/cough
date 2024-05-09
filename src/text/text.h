@@ -20,6 +20,9 @@ typedef struct text_view {
     text_pos_t end;
 } text_view_t;
 
+bool text_eq(text_view_t a, text_view_t b);
+#define TEXT_FMT(text_view) (int)(text_view).len, (text_view).data
+
 typedef struct source {
     char path[PATH_MAX];
     string_buf_t text;

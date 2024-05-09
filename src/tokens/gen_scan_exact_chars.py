@@ -46,7 +46,7 @@ def main():
 #include <stdio.h>
 #include <stdbool.h>
 
-#include "scanner/scanner.h"
+#include "tokens/scanner.h"
 
 scan_result_t scan_punctuation(scanner_t* scanner, token_t* dst) {
     bool error = false;
@@ -62,7 +62,7 @@ scan_result_t scan_punctuation(scanner_t* scanner, token_t* dst) {
         return SCAN_UNEXPECTED_CHARACTER;
     } else {
         text_view_t view = {
-            .ptr = text,
+            .data = text,
             .len = scanner->text - text,
             .start = start,
             .end = scanner->text_pos,

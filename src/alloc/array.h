@@ -2,6 +2,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdbool.h>
 
 #include "diagnostic/diagnostic.h"
 
@@ -93,5 +94,7 @@ typedef struct string_view {
 } string_view_t;
 
 #define STRING_VIEW(src) (string_view_t){ .data = src.data, .len = src.len }
+
+bool string_views_eq(string_view_t a, string_view_t b);
 
 errno_t read_file(FILE* file, string_buf_t* dst);

@@ -19,6 +19,14 @@ text_pos_t text_pos_next(text_pos_t pos, const char* text) {
     }
 }
 
+bool text_eq(text_view_t a, text_view_t b) {
+    if (a.len != b.len) {
+        return false;
+    }
+    return strncmp(a.data, b.data, a.len) == 0;
+}
+
+
 errno_t load_source_file(const char* path, source_t* dst) {
     FILE* input;
     char absolute_path[PATH_MAX];

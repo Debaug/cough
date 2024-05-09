@@ -11,6 +11,20 @@
 
 typedef struct expression expression_t;
 
+typedef enum symbol_expression_kind {
+    SYMBOL_EXPRESSION_VARIABLE,
+    SYMBOL_EXPRESSION_FUNCTION,
+} symbol_expression_kind_t;
+
+typedef struct symbol_expression {
+    text_view_t name;
+    symbol_expression_kind_t kind;
+    union {
+        const variable_t* variable;
+        const function_t* function;
+    } as;
+} symbol_expression_t;
+
 typedef enum unary_operator {
     OPERATOR_NEGATE,
     OPERATOR_NOT,
@@ -57,15 +71,19 @@ typedef struct binary_operation {
 
 typedef array_buf_t(expression_t) expression_array_buf_t;
 
+typedef struct member_access {
+    expression_t* container;
+    text_view_t member_name;
+    const field_t* field;
+} member_access_t;
+
 typedef struct call {
     expression_t* callee;
     expression_array_buf_t arguments;
 } call_t;
 
 typedef struct binding {
-    bool mutable;
-    text_view_t identifier;
-    named_type_t type;
+    variable_t variable;
     expression_t* value;
 } binding_t;
 
@@ -87,9 +105,9 @@ typedef struct conditional {
     } else_as;
 } conditional_t;
 
-typedef struct loop {
+typedef struct infinite_loop {
     block_t* body;
-} loop_t;
+} infinite_loop_t;
 
 typedef struct while_loop {
     expression_t* condition;
@@ -98,14 +116,15 @@ typedef struct while_loop {
 
 typedef enum expression_kind {
     EXPRESSION_INTEGER,
-    EXPRESSION_VARIABLE,
+    EXPRESSION_SYMBOL,
     EXPRESSION_BLOCK,
     EXPRESSION_UNARY_OPERATION,
     EXPRESSION_BINARY_OPERATION,
+    EXPRESSION_MEMBER_ACCESS,
     EXPRESSION_CALL,
     EXPRESSION_BINDING,
     EXPRESSION_CONDITIONAL,
-    EXPRESSION_LOOP,
+    EXPRESSION_INFINITE_LOOP,
     EXPRESSION_WHILE_LOOP,
     // EXPRESSION_FOR_LOOP,
 } expression_kind_t;
@@ -114,16 +133,18 @@ typedef struct expression {
     expression_kind_t kind;
     union {
         int64_t integer;
-        text_view_t variable;
+        symbol_expression_t symbol;
         block_t* block;
         unary_operation_t unary_operation;
         binary_operation_t binary_operation;
+        member_access_t member_access;
         call_t call;
         binding_t binding;
         conditional_t conditional;
-        loop_t loop;
+        infinite_loop_t infinite_loop;
         while_loop_t while_loop;
     } as;
+    type_t type;
 } expression_t;
 
 typedef struct block {
@@ -136,12 +157,25 @@ typedef struct block {
 parse_result_t parse_expression(parser_t* parser, expression_t* dst);
 parse_result_t parse_block(parser_t* parser, block_t* dst);
 
+analyze_result_t analyze_expression(
+    analyzer_t* analyzer,
+    expression_t* expression,
+    type_t* return_type,
+    type_t* break_type
+);
+analyze_result_t analyze_block(
+    analyzer_t* analyzer,
+    block_t* block,
+    type_t* return_type,
+    type_t* break_type
+);
+
 void debug_unary_operation(unary_operation_t operation, ast_debugger_t* debugger);
 void debug_binary_operation(binary_operation_t operation, ast_debugger_t* debugger);
 void debug_call(call_t call, ast_debugger_t* debugger);
 void debug_binding(binding_t binding, ast_debugger_t* debugger);
 void debug_block(block_t block, ast_debugger_t* debugger);
 void debug_conditional(conditional_t conditional, ast_debugger_t* debugger);
-void debug_loop(loop_t loop, ast_debugger_t* debugger);
+void debug_infinite_loop(infinite_loop_t infinite_loop, ast_debugger_t* debugger);
 void debug_while_loop(while_loop_t while_loop, ast_debugger_t* debugger);
 void debug_expression(expression_t expression, ast_debugger_t* debugger);

@@ -49,6 +49,15 @@ void debug_binary_operation(binary_operation_t operation, ast_debugger_t* debugg
     ast_debug_end(debugger);
 }
 
+void debug_member_access(member_access_t member_access, ast_debugger_t* debugger) {
+    ast_debug_start(debugger, "member_access");
+    ast_debug_key(debugger, "container");
+    debug_expression(*member_access.container, debugger);
+    ast_debug_key(debugger, "field");
+    debug_field(*member_access.field, debugger);
+    ast_debug_end(debugger);
+}
+
 void debug_call(call_t call, ast_debugger_t* debugger) {
     ast_debug_start(debugger, "call");
     ast_debug_key(debugger, "callee");
@@ -64,13 +73,8 @@ void debug_call(call_t call, ast_debugger_t* debugger) {
 
 void debug_binding(binding_t binding, ast_debugger_t* debugger) {
     ast_debug_start(debugger, "binding");
-    if (binding.mutable) {
-        ast_debug_flag(debugger, "mutable");
-    }
-    ast_debug_key(debugger, "identifier");
-    ast_debug_string_view(debugger, STRING_VIEW(binding.identifier));
-    ast_debug_key(debugger, "type");
-    debug_named_type(binding.type, debugger);
+    ast_debug_key(debugger, "variable");
+    debug_variable(binding.variable, debugger);
     ast_debug_key(debugger, "value");
     debug_expression(*binding.value, debugger);
     ast_debug_end(debugger);
@@ -116,10 +120,10 @@ void debug_conditional(conditional_t conditional, ast_debugger_t* debugger) {
     ast_debug_end(debugger);
 }
 
-void debug_loop(loop_t loop, ast_debugger_t* debugger) {
-    ast_debug_start(debugger, "loop");
+void debug_infinite_loop(infinite_loop_t infinite_loop, ast_debugger_t* debugger) {
+    ast_debug_start(debugger, "infinite_loop");
     ast_debug_key(debugger, "body");
-    debug_block(*loop.body, debugger);
+    debug_block(*infinite_loop.body, debugger);
     ast_debug_end(debugger);
 }
 
@@ -137,8 +141,8 @@ void debug_expression(expression_t expression, ast_debugger_t* debugger) {
     case EXPRESSION_INTEGER:
         ast_debug_int(debugger, expression.as.integer);
         break;
-    case EXPRESSION_VARIABLE:
-        ast_debug_string_view(debugger, STRING_VIEW(expression.as.variable));
+    case EXPRESSION_SYMBOL:
+        ast_debug_string_view(debugger, STRING_VIEW(expression.as.symbol.name));
         break;
     case EXPRESSION_BLOCK:
         debug_block(*expression.as.block, debugger);
@@ -149,6 +153,9 @@ void debug_expression(expression_t expression, ast_debugger_t* debugger) {
     case EXPRESSION_BINARY_OPERATION:
         debug_binary_operation(expression.as.binary_operation,  debugger);
         break;
+    case EXPRESSION_MEMBER_ACCESS:
+        debug_member_access(expression.as.member_access, debugger);
+        break;
     case EXPRESSION_CALL:
         debug_call(expression.as.call,  debugger);
         break;
@@ -158,8 +165,8 @@ void debug_expression(expression_t expression, ast_debugger_t* debugger) {
     case EXPRESSION_CONDITIONAL:
         debug_conditional(expression.as.conditional,  debugger);
         break;
-    case EXPRESSION_LOOP:
-        debug_loop(expression.as.loop,  debugger);
+    case EXPRESSION_INFINITE_LOOP:
+        debug_infinite_loop(expression.as.infinite_loop,  debugger);
         break;
     case EXPRESSION_WHILE_LOOP:
         debug_while_loop(expression.as.while_loop,  debugger);

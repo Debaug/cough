@@ -126,8 +126,6 @@ typedef struct function_state {
 static control_flow_t op_call(vm_t* vm) {
     size_t dst_ip = (size_t)(*(vm->ip++));
 
-    eprintf("[dbg] call -> %zu\n", dst_ip);
-
     function_state_t state = {
         .variable_frame_index = (uint64_t)(vm->variable_frame_index),
         .ip = (uint64_t)(vm->ip),

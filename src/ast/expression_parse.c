@@ -37,7 +37,7 @@ parse_result_t parse_block(parser_t* parser, block_t* dst) {
         
         last_is_block = expression.kind == EXPRESSION_BLOCK
             || expression.kind == EXPRESSION_CONDITIONAL
-            || expression.kind == EXPRESSION_LOOP
+            || expression.kind == EXPRESSION_INFINITE_LOOP
             || expression.kind == EXPRESSION_WHILE_LOOP;
 
         has_tail = true;
@@ -68,6 +68,7 @@ typedef enum precedence {
     PRECEDENCE_ADDITION,
     PRECEDENCE_MULTIPLICATION,
     PRECEDENCE_UNARY,
+    PRECEDENCE_MEMBER,
     PRECEDENCE_PRIMARY,
 } precedence_t;
 
@@ -131,11 +132,11 @@ static parse_result_t parse_integer(parser_t* parser, expression_t* dst) {
     return PARSE_SUCCESS;
 }
 
-static parse_result_t parse_variable_expression(parser_t* parser, expression_t* dst) {
+static parse_result_t parse_symbol_expression(parser_t* parser, expression_t* dst) {
     // when called, first token is an identifier
-    text_view_t identifier = peek_parser(*parser).text;
+    text_view_t name = peek_parser(*parser).text;
     step_parser(parser);
-    *dst = (expression_t){ .kind = EXPRESSION_VARIABLE, .as.variable = identifier };
+    *dst = (expression_t){ .kind = EXPRESSION_SYMBOL, .as.symbol.name = name };
     return PARSE_SUCCESS;
 }
 
@@ -350,24 +351,9 @@ static parse_result_t
 parse_binding(parser_t* parser, expression_t* dst) {
     parser_state_t state = parser_snapshot(*parser);
     step_parser(parser); // skip "let"
-    
-    bool mutable = match_parser(parser, TOKEN_MUT, NULL);
 
-    token_t identifier;
-    if (!match_parser(parser, TOKEN_IDENTIFIER, &identifier)) {
-        PARSER_ERROR_RESTORE(parser, state);
-    }
-
-    if (!match_parser(parser, TOKEN_COLON, NULL)) {
-        PARSER_ERROR_RESTORE(parser, state);
-    }
-
-    named_type_t type;
-    if (parse_type_name(parser, &type)) {
-        PARSER_ERROR_RESTORE(parser, state);
-    }
-    
-    if (!match_parser(parser, TOKEN_EQUAL, NULL)) {
+    variable_t variable;
+    if (parse_variable(parser, &variable) != PARSE_SUCCESS) {
         PARSER_ERROR_RESTORE(parser, state);
     }
 
@@ -377,9 +363,7 @@ parse_binding(parser_t* parser, expression_t* dst) {
     }
 
     binding_t binding = {
-        .mutable = mutable,
-        .identifier = identifier.text,
-        .type = type,
+        .variable = variable,
         .value = ast_box(&parser->storage, value),
     };
     *dst = (expression_t){ .kind = EXPRESSION_BINDING, .as.binding = binding };
@@ -444,17 +428,17 @@ parse_else_loop_end:
 }
 
 static parse_result_t
-parse_loop(parser_t* parser, expression_t* dst) {
+parse_infinite_loop(parser_t* parser, expression_t* dst) {
     parser_state_t state = parser_snapshot(*parser);
-    step_parser(parser); // skip "loop"
+    step_parser(parser); // skip "infinite_loop"
 
     block_t body;
     if (parse_block(parser, &body) != PARSE_SUCCESS) {
         PARSER_ERROR_RESTORE(parser, state);
     }
 
-    loop_t loop = { .body = ast_box(&parser->storage, body) };
-    *dst = (expression_t){ .kind = EXPRESSION_LOOP, .as.loop = loop };
+    infinite_loop_t infinite_loop = { .body = ast_box(&parser->storage, body) };
+    *dst = (expression_t){ .kind = EXPRESSION_INFINITE_LOOP, .as.infinite_loop = infinite_loop };
     return PARSE_SUCCESS;
 }
 
@@ -484,6 +468,27 @@ parse_while_loop(parser_t* parser, expression_t* dst) {
     return PARSE_SUCCESS;
 }
 
+static parse_result_t
+parse_member_access(parser_t* parser, expression_t container, expression_t* dst) {
+    parser_state_t state = parser_snapshot(*parser);
+    step_parser(parser); // skip "."
+
+    token_t field;
+    if (!match_parser(parser, TOKEN_IDENTIFIER, &field)) {
+        PARSER_ERROR_RESTORE(parser, state);
+    }
+
+    member_access_t member_access = {
+        .container = ast_box(&parser->storage, container),
+        .member_name = field.text,
+    };
+    *dst = (expression_t){
+        .kind = EXPRESSION_MEMBER_ACCESS,
+        .as.member_access = member_access
+    };
+    return PARSE_SUCCESS;
+}
+
 static parse_result_t parse_expression_precedence(
     parser_t* parser,
     precedence_t precedence,
@@ -502,7 +507,7 @@ static parse_result_t parse_expression_precedence(
         break;
 
     case TOKEN_IDENTIFIER:
-        error = parse_variable_expression(parser, &expression);
+        error = parse_symbol_expression(parser, &expression);
         break;
 
     case TOKEN_LEFT_PAREN:
@@ -537,7 +542,7 @@ static parse_result_t parse_expression_precedence(
         break;
 
     case TOKEN_LOOP:
-        error = parse_loop(parser, &expression);
+        error = parse_infinite_loop(parser, &expression);
         break;
 
     case TOKEN_WHILE:
@@ -551,8 +556,16 @@ static parse_result_t parse_expression_precedence(
         PARSER_ERROR_RESTORE(parser, state);
     }
 
+    if (precedence >= PRECEDENCE_MEMBER) {
+        *dst = expression;
+        return PARSE_SUCCESS;
+    }
+
     while (true) {
         switch (peek_parser(*parser).type) {
+        case TOKEN_DOT:
+            error = parse_member_access(parser, expression, &expression);
+            break;
         case TOKEN_LEFT_PAREN:
             error = parse_call(parser, expression, &expression);
             break;
@@ -560,15 +573,15 @@ static parse_result_t parse_expression_precedence(
             error = parse_index(parser, expression, &expression);
             break;
         default:
-            goto parse_call_or_index_loop_end;
+            goto parse_binary_operation;
         }
 
         if (error != PARSE_SUCCESS) {
             PARSER_ERROR_RESTORE(parser, state);
         }
     }
-parse_call_or_index_loop_end:
-
+    
+parse_binary_operation:
     while (true) {
         binary_operator_t binary_operator = as_infix_operator(peek_parser(*parser));
         if (binary_operator == -1) {
@@ -598,6 +611,7 @@ parse_call_or_index_loop_end:
         }
     }
 
+    dst->type = (type_t){ .array_depth = 0, .element_type.kind = TYPE_NEVER };
     *dst = expression;
     return PARSE_SUCCESS;
 }

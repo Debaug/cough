@@ -60,6 +60,13 @@ void raw_array_buf_pop(
     memmove(dst_data, array_data + *array_len * element_size, dst_len * element_size);
 }
 
+bool string_views_eq(string_view_t a, string_view_t b) {
+    if (a.len != b.len) {
+        return false;
+    }
+    return strncmp(a.data, b.data, a.len) == 0;
+}
+
 errno_t read_file(FILE* file, string_buf_t* dst) {
     while (!feof(file)) {
         array_buf_reserve(dst, 1, char);

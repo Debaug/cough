@@ -54,6 +54,16 @@ int test_parse(int argc, const char* argv[]) {
         return EXIT_FAILURE;
     }
 
+    analyzer_t analyzer = new_analyzer();
+    if (analyze_unordered_symbols(&analyzer, &ast.program) != ANALYZE_SUCCESS) {
+        report_error("failed to analyze unordered symbols");
+        return EXIT_FAILURE;
+    }
+    if (analyze_expressions(&analyzer, &ast.program) != ANALYZE_SUCCESS) {
+        report_error("failed to analyze expressions");
+        return EXIT_FAILURE;
+    }
+
     ast_debugger_t debugger = new_ast_debugger();
     debug_ast(ast, &debugger);
 

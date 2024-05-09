@@ -25,6 +25,16 @@
         format __VA_OPT__(,) __VA_ARGS__                    \
     )
 
+#define report_text_error(text_view, format, ...)   \
+    report_error(                                   \
+        "%zu:%zu-%zu:%zu: " format,                 \
+        (text_view).start.column + 1,               \
+        (text_view).start.line + 1,                 \
+        (text_view).end.column + 1,                 \
+        (text_view).end.line + 1                    \
+        __VA_OPT__(,) __VA_ARGS__                   \
+    )
+
 typedef int errno_t;
 #define SUCCESS ((errno_t)0)
 
