@@ -60,10 +60,10 @@ typedef enum token_type {
 
     TOKEN_EOF,
 } token_type_t;
+typedef array_buf_t(token_type_t) token_type_array_buf_t;
 
 typedef struct token {
     token_type_t type;
     text_view_t text;
 } token_t;
-
 typedef array_buf_t(token_t) token_array_buf_t;

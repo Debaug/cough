@@ -10,7 +10,7 @@
 
 int test_parse(int argc, const char* argv[]) {
     if (argc >= 3) {
-        report_error(
+        print_error(
             "too many arguments\n\n"
             "\tUSAGE:\n"
             "\t\tcough <FILE>\t scan file\n"
@@ -22,47 +22,51 @@ int test_parse(int argc, const char* argv[]) {
     const char* path = (argc == 2) ? argv[1] : NULL;
     source_t source;
     if (load_source_file(path, &source) != SUCCESS) {
-        report_errno();
+        print_errno();
         return EXIT_FAILURE;
     }
 
-    report_system_error("a system error, value: %d", 420);
-    report_error("a regular error, value: %d", 69);
+    print_system_error("a system error, value: %d", 420);
+    print_error("a regular error, value: %d", 69);
+
+    default_reporter_t reporter = new_default_reporter(&source);
 
     printf("==== TOKENS ====\n");
 
-    scanner_t scanner = new_scanner(source.text.data);
+    scanner_t scanner = new_scanner(source.text.data, (reporter_t*)&reporter);
     token_array_buf_t tokens = scan(&scanner);
-    for (token_t* token = tokens.data; token->type != TOKEN_EOF; token++) {
-        printf("%zu:%zu .. %zu:%zu: [%d] '%.*s'\n",
-            token->text.start.line + 1,
-            token->text.start.column + 1,
-            token->text.end.line + 1,
-            token->text.end.column + 1,
-            token->type,
-            (int)token->text.len,
-            token->text.data
+    for (size_t i = 0; tokens.data[i].type != TOKEN_EOF; i++) {
+        token_t token = tokens.data[i];
+        printf("%zu. \t%zu:%zu .. %zu:%zu: [%d] '%.*s'\n",
+            i,
+            token.text.start.line + 1,
+            token.text.start.column + 1,
+            token.text.end.line + 1,
+            token.text.end.column + 1,
+            token.type,
+            (int)token.text.len,
+            token.text.data
         );
     }
 
     printf("\n====== AST ======\n");
 
-    parser_t parser = new_parser(tokens.data);
+    parser_t parser = new_parser(tokens.data, &reporter.reporter);
     ast_t ast;
-    if (parse(&parser, &ast) != PARSE_SUCCESS) {
-        report_error("failed to parse program");
+    if (parse(&parser, &ast) != SUCCESS) {
+        eprintf("failed to parse program");
         return EXIT_FAILURE;
     }
 
-    analyzer_t analyzer = new_analyzer();
-    if (analyze_unordered_symbols(&analyzer, &ast.program) != ANALYZE_SUCCESS) {
-        report_error("failed to analyze unordered symbols");
-        return EXIT_FAILURE;
-    }
-    if (analyze_expressions(&analyzer, &ast.program) != ANALYZE_SUCCESS) {
-        report_error("failed to analyze expressions");
-        return EXIT_FAILURE;
-    }
+    // analyzer_t analyzer = new_analyzer();
+    // if (analyze_unordered_symbols(&analyzer, &ast.program) != ANALYZE_SUCCESS) {
+    //     report_error("failed to analyze unordered symbols");
+    //     return EXIT_FAILURE;
+    // }
+    // if (analyze_expressions(&analyzer, &ast.program) != ANALYZE_SUCCESS) {
+    //     report_error("failed to analyze expressions");
+    //     return EXIT_FAILURE;
+    // }
 
     ast_debugger_t debugger = new_ast_debugger();
     debug_ast(ast, &debugger);

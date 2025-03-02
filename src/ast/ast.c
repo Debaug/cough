@@ -1,13 +1,13 @@
 #include "ast/ast.h"
 
-parse_result_t parse(parser_t* parser, ast_t* dst) {
+result_t parse(parser_t* parser, ast_t* dst) {
     ast_t ast;
-    if (parse_program(parser, &ast.program) != PARSE_SUCCESS) {
-        return PARSE_ERROR;
+    if (parse_program(parser, &ast.program) != SUCCESS) {
+        return ERROR;
     }
     ast.storage = parser->storage;
     *dst = ast;
-    return PARSE_SUCCESS;
+    return SUCCESS;
 }
 
 void free_ast(ast_t ast) {

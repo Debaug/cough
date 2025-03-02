@@ -54,7 +54,11 @@ void debug_member_access(member_access_t member_access, ast_debugger_t* debugger
     ast_debug_key(debugger, "container");
     debug_expression(*member_access.container, debugger);
     ast_debug_key(debugger, "field");
-    debug_field(*member_access.field, debugger);
+    if (member_access.field != NULL) {
+        debug_field(*member_access.field, debugger);
+    } else {
+        ast_debug_string_view(debugger, STRING_VIEW(member_access.member_name));
+    }
     ast_debug_end(debugger);
 }
 
@@ -138,6 +142,11 @@ void debug_while_loop(while_loop_t while_loop, ast_debugger_t* debugger) {
 
 void debug_expression(expression_t expression, ast_debugger_t* debugger) {
     switch (expression.kind) {
+    case EXPRESSION_INVALID:
+        ast_debug_string(debugger, "<invalid>");
+        break;
+    case EXPRESSION_UNIT:
+        ast_debug_string(debugger, "<unit>");
     case EXPRESSION_INTEGER:
         ast_debug_int(debugger, expression.as.integer);
         break;

@@ -67,179 +67,207 @@ bool function_signature_eq(function_signature_t a, function_signature_t b) {
     return type_eq(a.return_type.type, b.return_type.type);
 }
 
-parse_result_t parse_type_name(parser_t* parser, named_type_t* dst) {
-    parser_state_t state = parser_snapshot(*parser);
+result_t parse_type_name(parser_t* parser, named_type_t* dst) {
+    // TODO: array type
 
-    size_t array_depth = 0;
-    while (match_parser(parser, TOKEN_LEFT_BRACKET, NULL)) {
-        array_depth++;
+    token_t type_name;
+    if (!match_parser(parser, TOKEN_IDENTIFIER, &type_name)) {
+        error_t error = {
+            .kind = ERROR_INVALID_TYPE_NAME,
+            .message = format("invalid type name (expected identifier)"),
+            .source = peek_parser(*parser).text,
+        };
+        report(parser->reporter, error);
+        return ERROR;
     }
-
-    token_t name;
-    if (!match_parser(parser, TOKEN_IDENTIFIER, &name)) {
-        PARSER_ERROR_RESTORE(parser, state);
-    }
-
-    for (size_t i = 0; i < array_depth; i++) {
-        if (!match_parser(parser, TOKEN_RIGHT_BRACKET, NULL)) {
-            PARSER_ERROR_RESTORE(parser, state);
-        }
-    }
-
     *dst = (named_type_t){
-        .type.array_depth = array_depth,
-        .type.element_type = (element_type_t){ .kind = TYPE_NEVER },
-        .element_type_name = name.text,
+        .type = {
+            .array_depth = 0,
+            .element_type = TYPE_NEVER, // will get resolved during analysis
+        },
+        .element_type_name = type_name.text
     };
-    return PARSE_SUCCESS;
+    return SUCCESS;
 }
 
-static parse_result_t parse_field(parser_t* parser, field_t* dst) {
-    parser_state_t state = parser_snapshot(*parser);
+static result_t parse_field_or_variable_tail(parser_t* parser, field_t* dst) {
+    // TODO: better error message depending on field or variable
 
     token_t name;
     if (!match_parser(parser, TOKEN_IDENTIFIER, &name)) {
-        PARSER_ERROR_RESTORE(parser, state);
+        error_t error = {
+            .kind = ERROR_VARIABLE_DECLARATION_INVALID_NAME,
+            .message = format("invalid variable or field name (expected identifier)"),
+            .source = peek_parser(*parser).text,
+        };
+        report(parser->reporter, error);
+        return ERROR;
     }
 
     if (!match_parser(parser, TOKEN_COLON, NULL)) {
-        PARSER_ERROR_RESTORE(parser, state);
+        error_t error = {
+            .kind = ERROR_VARIABLE_DECLARATION_INVALID_TYPE,
+            .message = format("missing type specification in variable or field declaration (expected `: <type>`)"),
+            .source = peek_parser(*parser).text,
+        };
+        report(parser->reporter, error);
+        return ERROR;
     }
 
     named_type_t type;
-    if (parse_type_name(parser, &type) != PARSE_SUCCESS) {
-        PARSER_ERROR_RESTORE(parser, state);
+    if (parse_type_name(parser, &type) != SUCCESS) {
+        // error is reported in `parse_type_name`
+        // we do not return `SUCCESS` as recovery is handled upstream
+        return ERROR;
     }
-
+    
+    // size and offset are determined during analysis
     *dst = (field_t){ .name = name.text, .type = type };
-    return PARSE_SUCCESS;
+    return SUCCESS;
 }
 
-parse_result_t parse_variable(parser_t* parser, variable_t* dst) {
-    parser_state_t state = parser_snapshot(*parser);
+result_t parse_variable(parser_t* parser, variable_t* dst) {
     bool mutable = match_parser(parser, TOKEN_MUT, NULL);
     field_t as_field;
-    if (parse_field(parser, &as_field) != PARSE_SUCCESS) {
-        PARSER_ERROR_RESTORE(parser, state);
+    if (parse_field_or_variable_tail(parser, &as_field) != SUCCESS) {
+        return ERROR;
     }
+
+    // size and offset are determined during analysis
     *dst = (variable_t){
         .mutable = mutable,
         .name = as_field.name,
         .type = as_field.type,
-        .offset = as_field.offset,
-        .size = as_field.offset,
     };
-    return PARSE_SUCCESS;
+    return SUCCESS;
 }
 
-parse_result_t parse_function_signature(parser_t* parser, function_signature_t* dst) {
-    parser_state_t state = parser_snapshot(*parser);
+result_t parse_function_signature(parser_t* parser, function_signature_t* dst) {
+    parser_alloc_state_t state = parser_snapshot(*parser);
 
     token_type_t start_pattern[2] = { TOKEN_FN, TOKEN_LEFT_PAREN };
-    if (match_parser_sequence(parser, start_pattern, NULL, 2) != 2) {
-        PARSER_ERROR_RESTORE(parser, state);
+    size_t nmatching_start = match_parser_sequence(parser, start_pattern, NULL, 2);
+    if (nmatching_start != 2) {
+        error_t error = {
+            .kind = ERROR_NOT_FUNCTION_SIGNATURE,
+            .message = format("invalid function signature (expected `fn (...)`)"),
+            .source = peek_parser_nth(*parser, nmatching_start).text,
+        };
+        parser_error_restore(parser, state, error);
+        return ERROR;
     }
 
     variable_array_buf_t parameters = new_array_buf(variable_t);
     while (!match_parser(parser, TOKEN_RIGHT_PAREN, NULL)) {
         variable_t parameter;
-        if (parse_variable(parser, &parameter) != PARSE_SUCCESS) {
-            free_array_buf(parameters);
-            PARSER_ERROR_RESTORE(parser, state);
+        if (parse_variable(parser, &parameter) != SUCCESS) {
+            token_type_t skip_until[2] = { TOKEN_COMMA, TOKEN_RIGHT_PAREN };
+            skip_parser_until_any_of(parser, skip_until, 2);
+            continue;
+        } else {
+            array_buf_push(&parameters, parameter);
         }
-        array_buf_push(&parameters, parameter);
 
         if (!match_parser(parser, TOKEN_COMMA, NULL)) {
             if (!match_parser(parser, TOKEN_RIGHT_PAREN, NULL)) {
                 free_array_buf(parameters);
-                PARSER_ERROR_RESTORE(parser, state);
+                error_t error = {
+                    .kind = ERROR_UNCLOSED_PARAMETER_LIST,
+                    .message = format("expected right parenthesis `)` after parameter list"),
+                    .source = peek_parser(*parser).text,
+                };
+                parser_error_restore(parser, state, error);
+                return ERROR;
             }
             break;
         }
     }
-    ast_push_alloc(&parser->storage, parameters.data);
 
     bool has_return_type = match_parser(parser, TOKEN_RIGHT_ARROW, NULL);
     named_type_t return_type = {0};
     if (has_return_type) {
-        if (parse_type_name(parser, &return_type) != PARSE_SUCCESS) {
-            PARSER_ERROR_RESTORE(parser, state);
+        if (parse_type_name(parser, &return_type) != SUCCESS) {
+            parser_restore(parser, state);
+            return ERROR;
         }
     }
 
+    ast_push_alloc(&parser->storage, parameters.data);
     *dst = (function_signature_t){
         .parameters = parameters,
         .has_return_type = has_return_type,
         .return_type = return_type,
     };
-    return PARSE_SUCCESS;
+    return SUCCESS;
 }
 
-static parse_result_t parse_composite(parser_t* parser, composite_type_t* dst) {
-    parser_state_t state = parser_snapshot(*parser);
-    
-    // skip leading `struct` or `enum` token
+static result_t parse_composite(parser_t* parser, composite_type_t* dst) {
+    // skip leading `struct` or `variant` token
     step_parser(parser);
 
     if (!match_parser(parser, TOKEN_LEFT_BRACE, NULL)) {
-        PARSER_ERROR_RESTORE(parser, state);
+        error_t error = {
+            .kind = ERROR_COMPOSITE_MISSING_FIELD_LIST,
+            .message = format("missing fields of struct or variant type declaration (expected `{ ... }`)"),
+            .source = peek_parser(*parser).text,
+        };
+        report(parser->reporter, error);
+        return ERROR;
     }
-
+    
+    parser_alloc_state_t state = parser_snapshot(*parser);
+    
     field_array_buf_t fields = new_array_buf();
     while (!match_parser(parser, TOKEN_RIGHT_BRACE, NULL)) {
         field_t field;
-        if (parse_field(parser, &field) != PARSE_SUCCESS) {
-            free_array_buf(fields);
-            PARSER_ERROR_RESTORE(parser, state);
+        if (parse_field_or_variable_tail(parser, &field) != SUCCESS) {
+            token_type_t skip_until[2] = { TOKEN_RIGHT_BRACE, TOKEN_COMMA };
+            skip_parser_until_any_of(parser, skip_until, 2);
+        } else {
+            array_buf_push(&fields, field);
         }
-        array_buf_push(&fields, field);
         if (match_parser(parser, TOKEN_COMMA, NULL)) {
             continue;
         }
         if (!match_parser(parser, TOKEN_RIGHT_BRACE, NULL)) {
             free_array_buf(fields);
-            PARSER_ERROR_RESTORE(parser, state);
+            error_t error = {
+                .kind = ERROR_UNCLOSED_PARAMETER_LIST,
+                .message = format("expected right brace `}` after parameter list"),
+                .source = peek_parser(*parser).text,
+            };
+            parser_error_restore(parser, state, error);
+            return ERROR;
         }
         break;
     }
 
-    ast_box(&parser->storage, fields);
+    ast_push_alloc(&parser->storage, fields.data);
     *dst = (composite_type_t){ .fields = fields };
-    return PARSE_SUCCESS;
+    return SUCCESS;
 }
 
-parse_result_t parse_struct(parser_t* parser, composite_type_t* dst) {
+result_t parse_struct(parser_t* parser, composite_type_t* dst) {
     return parse_composite(parser, dst);
 }
 
-parse_result_t parse_variant(parser_t* parser, composite_type_t* dst) {
+result_t parse_variant(parser_t* parser, composite_type_t* dst) {
     return parse_composite(parser, dst);
 }
 
-analyze_result_t analyze_type(analyzer_t* analyzer, named_type_t* type) {
-    switch (type->type.element_type.kind) {
-    case TYPE_NEVER:
-    case TYPE_UNIT:
-    case TYPE_BOOL:
-    case TYPE_INT:
-    case TYPE_FLOAT:
-        break;
-    case TYPE_FUNCTION:
-        analyze_function_signature(analyzer, type->type.element_type.as.)
-    }
+result_t analyze_type(analyzer_t* analyzer, named_type_t* type) {
+    eprintf("todo `analyze_type`\n");
+    abort();
+    return SUCCESS;
 }
 
-analyze_result_t analyze_function_signature(
+result_t analyze_function_signature(
     analyzer_t* analyzer,
     function_signature_t* signature
 ) {
-    analyze_result_t result;
-    if (signature->has_return_type) {
-        switch (signature->return_type.type.element_type.kind) {
-            case TYPE_
-        }
-    }
-    return result;
+    eprintf("todo `analyze_function_signature`\n");
+    abort();
+    return SUCCESS;
 }
 
 const field_t* find_field(composite_type_t type, string_view_t name) {
@@ -263,38 +291,57 @@ void debug_function_signature(function_signature_t signature, ast_debugger_t* de
 
     if (signature.has_return_type) {
         ast_debug_key(debugger, "return_type");
-        debug_type(signature.return_type.type, debugger);
+        debug_named_type(signature.return_type, debugger);
     }
 
     ast_debug_end(debugger);
 }
 
+static void debug_element_type(element_type_t type, ast_debugger_t* debugger) {
+    switch (type.kind) {
+        case TYPE_NEVER: ast_debug_string(debugger, "Never"); break;
+        case TYPE_UNIT: ast_debug_string(debugger, "Unit"); break;
+        case TYPE_BOOL: ast_debug_string(debugger, "Bool"); break;
+        case TYPE_INT: ast_debug_string(debugger, "Int"); break;
+        case TYPE_FLOAT: ast_debug_string(debugger, "Float"); break;
+        case TYPE_FUNCTION:
+            debug_function_signature(
+                *type.as.function_signature,
+                debugger
+            );
+            break;
+        case TYPE_STRUCT:
+            debug_struct(*type.as.composite, debugger);
+            break;
+        case TYPE_VARIANT:
+            debug_variant(*type.as.composite, debugger);
+            break;
+        }
+}
+
 void debug_type(type_t type, ast_debugger_t* debugger) {
-    ast_debug_start(debugger, "named_type");
+    ast_debug_start(debugger, "type");
 
     ast_debug_key(debugger, "array_depth");
     ast_debug_uint(debugger, type.array_depth);
 
     ast_debug_key(debugger, "element_type");
-    switch (type.element_type.kind) {
-    case TYPE_NEVER: ast_debug_string(debugger, "Never"); break;
-    case TYPE_UNIT: ast_debug_string(debugger, "Unit"); break;
-    case TYPE_BOOL: ast_debug_string(debugger, "Bool"); break;
-    case TYPE_INT: ast_debug_string(debugger, "Int"); break;
-    case TYPE_FLOAT: ast_debug_string(debugger, "Float"); break;
-    case TYPE_FUNCTION:
-        debug_function_signature(
-            *type.element_type.as.function_signature,
-            debugger
-        );
-        break;
-    case TYPE_STRUCT:
-        debug_struct(*type.element_type.as.composite, debugger);
-        break;
-    case TYPE_VARIANT:
-        debug_variant(*type.element_type.as.composite, debugger);
-        break;
-    }
+    debug_element_type(type.element_type, debugger);
+
+    ast_debug_end(debugger);
+}
+
+void debug_named_type(named_type_t type, ast_debugger_t* debugger) {
+    ast_debug_start(debugger, "named_type");
+
+    ast_debug_key(debugger, "array_depth");
+    ast_debug_uint(debugger, type.type.array_depth);
+
+    ast_debug_key(debugger, "element_type_name");
+    ast_debug_string_view(debugger, STRING_VIEW(type.element_type_name));
+
+    ast_debug_key(debugger, "element_type");
+    debug_element_type(type.type.element_type, debugger);
 
     ast_debug_end(debugger);
 }
@@ -330,7 +377,7 @@ void debug_field(field_t field, ast_debugger_t* debugger) {
     ast_debug_string_view(debugger, STRING_VIEW(field.name));
 
     ast_debug_key(debugger, "type");
-    debug_type(field.type.type, debugger);
+    debug_named_type(field.type, debugger);
 
     ast_debug_end(debugger);
 }
@@ -346,7 +393,7 @@ void debug_variable(variable_t variable, ast_debugger_t* debugger) {
     ast_debug_string_view(debugger, STRING_VIEW(variable.name));
 
     ast_debug_key(debugger, "type");
-    debug_type(variable.type.type, debugger);
+    debug_named_type(variable.type, debugger);
 
     ast_debug_end(debugger);
 }

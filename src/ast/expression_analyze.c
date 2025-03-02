@@ -6,6 +6,10 @@ static analyze_result_t analyze_symbol_expression(
     symbol_expression_t* symbol_expression,
     type_t* dst
 ) {
+    eprintf("TODO: analyze_symbol_expression\n");
+    exit(EXIT_FAILURE);
+    return ANALYZE_SUCCESS;
+
     const symbol_t* symbol = find_symbol_of(
         *analyzer->current_scope,
         STRING_VIEW(symbol_expression->name),
@@ -13,11 +17,12 @@ static analyze_result_t analyze_symbol_expression(
     );
 
     if (symbol == NULL) {
-        report_text_error(
-            symbol_expression->name,
-            "no variable or function named `%.*s`",
-            TEXT_FMT(symbol_expression->name)
-        );
+        // FIXME: error reporting
+        // report_text_error(
+        //     symbol_expression->name,
+        //     "no variable or function named `%.*s`",
+        //     TEXT_FMT(symbol_expression->name)
+        // );
         return ANALYZE_ERROR;
     }
 
@@ -91,9 +96,13 @@ static analyze_result_t analyze_not(
     unary_operation_t operation,
     type_t* dst
 ) {
+    eprintf("TODO: analyze_not\n");
+    exit(EXIT_FAILURE);
+    return ANALYZE_SUCCESS;
+
     if (!TYPE_IS_SCALAR(operation.operand->type, TYPE_BOOL)) {
-        // FIXME: where error?
-        report_error("operand to not operator must be of type `Bool`");
+        // FIXME: error reporting
+        // report_error("operand to not operator must be of type `Bool`");
         return ANALYZE_ERROR;
     }
     *dst = (type_t){ .array_depth = 0, .element_type.kind = TYPE_BOOL };
@@ -104,9 +113,13 @@ static analyze_result_t analyze_negate(
     unary_operation_t operation,
     type_t* dst
 ) {
+    eprintf("TODO: analyze_negate\n");
+    exit(EXIT_FAILURE);
+    return ANALYZE_SUCCESS;
+
     if (!TYPE_IS_NUMERIC(operation.operand->type)) {
         // FIXME: where error?
-        report_error("operand to negation operator must be of numeric type");
+        // report_error("operand to negation operator must be of numeric type");
         return ANALYZE_SUCCESS;
     }
     *dst = operation.operand->type;
@@ -117,9 +130,13 @@ static analyze_result_t analyze_diverge(
     unary_operation_t operation,
     type_t* diverge_type
 ) {
+    eprintf("TODO: analyze_diverge\n");
+    exit(EXIT_FAILURE);
+    return ANALYZE_SUCCESS;
+
     if (diverge_type == NULL) {
         // FIXME: where error?
-        report_error("dangling `break` or `return`");
+        // eport_error("dangling `break` or `return`");
     }
     if (TYPE_IS_SCALAR(*diverge_type, TYPE_NEVER)) {
         *diverge_type = operation.operand->type;
@@ -127,7 +144,7 @@ static analyze_result_t analyze_diverge(
     }
     if (!type_eq(*diverge_type, operation.operand->type)) {
         // FIXME: where error?
-        report_error("invalid operand type for `break` or `return`");
+        // report_error("invalid operand type for `break` or `return`");
         return ANALYZE_ERROR;
     }
     return ANALYZE_SUCCESS;
@@ -160,15 +177,19 @@ static analyze_result_t analyze_binary_arithmetic(
     binary_operation_t operation,
     type_t* dst
 ) {
+    eprintf("TODO: analyze_binary_arithmetic\n");
+    exit(EXIT_FAILURE);
+    return ANALYZE_SUCCESS;
+
     if (!TYPE_IS_NUMERIC(operation.left->type)
         || !TYPE_IS_NUMERIC(operation.right->type)) {
         // FIXME: where error?
-        report_error("operands to arithmetic operation must be of type `Int` or `Float`");
+        // report_error("operands to arithmetic operation must be of type `Int` or `Float`");
         return ANALYZE_ERROR;
     }
     if (!type_eq(operation.left->type, operation.right->type)) {
         // FIXME: where error?
-        report_error("operands to binary arithmetic operations must be of the same type");
+        // report_error("operands to binary arithmetic operations must be of the same type");
         return ANALYZE_ERROR;
     }
     *dst = operation.left->type;
@@ -179,17 +200,21 @@ static analyze_result_t analyze_binary_bitwise(
     binary_operation_t operation,
     type_t* dst
 ) {
+    eprintf("TODO: analyze_binary_bitwise\n");
+    exit(EXIT_FAILURE);
+    return ANALYZE_SUCCESS;
+
     if (!TYPE_IS_SCALAR(operation.left->type, TYPE_BOOL)
         || !TYPE_IS_SCALAR(operation.left->type, TYPE_INT)
         || !TYPE_IS_SCALAR(operation.right->type, TYPE_BOOL)
         || !TYPE_IS_SCALAR(operation.right->type, TYPE_INT)) {
         // FIXME: where error?
-        report_error("operands to bitwise operations must be of type `Int` or `Bool`");
+        // report_error("operands to bitwise operations must be of type `Int` or `Bool`");
         return ANALYZE_ERROR;
     }
     if (!type_eq(operation.left->type, operation.right->type)) {
         // FIXME: where error?
-        report_error("operands to binary bitwise operations must be of the same type");
+        // report_error("operands to binary bitwise operations must be of the same type");
         return ANALYZE_ERROR;
     }
     *dst = operation.left->type;
@@ -200,10 +225,14 @@ static analyze_result_t analyze_binary_logical(
     binary_operation_t operation,
     type_t* dst
 ) {
+    eprintf("TODO: analyze_binary_logical\n");
+    exit(EXIT_FAILURE);
+    return ANALYZE_SUCCESS;
+
     if (!TYPE_IS_SCALAR(operation.left->type, TYPE_BOOL)
         || !TYPE_IS_SCALAR(operation.right->type, TYPE_BOOL)) {
         // FIXME: where error?
-        report_error("operands to `and` or `or` must be of type `Bool`");
+        // report_error("operands to `and` or `or` must be of type `Bool`");
         return ANALYZE_ERROR;
     }
     *dst = operation.left->type;
@@ -214,15 +243,19 @@ static analyze_result_t analyze_comparison(
     binary_operation_t operation,
     type_t* dst
 ) {
+    eprintf("TODO: analyze_comparison\n");
+    exit(EXIT_FAILURE);
+    return ANALYZE_SUCCESS;
+
     if (!TYPE_IS_NUMERIC(operation.left->type)
         || !TYPE_IS_NUMERIC(operation.right->type)) {
         // FIXME: where error?
-        report_error("operands to comparison must be of type `Int` or `Float`");
+        // report_error("operands to comparison must be of type `Int` or `Float`");
         return ANALYZE_ERROR;
     }
     if (!type_eq(operation.left->type, operation.right->type)) {
         // FIXME: where error?
-        report_error("operands to comparison must be of the same type");
+        // report_error("operands to comparison must be of the same type");
         return ANALYZE_ERROR;
     }
     *dst = (type_t){ .array_depth = 0, .element_type.kind = TYPE_BOOL };
@@ -233,14 +266,18 @@ static analyze_result_t analyze_index(
     binary_operation_t operation,
     type_t* dst
 ) {
+    eprintf("TODO: analyze_index\n");
+    exit(EXIT_FAILURE);
+    return ANALYZE_SUCCESS;
+
     if (operation.left->type.array_depth == 0) {
         // FIXME: where error?
-        report_error("indexee must be an array");
+        // report_error("indexee must be an array");
         return ANALYZE_ERROR;
     }
     if (!TYPE_IS_SCALAR(operation.right->type, TYPE_INT)) {
         // FIXME: where error?
-        report_error("index must be of type `Int`");
+        // report_error("index must be of type `Int`");
         return ANALYZE_ERROR;
     }
     *dst = operation.left->type;
@@ -255,6 +292,10 @@ static analyze_result_t analyze_binary_operation(
     type_t* break_type,
     type_t* dst
 ) {
+    eprintf("TODO: analyze_binary_operation\n");
+    exit(EXIT_FAILURE);
+    return ANALYZE_SUCCESS;
+
     analyze_expression(analyzer, operation->left, return_type, break_type);
     analyze_expression(analyzer, operation->right, return_type, break_type);
 
@@ -288,7 +329,7 @@ static analyze_result_t analyze_binary_operation(
 
     case OPERATOR_ASSIGN:
         // TODO:
-        report_error("TODO: assignment");
+        // report_error("TODO: assignment");
         exit(-1);
     }
 }
@@ -301,12 +342,16 @@ analyze_member_access(
     type_t* break_type,
     type_t* dst
 ) {
+    eprintf("TODO: analyze_binary_operation\n");
+    exit(EXIT_FAILURE);
+    return ANALYZE_SUCCESS;
+
     if (analyze_expression(analyzer, member->container, return_type, break_type) != ANALYZE_SUCCESS) {
         return ANALYZE_ERROR;
     }
     type_t container_type = member->container->type;
     if (!TYPE_IS_COMPOSITE(container_type)) {
-        report_error("can't access a field of a non-composite type");
+        // report_error("can't access a field of a non-composite type");
         return ANALYZE_ERROR;
     }
     member->field = find_field(
@@ -314,7 +359,7 @@ analyze_member_access(
         STRING_VIEW(member->member_name)
     );
     if (member->field == NULL) {
-        report_error("no such field `%.*s`", TEXT_FMT(member->member_name));
+        // report_error("no such field `%.*s`", TEXT_FMT(member->member_name));
         return ANALYZE_ERROR;
     }
     *dst = member->field->type.type;
@@ -328,12 +373,16 @@ static analyze_result_t analyze_call(
     type_t* break_type,
     type_t* dst
 ) {
+    eprintf("TODO: analyze_call\n");
+    exit(EXIT_FAILURE);
+    return ANALYZE_SUCCESS;
+
     analyze_result_t result = ANALYZE_SUCCESS;
     if (analyze_expression(analyzer, call->callee, return_type, break_type) != ANALYZE_SUCCESS) {
         result = ANALYZE_ERROR;
     }
     if (call->callee->type.array_depth != 0 || call->callee->type.element_type.kind != TYPE_FUNCTION) {
-        report_error("can't call non-function value");
+        // report_error("can't call non-function value");
         result = ANALYZE_ERROR;
     }
     for (size_t i = 0; i < call->arguments.len; i++) {
@@ -344,7 +393,7 @@ static analyze_result_t analyze_call(
             call->arguments.data[i].type,
             call->callee->type.element_type.as.function_signature->parameters.data[i].type.type
         )) {
-            report_error("argument and parameter type do not match");
+            // report_error("argument and parameter type do not match");
             result = ANALYZE_ERROR;
         }
     }
@@ -382,6 +431,10 @@ analyze_result_t analyze_expression(
     type_t* return_type,
     type_t* break_type
 ) {
+    eprintf("TODO: analyze_expression\n");
+    exit(EXIT_FAILURE);
+    return ANALYZE_SUCCESS;
+
     switch (expression->kind) {
     case EXPRESSION_INTEGER:
         expression->type = (type_t){
@@ -453,7 +506,7 @@ analyze_result_t analyze_expression(
     case EXPRESSION_INFINITE_LOOP:
     case EXPRESSION_WHILE_LOOP:
         // TODO:
-        report_error("TODO: analyze expressions");
+        // report_error("TODO: analyze expressions");
         exit(-1);
     }
 }

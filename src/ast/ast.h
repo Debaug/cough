@@ -11,7 +11,7 @@ typedef struct ast {
     program_t program;
 } ast_t;
 
-parse_result_t parse(parser_t* parser, ast_t* dst);
+result_t parse(parser_t* parser, ast_t* dst);
 void free_ast(ast_t ast);
 
 analyze_result_t analyze(analyzer_t* analyzer, ast_t* ast);

@@ -6,6 +6,9 @@
 #include "ast/parser.h"
 #include "ast/debug.h"
 #include "alloc/array.h"
+#include "diagnostic/diagnostic.h"
+
+typedef struct analyzer analyzer_t;
 
 typedef struct composite_type composite_type_t;
 
@@ -30,8 +33,8 @@ typedef struct element_type {
 } element_type_t;
 
 typedef struct type {
-    size_t array_depth;
     element_type_t element_type;
+    size_t array_depth;
 } type_t;
 
 typedef struct named_type {
@@ -69,14 +72,14 @@ typedef struct composite_type {
 bool type_eq(type_t a, type_t b);
 bool function_signature_eq(function_signature_t a, function_signature_t b);
 
-parse_result_t parse_type_name(parser_t* parser, named_type_t* dst);
-parse_result_t parse_variable(parser_t* parser, variable_t* dst);
-parse_result_t parse_function_signature(parser_t* parser, function_signature_t* dst);
-parse_result_t parse_struct(parser_t* parser, composite_type_t* dst);
-parse_result_t parse_variant(parser_t* parser, composite_type_t* dst);
+result_t parse_type_name(parser_t* parser, named_type_t* dst);
+result_t parse_variable(parser_t* parser, variable_t* dst);
+result_t parse_function_signature(parser_t* parser, function_signature_t* dst);
+result_t parse_struct(parser_t* parser, composite_type_t* dst);
+result_t parse_variant(parser_t* parser, composite_type_t* dst);
 
-analyze_result_t analyze_type(analyzer_t* analyzer, named_type_t* type);
-analyze_result_t analyze_function_signature(
+result_t analyze_type(analyzer_t* analyzer, named_type_t* type);
+result_t analyze_function_signature(
     analyzer_t* analyzer,
     function_signature_t* signature
 );
@@ -84,6 +87,7 @@ analyze_result_t analyze_function_signature(
 const field_t* find_field(composite_type_t type, string_view_t name);
 
 void debug_type(type_t type, ast_debugger_t* debugger);
+void debug_named_type(named_type_t type, ast_debugger_t* debugger);
 void debug_field(field_t field, ast_debugger_t* debugger);
 void debug_variable(variable_t variable, ast_debugger_t* debugger);
 void debug_function_signature(function_signature_t signature, ast_debugger_t* debugger);

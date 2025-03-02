@@ -5,7 +5,7 @@
 
 #include "alloc/alloc.h"
 
-typedef struct arena dyn_arena_t;
+typedef struct dyn_arena dyn_arena_t;
 
 typedef struct arena_stack {
     dyn_arena_t* top;

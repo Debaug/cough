@@ -4,20 +4,40 @@
 #include "ast/program.h"
 #include "ast/debug.h"
 
-parse_result_t parse_item_declaration(parser_t* parser, item_declaration_t* dst) {
-    parser_state_t state = parser_snapshot(*parser);
+result_t parse_item_declaration(parser_t* parser, item_declaration_t* dst) {
+    parser_alloc_state_t state = parser_snapshot(*parser);
 
     token_t name;
     if (!match_parser(parser, TOKEN_IDENTIFIER, &name)) {
-        PARSER_ERROR_RESTORE(parser, state);
+        token_t token = peek_parser(*parser);
+        error_t error = {
+            .kind = ERROR_INVALID_ITEM_DECLARATION,
+            .source = peek_parser(*parser).text,
+            .message = format(
+                "invalid token in item declaration: expected an identifier, found `%.*s`",
+                TEXT_FMT(token.text)
+            )
+        };
+        parser_error_restore(parser, state, error);
+        return ERROR;
     }
     dst->name = name.text;
 
     if (!match_parser(parser, TOKEN_COLON_COLON, NULL)) {
-        PARSER_ERROR_RESTORE(parser, state);
+        token_t token = peek_parser(*parser);
+        error_t error = {
+            .kind = ERROR_INVALID_ITEM_DECLARATION,
+            .source = peek_parser(*parser).text,
+            .message = format(
+                "invalid token in item declaration: expected `::`, found `%.*s`",
+                TEXT_FMT(token.text)
+            )
+        };
+        parser_error_restore(parser, state, error);
+        return ERROR;
     }
 
-    parse_result_t result;
+    result_t result;
     switch (peek_parser(*parser).type) {
     case TOKEN_FN:
         dst->kind = ITEM_FUNCTION;
@@ -31,29 +51,31 @@ parse_result_t parse_item_declaration(parser_t* parser, item_declaration_t* dst)
         dst->kind = ITEM_VARIANT;
         result = parse_variant(parser, &dst->as.composite);
         break;
-    default: result = PARSE_ERROR;
+    default: result = ERROR;
     }
 
-    if (result != PARSE_SUCCESS) {
-        PARSER_ERROR_RESTORE(parser, state);
+    if (result != SUCCESS) {
+        parser_restore(parser, state);
+        return ERROR;
     }
 
-    return PARSE_SUCCESS;
+    return SUCCESS;
 }
 
-parse_result_t parse_program(parser_t* parser, program_t* program) {
-    item_declaration_array_buf_t item_declarations = new_array_buf(item_declaration_t);
+result_t parse_program(parser_t* parser, program_t* program) {
+    item_declaration_array_buf_t items = new_array_buf(item_declaration_t);
     while (!parser_is_eof(*parser)) {
         item_declaration_t item_declaration;
-        if (parse_item_declaration(parser, &item_declaration) != PARSE_SUCCESS) {
-            free_array_buf(item_declarations);
-            return PARSE_ERROR;
+        if (parse_item_declaration(parser, &item_declaration) != SUCCESS) {
+            // error gets reported in `parse_item_declaration`
+            skip_parser_until(parser, TOKEN_IDENTIFIER);
+            continue;
         }
-        array_buf_push(&item_declarations, item_declaration);
+        array_buf_push(&items, item_declaration);
     }
-    ast_push_alloc(&parser->storage, item_declarations.data);
-    *program = (program_t){ .item_declarations = item_declarations };
-    return PARSE_SUCCESS;
+    ast_push_alloc(&parser->storage, items.data);
+    *program = (program_t){ .items = items };
+    return SUCCESS;
 }
 
 typedef struct function_item {
@@ -66,63 +88,66 @@ analyze_result_t analyze_unordered_symbols(
     analyzer_t* analyzer,
     program_t* program
 ) {
-    for (size_t i = 0; i < program->item_declarations.len; i++) {
-        item_declaration_t* item = &program->item_declarations.data[i];
-        element_type_kind_t type_kind;
-        switch (item->kind) {
-        case ITEM_FUNCTION:;
-            function_item_t function_item = { .name = item->name, .function = &item->as.function };
-            break;
-        case ITEM_STRUCT: type_kind = TYPE_STRUCT; break;
-        case ITEM_VARIANT: type_kind = TYPE_VARIANT; break;
-        }
-        symbol_t symbol = {
-            .name = item->name,
-            .kind = SYMBOL_TYPE,
-            .as.type = (element_type_t){
-                .kind = type_kind,
-                .as.composite = &item->as.composite
-            }
-        };
-        if (!add_symbol(analyzer->current_scope, symbol)) {
-            // where error?
-            report_error("type with name `%.*s` defined multiple times",
-                TEXT_FMT(symbol.name));
-        }
-    }
+    eprintf("TODO: analyze_unordered_symbols");
+    abort();
 
-    for (size_t i = 0; i < program->item_declarations.len; i++) {
-        item_declaration_t* item = &program->item_declarations.data[i];
-        switch (item->kind) {
-        case ITEM_FUNCTION:;
-            symbol_t symbol = {
-                .name = item->name,
-                .kind = SYMBOL_FUNCTION,
-                .as.function = &item->as.function
-            };
-            if (!add_symbol(analyzer->current_scope, symbol)) {
-                report_error("item with name `%.*s` defined multiple times",
-                    TEXT_FMT(symbol.name));
-            }
-            function_signature_t* signature = &item->as.function.signature;
-            if (signature->has_return_type) {
-                exit(-1); // TODO
-            }
-            break;
+    // for (size_t i = 0; i < program->items.len; i++) {
+    //     item_declaration_t* item = &program->items.data[i];
+    //     element_type_kind_t type_kind;
+    //     switch (item->kind) {
+    //     case ITEM_FUNCTION:;
+    //         function_item_t function_item = { .name = item->name, .function = &item->as.function };
+    //         break;
+    //     case ITEM_STRUCT: type_kind = TYPE_STRUCT; break;
+    //     case ITEM_VARIANT: type_kind = TYPE_VARIANT; break;
+    //     }
+    //     symbol_t symbol = {
+    //         .name = item->name,
+    //         .kind = SYMBOL_TYPE,
+    //         .as.type = (element_type_t){
+    //             .kind = type_kind,
+    //             .as.composite = &item->as.composite
+    //         }
+    //     };
+    //     if (!add_symbol(analyzer->current_scope, symbol)) {
+    //         // where error?
+    //         report_error("type with name `%.*s` defined multiple times",
+    //             TEXT_FMT(symbol.name));
+    //     }
+    // }
 
-        case ITEM_STRUCT:
-        case ITEM_VARIANT:
-            analyze_composite(analyzer, &item->as.composite);
-            break;
-        }
-    }
+    // for (size_t i = 0; i < program->items.len; i++) {
+    //     item_declaration_t* item = &program->items.data[i];
+    //     switch (item->kind) {
+    //     case ITEM_FUNCTION:;
+    //         symbol_t symbol = {
+    //             .name = item->name,
+    //             .kind = SYMBOL_FUNCTION,
+    //             .as.function = &item->as.function
+    //         };
+    //         if (!add_symbol(analyzer->current_scope, symbol)) {
+    //             report_error("item with name `%.*s` defined multiple times",
+    //                 TEXT_FMT(symbol.name));
+    //         }
+    //         function_signature_t* signature = &item->as.function.signature;
+    //         if (signature->has_return_type) {
+    //             exit(-1); // TODO
+    //         }
+    //         break;
+
+    //     case ITEM_STRUCT:
+    //     case ITEM_VARIANT:
+    //         analyze_composite(analyzer, &item->as.composite);
+    //         break;
+    //     }
+    // }
 
     return ANALYZE_SUCCESS;
 }
 
 analyze_result_t analyze_expressions(analyzer_t* analyzer, program_t* program) {
-    for (size_t i = 0; i < program->item_declarations.len; i++) {
-        item_declaration_t* declaration = &program->item_declarations.data[i];
+    for (size_t i = 0; i < program->items.len; i++) {
+        item_declaration_t* declaration = &program->items.data[i];
         if (declaration->kind != ITEM_FUNCTION) {
             continue;
         }
@@ -160,11 +185,11 @@ void debug_program(
     ast_debugger_t* debugger
 ) {
     ast_debug_start(debugger, "program");
-    ast_debug_key(debugger, "item_declarations");
+    ast_debug_key(debugger, "items");
     ast_debug_start_sequence(debugger);
-    for (size_t i = 0; i < program.item_declarations.len; i++) {
+    for (size_t i = 0; i < program.items.len; i++) {
         debug_item_declaration(
-            program.item_declarations.data[i],
+            program.items.data[i],
             debugger
         );
     }

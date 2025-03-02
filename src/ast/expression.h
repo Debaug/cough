@@ -115,6 +115,8 @@ typedef struct while_loop {
 } while_loop_t;
 
 typedef enum expression_kind {
+    EXPRESSION_INVALID,
+    EXPRESSION_UNIT,
     EXPRESSION_INTEGER,
     EXPRESSION_SYMBOL,
     EXPRESSION_BLOCK,
@@ -154,8 +156,8 @@ typedef struct block {
     scope_t* scope;
 } block_t;
 
-parse_result_t parse_expression(parser_t* parser, expression_t* dst);
-parse_result_t parse_block(parser_t* parser, block_t* dst);
+result_t parse_expression(parser_t* parser, expression_t* dst);
+result_t parse_block(parser_t* parser, block_t* dst);
 
 analyze_result_t analyze_expression(
     analyzer_t* analyzer,

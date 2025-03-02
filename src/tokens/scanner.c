@@ -5,8 +5,9 @@
 
 #include "tokens/scanner.h"
 
-scanner_t new_scanner(const char* text) {
-    return (scanner_t){ .text = text, .text_pos = {0} };
+scanner_t new_scanner(const char* text, reporter_t* reporter) {
+    text_pos_t start = { .line = 0, .column = 0, .index = 0 };
+    return (scanner_t){ .text = text, .text_pos = start, .reporter = reporter };
 }
 
 char peek_scanner(scanner_t scanner) {
@@ -29,13 +30,29 @@ static bool is_unary_operator(token_t token) {
     }
 }
 
-static scan_result_t scan_string(scanner_t* scanner, token_t* dst) {
+text_view_t scanner_text_from(scanner_t scanner, text_pos_t start) {
+    size_t len = scanner.text_pos.index - start.index;
+    const char* data = scanner.text - len;
+    return (text_view_t){
+        .data = data,
+        .len = len,
+        .start = start,
+        .end = scanner.text_pos
+    };
+}
+
+static result_t scan_string(scanner_t* scanner, token_t* dst) {
     text_pos_t start = scanner->text_pos;
-    const char* text = scanner->text;
     step_scanner(scanner); // '"' character
     while (peek_scanner(*scanner) != '"') {
         if (peek_scanner(*scanner) == '\0') {
-            return SCAN_INCOMPLETE_TOKEN;
+            error_t error = {
+                .kind = ERROR_UNCLOSED_STRING,
+                .source = scanner_text_from(*scanner, start),
+                .message = format("missing closing `\"` in string literal")
+            };
+            report(scanner->reporter, error);
+            return ERROR;
         }
         if (peek_scanner(*scanner) == '\\') {
             step_scanner(scanner);
@@ -44,19 +61,12 @@ static scan_result_t scan_string(scanner_t* scanner, token_t* dst) {
             step_scanner(scanner);
         }
     }
-    text_view_t view = {
-        .data = text,
-        .len = scanner->text - text,
-        .start = start,
-        .end = scanner->text_pos
-    };
-    *dst = (token_t){ .type = TOKEN_STRING, .text = view };
-    return SCAN_SUCCESS;
+    *dst = (token_t){ .type = TOKEN_STRING, .text = scanner_text_from(*scanner, start) };
+    return SUCCESS;
 }
 
-static scan_result_t scan_integer(scanner_t* scanner, token_t* dst) {
+static result_t scan_integer(scanner_t* scanner, token_t* dst) {
     text_pos_t start = scanner->text_pos;
-    const char* text = scanner->text;
 
     if (peek_scanner(*scanner) == '-') {
         step_scanner(scanner);
@@ -65,14 +75,9 @@ static scan_result_t scan_integer(scanner_t* scanner, token_t* dst) {
     while (isdigit(peek_scanner(*scanner))) {
         step_scanner(scanner);
     }
-    text_view_t view = {
-        .data = text,
-        .len = scanner->text - text,
-        .start = start,
-        .end = scanner->text_pos
-    };
-    *dst = (token_t){ .type = TOKEN_INTEGER, .text = view };
-    return SCAN_SUCCESS;
+
+    *dst = (token_t){ .type = TOKEN_INTEGER, .text = scanner_text_from(*scanner, start) };
+    return SUCCESS;
 }
 
 typedef struct keyword {
@@ -91,43 +96,37 @@ static keyword_t keywords[] = {
     { "if", TOKEN_IF },
     { "elif", TOKEN_ELIF },
     { "else", TOKEN_ELSE },
-    { "infinite_loop", TOKEN_LOOP, },
+    { "loop", TOKEN_LOOP, },
     { "while", TOKEN_WHILE },
     { "break", TOKEN_BREAK },
     { "return", TOKEN_RETURN },
 };
 
-static scan_result_t scan_identifier_or_keyword(scanner_t* scanner, token_t* dst) {
+static result_t scan_identifier_or_keyword(scanner_t* scanner, token_t* dst) {
     text_pos_t start = scanner->text_pos;
-    const char* text = scanner->text;
     step_scanner(scanner); // first character
     while (isalnum(peek_scanner(*scanner)) || peek_scanner(*scanner) == '_') {
         step_scanner(scanner);
     }
-    text_view_t view = {
-        .data = text,
-        .len = scanner->text - text,
-        .start = start,
-        .end = scanner->text_pos,
-    };
-    token_t token = { .type = TOKEN_IDENTIFIER, .text = view };
+    text_view_t text = scanner_text_from(*scanner, start);
+    token_t token = { .type = TOKEN_IDENTIFIER, .text = text };
 
     for (size_t i = 0; i < sizeof(keywords) / sizeof(keywords[0]); i++) {
         keyword_t keyword = keywords[i];
-        if (strlen(keyword.text) != view.len) {
+        if (strlen(keyword.text) != text.len) {
             continue;
         }
-        if (strncmp(keyword.text, view.data, view.len) == 0) {
+        if (strncmp(keyword.text, text.data, text.len) == 0) {
             token.type = keyword.token_type;
             break;
         }
     }
 
     *dst = token;
-    return SCAN_SUCCESS;
+    return SUCCESS;
 }
 
-static scan_result_t scan_one(scanner_t* scanner, token_t* dst) {
+static result_t scan_one(scanner_t* scanner, token_t* dst) {
     while (isspace(peek_scanner(*scanner))) {
         step_scanner(scanner);
     }
@@ -139,7 +138,7 @@ static scan_result_t scan_one(scanner_t* scanner, token_t* dst) {
             .end = scanner->text_pos,
         };
         *dst = (token_t){ .type = TOKEN_EOF, .text = view };
-        return SCAN_SUCCESS;
+        return SUCCESS;
     }
 
     char first_char = peek_scanner(*scanner);
@@ -159,24 +158,13 @@ static scan_result_t scan_one(scanner_t* scanner, token_t* dst) {
     }
 }
 
-static const char* scan_error_messages[] = {
-    [SCAN_UNEXPECTED_CHARACTER] = "unexpected character",
-    [SCAN_INCOMPLETE_TOKEN] = "incomplete token",
-};
-
 token_array_buf_t scan(scanner_t* scanner) {
     token_array_buf_t tokens = new_array_buf(token_t);
     while (true) {
         token_t token;
-        scan_result_t result = scan_one(scanner, &token);
+        result_t result = scan_one(scanner, &token);
 
-        if (result != SCAN_SUCCESS) {
-            report_error(
-                "%s at %zu:%zu",
-                scan_error_messages[result],
-                scanner->text_pos.line + 1,
-                scanner->text_pos.column + 1
-            );
+        if (result != SUCCESS) {
             step_scanner(scanner);
             continue;
         }

@@ -88,7 +88,7 @@ static control_flow_t run_one(vm_t* vm) {
     case OP_ADD_INT: return op_add_int(vm);
 
     default:
-        report_error("invalid instruction 0x%02x", 0);
+        eprintf("invalid instruction 0x%02x", 0);
         return false;
     }
 }
@@ -112,7 +112,7 @@ static control_flow_t op_syscall(vm_t* vm) {
         return FLOW_CONTINUE;
 
     default:
-        report_error("invalid syscall 0x%02x\n", code);
+        eprintf("invalid syscall 0x%02x\n", code);
     }
 
     return FLOW_EXIT;

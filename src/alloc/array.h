@@ -4,13 +4,13 @@
 #include <stdio.h>
 #include <stdbool.h>
 
-#include "diagnostic/diagnostic.h"
-
 #define array_buf_t(T) struct array_buf__ ## T {  \
     T* data;                                    \
     size_t len;                                 \
     size_t capacity_bytes;                      \
 }
+
+typedef array_buf_t(size_t) size_array_buf_t;
 
 #define new_array_buf(...)                              \
     __VA_OPT__((struct array_buf__ ## __VA_ARGS__)) {   \
@@ -88,6 +88,8 @@ void raw_array_buf_pop(
 
 typedef array_buf_t(char) string_buf_t;
 
+string_buf_t format(const char* restrict fmt, ...);
+
 typedef struct string_view {
     const char* data;
     size_t len;
@@ -97,4 +99,5 @@ typedef struct string_view {
 
 bool string_views_eq(string_view_t a, string_view_t b);
 
+typedef int errno_t; // FIXME: duplicate declaration
 errno_t read_file(FILE* file, string_buf_t* dst);

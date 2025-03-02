@@ -105,33 +105,39 @@ void analyzer_exit_scope(analyzer_t* analyzer) {
 }
 
 analyze_result_t analyze_variable(analyzer_t* analyzer, variable_t* variable) {
-    analyze_field(analyzer, (field_t*)variable);
-    symbol_t symbol = (symbol_t){
-        .name = variable->name,
-        .kind = SYMBOL_VARIABLE,
-        .as.variable = variable,
-    };
-    if (!add_symbol(analyzer->current_scope, symbol)) {
-        // where error?
-        report_error("symbol with name `%.*s` already exists", TEXT_FMT(symbol.name));
-        return ANALYZE_ERROR;
-    }
+    eprintf("TODO: analyze_variable");
+    abort();
+
+    // analyze_field(analyzer, (field_t*)variable);
+    // symbol_t symbol = (symbol_t){
+    //     .name = variable->name,
+    //     .kind = SYMBOL_VARIABLE,
+    //     .as.variable = variable,
+    // };
+    // if (!add_symbol(analyzer->current_scope, symbol)) {
+    //     // where error?
+    //     report_error("symbol with name `%.*s` already exists", TEXT_FMT(symbol.name));
+    //     return ANALYZE_ERROR;
+    // }
     return ANALYZE_SUCCESS;
 }
 
 analyze_result_t analyze_field(analyzer_t* analyzer, field_t* field) {
-    const symbol_t* type_symbol = find_symbol_of(
-        *analyzer->current_scope,
-        STRING_VIEW(field->type.element_type_name),
-        SYMBOL_TYPE
-    );
-    if (type_symbol == NULL) {
-        // where error?
-        report_error("type `%.*s` not found",
-            TEXT_FMT(field->type.element_type_name));
-    } else {
-        field->type.type.element_type = type_symbol->as.type;
-    }
+    eprintf("TODO: analyze_field");
+    abort();
+    
+    // const symbol_t* type_symbol = find_symbol_of(
+    //     *analyzer->current_scope,
+    //     STRING_VIEW(field->type.element_type_name),
+    //     SYMBOL_TYPE
+    // );
+    // if (type_symbol == NULL) {
+    //     // where error?
+    //     report_error("type `%.*s` not found",
+    //         TEXT_FMT(field->type.element_type_name));
+    // } else {
+    //     field->type.type.element_type = type_symbol->as.type;
+    // }
     return ANALYZE_SUCCESS;
 }
 
@@ -139,16 +145,20 @@ analyze_result_t analyze_composite(
     analyzer_t* analyzer,
     composite_type_t* composite
 ) {
+    eprintf("TODO: analyze_composite\n");
+    exit(EXIT_FAILURE);
+    return ANALYZE_SUCCESS;
+
     for (size_t i = 0; i < composite->fields.len; i++) {
         field_t* field = &composite->fields.data[i];
         analyze_field(analyzer, field);
         for (size_t j = 0; j < i; j++) {
             if (text_eq(field->name, composite->fields.data[j].name)) {
                 // where error?
-                report_error(
-                    "field `%.*s` defined multiple times",
-                    TEXT_FMT(field->name)
-                );
+                // report_error(
+                //     "field `%.*s` defined multiple times",
+                //     TEXT_FMT(field->name)
+                // );
                 break;
             }
         }

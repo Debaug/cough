@@ -6,7 +6,7 @@
 #define ARENA_SIZE 2048
 #define ARENA_ALIGNMENT 2048
 
-typedef struct arena {
+typedef struct dyn_arena {
     dyn_arena_t* previous;
     void* end;
     // data...

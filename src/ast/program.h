@@ -23,11 +23,11 @@ typedef struct item_declaration {
 
 typedef array_buf_t(item_declaration_t) item_declaration_array_buf_t;
 typedef struct program {
-    item_declaration_array_buf_t item_declarations;
+    item_declaration_array_buf_t items;
 } program_t;
 
-parse_result_t parse_item_declaration(parser_t* parser, item_declaration_t* dst);
-parse_result_t parse_program(parser_t* parser, program_t* program);
+result_t parse_item_declaration(parser_t* parser, item_declaration_t* dst);
+result_t parse_program(parser_t* parser, program_t* program);
 
 analyze_result_t analyze_unordered_symbols(analyzer_t* analyzer, program_t* program);
 analyze_result_t analyze_expressions(analyzer_t* analyzer, program_t* program);

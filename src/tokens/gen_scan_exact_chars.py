@@ -28,7 +28,7 @@ def character_switch(char_tree, indent = ""):
     if "" in char_tree:
         string += indent + f"default: type = {"TOKEN_" + char_tree['']}; break;\n"
     else:
-        string += indent + f"default: error = true; break;"
+        string += indent + f"default: error = true; error_char = peek_scanner(*scanner); break;\n"
 
     string += indent + "}\n"
     return string
@@ -47,28 +47,29 @@ def main():
 #include <stdbool.h>
 
 #include "tokens/scanner.h"
+#include "alloc/array.h"
 
-scan_result_t scan_punctuation(scanner_t* scanner, token_t* dst) {
+result_t scan_punctuation(scanner_t* scanner, token_t* dst) {
     bool error = false;
+    char error_char;
     token_type_t type;
     text_pos_t start = scanner->text_pos;
-    const char* text = scanner->text;
 '''
 
     string += character_switch(char_tree, indent = "    ")
 
     string += """
     if (error) {
-        return SCAN_UNEXPECTED_CHARACTER;
-    } else {
-        text_view_t view = {
-            .data = text,
-            .len = scanner->text - text,
-            .start = start,
-            .end = scanner->text_pos,
+        error_t error = {
+            .kind = ERROR_UNEXPECTED_CHARACTER,
+            .source = scanner_text_from(*scanner, start),
+            .message = format("unexpected character `%c` in punctuation token", error_char)
         };
-        *dst = (token_t){ .type = type, .text = view };
-        return SCAN_SUCCESS;
+        report(scanner->reporter, error);
+        return ERROR;
+    } else {
+        *dst = (token_t){ .type = type, .text = scanner_text_from(*scanner, start) };
+        return SUCCESS;
     }
 }"""
 
