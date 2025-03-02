@@ -150,7 +150,7 @@ result_t parse_function_signature(parser_t* parser, function_signature_t* dst) {
     if (nmatching_start != 2) {
         error_t error = {
             .kind = ERROR_NOT_FUNCTION_SIGNATURE,
-            .message = format("invalid function signature (expected `fn (...)`)"),
+            .message = format("invalid function signature (expected `fn(...)`)"),
             .source = peek_parser_nth(*parser, nmatching_start).text,
         };
         parser_error_restore(parser, state, error);

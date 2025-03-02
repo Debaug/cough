@@ -23,7 +23,7 @@ static void print_error_source(const source_t* source, text_view_t span) {
 
     if (single_line) {
         eprintf(
-            "at %s:%zu:%zu-%zu:\n",
+            "at %s:%zu.%zu-%zu\n",
             source->path,
             span.start.line + 1,
             span.start.column + 1,
@@ -31,7 +31,7 @@ static void print_error_source(const source_t* source, text_view_t span) {
         );
     } else {
         eprintf(
-            "at %s:%zu:%zu-%zu:%zu:\n",
+            "at %s:%zu.%zu-%zu.%zu\n",
             source->path,
             span.start.line + 1,
             span.start.column + 1,
@@ -53,9 +53,9 @@ static void print_error_source(const source_t* source, text_view_t span) {
         int tail_len = last_line_len - last_line_error_len;
 
         eprintf(
-            "\n%.*s" KEY_UNDERLINE "%.*s\n"
+            "%.*s" KEY_UNDERLINE KEY_BOLD "%.*s\n"
             KEY_RESET "...\n"
-            KEY_UNDERLINE "%.*s" KEY_RESET "%.*s\n\n",
+            KEY_UNDERLINE KEY_BOLD "%.*s" KEY_RESET "%.*s\n\n",
             head_len, first_line, first_line_error_len, first_line + head_len,
             last_line_error_len, last_line, tail_len, last_line + last_line_error_len
         );
@@ -64,10 +64,10 @@ static void print_error_source(const source_t* source, text_view_t span) {
         int head_len = span.start.column;
         const char* last_line = source->text.data + line_start_indices[span.end.line];
         const char* tail_start = last_line + span.end.column;
-        int tail_len = line_start_indices[span.end.line + 1] - span.end.column;
+        int tail_len = line_start_indices[span.end.line + 1] - span.end.index;
 
         eprintf(
-            "\n%.*s" KEY_UNDERLINE "%.*s" KEY_RESET "%.*s\n\n",
+            "%.*s" KEY_UNDERLINE KEY_BOLD "%.*s" KEY_RESET "%.*s\n\n",
             head_len, start_line,
             (int)span.len, span.data,
             tail_len, tail_start
