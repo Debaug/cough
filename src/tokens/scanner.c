@@ -42,8 +42,8 @@ text_view_t scanner_text_from(scanner_t scanner, text_pos_t start) {
 }
 
 static result_t scan_string(scanner_t* scanner, token_t* dst) {
-    step_scanner(scanner); // skip opening '"' character
     text_pos_t start = scanner->text_pos;
+    step_scanner(scanner); // skip opening '"' character
     while (peek_scanner(*scanner) != '"') {
         if (peek_scanner(*scanner) == '\0') {
             error_t error = {
@@ -61,8 +61,8 @@ static result_t scan_string(scanner_t* scanner, token_t* dst) {
             step_scanner(scanner);
         }
     }
-    *dst = (token_t){ .type = TOKEN_STRING, .text = scanner_text_from(*scanner, start) };
     step_scanner(scanner); // closing '"' character
+    *dst = (token_t){ .type = TOKEN_STRING, .text = scanner_text_from(*scanner, start) };
     return SUCCESS;
 }
 
