@@ -29,17 +29,12 @@ static parse_delimited_result_t parse_delimited_expression(
     parse_delimited_result_t result;
     if (parse_expression(parser, &inside) != SUCCESS) {
         result = DELIMITED_INVALID_INSIDE;
-    } else if (eprintf("%.*s\n", TEXT_FMT(peek_parser(*parser).text)), !match_parser(parser, closing, NULL)) {
+    } else if (!match_parser(parser, closing, NULL)) {
         *invalid_closing_token = peek_parser(*parser);
-        eprintf("invalid_closing_token: `%.*s`\n", TEXT_FMT(invalid_closing_token->text));
-        eprintf("inside kind: `%d`\n", inside.kind);
-        eprintf("inside value: `%lld`\n", inside.as.integer);
         result = DELIMITED_EXCESS_INSIDE;
     } else {
         result = DELIMITED_SUCCESS;
     }
-
-    eprintf("result: %d\n", result);
 
     if (result == DELIMITED_INVALID_INSIDE || result == DELIMITED_EXCESS_INSIDE) {
         parser_restore(parser, state);
