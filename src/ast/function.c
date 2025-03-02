@@ -1,17 +1,17 @@
 #include "ast/function.h"
 
 result_t parse_function(parser_t* parser, function_t* dst) {
-    parser_alloc_state_t state = parser_snapshot(*parser);
+    parser_alloc_state_t state = parser_snapshot_alloc(*parser);
 
     function_signature_t signature;
     if (parse_function_signature(parser, &signature) != SUCCESS) {
-        parser_restore(parser, state);
+        parser_restore_alloc(parser, state);
         return ERROR;
     }
 
     block_t body;
     if (parse_block(parser, &body) != SUCCESS) {
-        parser_restore(parser, state);
+        parser_restore_alloc(parser, state);
         return ERROR;
     }
 

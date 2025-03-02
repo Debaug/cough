@@ -25,7 +25,7 @@ static parse_delimited_result_t parse_delimited_expression(
     }
 
     expression_t inside;
-    parser_alloc_state_t state = parser_snapshot(*parser);
+    parser_alloc_state_t state = parser_snapshot_alloc(*parser);
     parse_delimited_result_t result;
     if (parse_expression(parser, &inside) != SUCCESS) {
         result = DELIMITED_INVALID_INSIDE;
@@ -37,7 +37,7 @@ static parse_delimited_result_t parse_delimited_expression(
     }
 
     if (result == DELIMITED_INVALID_INSIDE || result == DELIMITED_EXCESS_INSIDE) {
-        parser_restore(parser, state);
+        parser_restore_alloc(parser, state);
         skip_parser_until(parser, closing);
         if (parser_is_eof(*parser)) {
             return DELIMITED_UNCLOSED;
@@ -56,7 +56,7 @@ static void skip_parser_invalid_statement(parser_t* parser) {
 }
 
 result_t parse_block(parser_t* parser, block_t* dst) {
-    parser_alloc_state_t state = parser_snapshot(*parser);
+    parser_alloc_state_t state = parser_snapshot_alloc(*parser);
 
     token_t opening_brace;
     if (!match_parser(parser, TOKEN_LEFT_BRACE, &opening_brace)) {
@@ -65,7 +65,7 @@ result_t parse_block(parser_t* parser, block_t* dst) {
             .source = peek_parser(*parser).text,
             .message = format("expected block (delimited by curly braces `{`, `}`)"),
         };
-        parser_error_restore(parser, state, error);
+        parser_error_restore_alloc(parser, state, error);
         return ERROR;
     }
 
@@ -80,7 +80,7 @@ result_t parse_block(parser_t* parser, block_t* dst) {
                 .source = opening_brace.text,
                 .message = format("unclosed block (delimited by curly braces `{` `}`)")
             };
-            parser_error_restore(parser, state, error);
+            parser_error_restore_alloc(parser, state, error);
             return ERROR;
         }
 
@@ -185,11 +185,11 @@ static void error_integer_too_big(
             "integer literal was too big (integer literals must be in the range -2^63 to 2^63 - 1)"
         )
     };
-    parser_error_restore(parser, state, error);
+    parser_error_restore_alloc(parser, state, error);
 }
 
 static result_t parse_integer(parser_t* parser, expression_t* dst) {
-    parser_alloc_state_t state = parser_snapshot(*parser);
+    parser_alloc_state_t state = parser_snapshot_alloc(*parser);
 
     // first token is integer when called
     text_view_t text = peek_parser(*parser).text;
@@ -237,7 +237,7 @@ static result_t parse_symbol_expression(parser_t* parser, expression_t* dst) {
 }
 
 static result_t parse_call(parser_t* parser, expression_t callee, expression_t* dst) {
-    parser_alloc_state_t state = parser_snapshot(*parser);
+    parser_alloc_state_t state = parser_snapshot_alloc(*parser);
     token_t opening_paren = peek_parser(*parser);
     step_parser(parser); // skip "("
 
@@ -250,7 +250,7 @@ static result_t parse_call(parser_t* parser, expression_t callee, expression_t* 
                 .source = opening_paren.text,
                 .message = format("unclosed parentheses `(`, `)`")
             };
-            parser_error_restore(parser, state, error);
+            parser_error_restore_alloc(parser, state, error);
             return ERROR;
         }
 
@@ -470,7 +470,7 @@ static result_t parse_infix(
 }
 
 static result_t parse_binding(parser_t* parser, expression_t* dst) {
-    parser_alloc_state_t state = parser_snapshot(*parser);
+    parser_alloc_state_t state = parser_snapshot_alloc(*parser);
 
     step_parser(parser); // skip "let"
 
@@ -485,13 +485,13 @@ static result_t parse_binding(parser_t* parser, expression_t* dst) {
             .source = peek_parser(*parser).text,
             .message = format("expected equals sign `=` in `let` binding")
         };
-        parser_error_restore(parser, state, error);
+        parser_error_restore_alloc(parser, state, error);
         return ERROR;
     }
 
     expression_t value;
     if (parse_expression(parser, &value) != SUCCESS) {
-        parser_restore(parser, state);
+        parser_restore_alloc(parser, state);
         return ERROR;
     }
 
@@ -504,18 +504,18 @@ static result_t parse_binding(parser_t* parser, expression_t* dst) {
 }
 
 static result_t parse_conditional(parser_t* parser, expression_t* dst) {
-    parser_alloc_state_t state = parser_snapshot(*parser);
+    parser_alloc_state_t state = parser_snapshot_alloc(*parser);
     step_parser(parser); // skip `if` or `elif`
 
     expression_t condition;
     if (parse_expression(parser, &condition) != SUCCESS) {
-        parser_restore(parser, state);
+        parser_restore_alloc(parser, state);
         return ERROR;
     }
 
     block_t body;
     if (parse_block(parser, &body) != SUCCESS) {
-        parser_restore(parser, state);
+        parser_restore_alloc(parser, state);
         return ERROR;
     }
 
@@ -529,7 +529,7 @@ static result_t parse_conditional(parser_t* parser, expression_t* dst) {
             step_parser(parser);
             block_t else_block;
             if (parse_block(parser, &else_block) != SUCCESS) {
-                parser_restore(parser, state);
+                parser_restore_alloc(parser, state);
                 return ERROR;
             }
             conditional.else_kind = CONDITIONAL_ELSE_BLOCK;
@@ -540,7 +540,7 @@ static result_t parse_conditional(parser_t* parser, expression_t* dst) {
             ;
             expression_t else_conditional;
             if (parse_conditional(parser, &else_conditional) != SUCCESS) {
-                parser_restore(parser, state);
+                parser_restore_alloc(parser, state);
                 return ERROR;
             }
             conditional.else_kind = CONDITIONAL_ELSE_CONDITIONAL;
@@ -564,12 +564,12 @@ parse_else_loop_end:
 }
 
 static result_t parse_infinite_loop(parser_t* parser, expression_t* dst) {
-    parser_alloc_state_t state = parser_snapshot(*parser);
+    parser_alloc_state_t state = parser_snapshot_alloc(*parser);
     step_parser(parser); // skip `loop`
 
     block_t body;
     if (parse_block(parser, &body) != SUCCESS) {
-        parser_restore(parser, state);
+        parser_restore_alloc(parser, state);
         return ERROR;
     }
 
@@ -579,18 +579,18 @@ static result_t parse_infinite_loop(parser_t* parser, expression_t* dst) {
 }
 
 static result_t parse_while_loop(parser_t* parser, expression_t* dst) {
-    parser_alloc_state_t state = parser_snapshot(*parser);
+    parser_alloc_state_t state = parser_snapshot_alloc(*parser);
     step_parser(parser); // skip "while"
 
     expression_t condition;
     if (parse_expression(parser, &condition) != SUCCESS) {
-        parser_restore(parser, state);
+        parser_restore_alloc(parser, state);
         return ERROR;
     }
 
     block_t body;
     if (parse_block(parser, &body) != SUCCESS) {
-        parser_restore(parser, state);
+        parser_restore_alloc(parser, state);
         return ERROR;
     }
 
@@ -606,7 +606,7 @@ static result_t parse_while_loop(parser_t* parser, expression_t* dst) {
 }
 
 static result_t parse_member_access(parser_t* parser, expression_t container, expression_t* dst) {
-    parser_alloc_state_t state = parser_snapshot(*parser);
+    parser_alloc_state_t state = parser_snapshot_alloc(*parser);
     step_parser(parser); // skip `.`
 
     token_t field;
@@ -616,7 +616,7 @@ static result_t parse_member_access(parser_t* parser, expression_t container, ex
             .source = peek_parser(*parser).text,
             .message = format("member wasn't an identifier")
         };
-        parser_error_restore(parser, state, error);
+        parser_error_restore_alloc(parser, state, error);
         return ERROR;
     }
 
@@ -632,7 +632,7 @@ static result_t parse_member_access(parser_t* parser, expression_t container, ex
 }
 
 static result_t parse_paren(parser_t* parser, expression_t* dst) {
-    parser_alloc_state_t state = parser_snapshot(*parser);
+    parser_alloc_state_t state = parser_snapshot_alloc(*parser);
 
     token_t opening_paren;
     expression_t inside;
@@ -694,7 +694,7 @@ static result_t parse_expression_precedence(
     precedence_t precedence,
     expression_t* dst
 ) {
-    parser_alloc_state_t state = parser_snapshot(*parser);
+    parser_alloc_state_t state = parser_snapshot_alloc(*parser);
     token_t start = peek_parser(*parser);
     result_t result = ERROR;
     expression_t expression;
@@ -720,7 +720,7 @@ static result_t parse_expression_precedence(
         ;
         block_t block;
         if (parse_block(parser, &block) != SUCCESS) {
-            parser_restore(parser, state);
+            parser_restore_alloc(parser, state);
             return ERROR;
         }
         result = SUCCESS;
@@ -750,7 +750,7 @@ static result_t parse_expression_precedence(
     }
 
     if (result != SUCCESS) {
-        parser_restore(parser, state);
+        parser_restore_alloc(parser, state);
         return ERROR;
     }
 
@@ -775,7 +775,7 @@ static result_t parse_expression_precedence(
         }
 
         if (result != SUCCESS) {
-            parser_restore(parser, state);
+            parser_restore_alloc(parser, state);
             return ERROR;
         }
     }
@@ -798,7 +798,7 @@ parse_binary_operation:
                     "(introduce parentheses `(` `)` to resolve ambiguity)"
                 )
             };
-            parser_error_restore(parser, state, error);
+            parser_error_restore_alloc(parser, state, error);
             return ERROR;
         }
 
@@ -816,7 +816,7 @@ parse_binary_operation:
 
         result = parse_infix(parser, expression, binary_operator, &expression);
         if (result != SUCCESS) {
-            parser_restore(parser, state);
+            parser_restore_alloc(parser, state);
             return ERROR;
         }
     }

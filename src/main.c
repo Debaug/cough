@@ -26,8 +26,8 @@ int test_parse(int argc, const char* argv[]) {
         return EXIT_FAILURE;
     }
 
-    print_system_error("a system error, value: %d", 420);
-    print_error("a regular error, value: %d", 69);
+    print_system_error("a system error, value: %d\n", 420);
+    print_error("a regular error, value: %d\n", 69);
 
     default_reporter_t reporter = new_default_reporter(&source);
 

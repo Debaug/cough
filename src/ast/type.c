@@ -143,7 +143,7 @@ result_t parse_variable(parser_t* parser, variable_t* dst) {
 }
 
 result_t parse_function_signature(parser_t* parser, function_signature_t* dst) {
-    parser_alloc_state_t state = parser_snapshot(*parser);
+    parser_alloc_state_t state = parser_snapshot_alloc(*parser);
 
     token_type_t start_pattern[2] = { TOKEN_FN, TOKEN_LEFT_PAREN };
     size_t nmatching_start = match_parser_sequence(parser, start_pattern, NULL, 2);
@@ -153,7 +153,7 @@ result_t parse_function_signature(parser_t* parser, function_signature_t* dst) {
             .message = format("invalid function signature (expected `fn(...)`)"),
             .source = peek_parser_nth(*parser, nmatching_start).text,
         };
-        parser_error_restore(parser, state, error);
+        parser_error_restore_alloc(parser, state, error);
         return ERROR;
     }
 
@@ -176,7 +176,7 @@ result_t parse_function_signature(parser_t* parser, function_signature_t* dst) {
                     .message = format("expected right parenthesis `)` after parameter list"),
                     .source = peek_parser(*parser).text,
                 };
-                parser_error_restore(parser, state, error);
+                parser_error_restore_alloc(parser, state, error);
                 return ERROR;
             }
             break;
@@ -187,7 +187,7 @@ result_t parse_function_signature(parser_t* parser, function_signature_t* dst) {
     named_type_t return_type = {0};
     if (has_return_type) {
         if (parse_type_name(parser, &return_type) != SUCCESS) {
-            parser_restore(parser, state);
+            parser_restore_alloc(parser, state);
             return ERROR;
         }
     }
@@ -215,7 +215,7 @@ static result_t parse_composite(parser_t* parser, composite_type_t* dst) {
         return ERROR;
     }
     
-    parser_alloc_state_t state = parser_snapshot(*parser);
+    parser_alloc_state_t state = parser_snapshot_alloc(*parser);
     
     field_array_buf_t fields = new_array_buf();
     while (!match_parser(parser, TOKEN_RIGHT_BRACE, NULL)) {
@@ -236,7 +236,7 @@ static result_t parse_composite(parser_t* parser, composite_type_t* dst) {
                 .message = format("expected right brace `}` after parameter list"),
                 .source = peek_parser(*parser).text,
             };
-            parser_error_restore(parser, state, error);
+            parser_error_restore_alloc(parser, state, error);
             return ERROR;
         }
         break;

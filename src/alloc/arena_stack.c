@@ -1,6 +1,7 @@
 #include <string.h>
 
 #include "alloc/arena_stack.h"
+#include "diagnostic/diagnostic.h"
 
 // should fit in a page
 #define ARENA_SIZE 2048
@@ -34,6 +35,10 @@ static void push_arena(arena_stack_t* stack) {
 }
 
 void* raw_arena_stack_alloc(arena_stack_t* stack, size_t size, size_t alignment) {
+    if (size + sizeof(dyn_arena_t) > ARENA_SIZE) {
+        print_error("tried to allocated too large of a memory block for a single arena (%zu bytes)", size);
+    }
+
     if (stack->top == NULL) {
         push_arena(stack);
     }

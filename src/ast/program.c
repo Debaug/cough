@@ -5,7 +5,7 @@
 #include "ast/debug.h"
 
 result_t parse_item_declaration(parser_t* parser, item_declaration_t* dst) {
-    parser_alloc_state_t state = parser_snapshot(*parser);
+    parser_alloc_state_t state = parser_snapshot_alloc(*parser);
 
     token_t name;
     if (!match_parser(parser, TOKEN_IDENTIFIER, &name)) {
@@ -18,7 +18,7 @@ result_t parse_item_declaration(parser_t* parser, item_declaration_t* dst) {
                 TEXT_FMT(token.text)
             )
         };
-        parser_error_restore(parser, state, error);
+        parser_error_restore_alloc(parser, state, error);
         return ERROR;
     }
     dst->name = name.text;
@@ -33,7 +33,7 @@ result_t parse_item_declaration(parser_t* parser, item_declaration_t* dst) {
                 TEXT_FMT(token.text)
             )
         };
-        parser_error_restore(parser, state, error);
+        parser_error_restore_alloc(parser, state, error);
         return ERROR;
     }
 
@@ -55,7 +55,7 @@ result_t parse_item_declaration(parser_t* parser, item_declaration_t* dst) {
     }
 
     if (result != SUCCESS) {
-        parser_restore(parser, state);
+        parser_restore_alloc(parser, state);
         return ERROR;
     }
 

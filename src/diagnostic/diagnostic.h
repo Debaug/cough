@@ -36,7 +36,7 @@
 
 /// @brief Prints a 'system' error.
 ///
-/// The error message is preceded by a brighter red-colored 'system error: ' string.
+/// The error message is preceded by a red-colored 'system error: ' string.
 /// This format of errors is intended for internal errors, i. e. those caused by a
 /// memory allocation or file system I/O. It is not intended to report errors due
 /// to incorrect Cough code.
