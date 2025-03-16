@@ -84,68 +84,77 @@ typedef struct function_item {
 } function_item_t;
 typedef array_buf_t(function_item_t) function_item_array_buf_t;
 
-analyze_result_t analyze_unordered_symbols(
+void report_symbol_defined_multiple_times(reporter_t* reporter, text_view_t name) {
+    error_t error = {
+        .kind = ERROR_DUPLICATE_SYMBOL_NAME,
+        .message = format(
+            "symbol with name `%.*s` was defined multiple times",
+            TEXT_FMT(name)
+        ),
+        .source = name,
+    };
+    report(reporter, error);
+}
+
+#if 0
+
+result_t analyze_unordered_symbols(
     analyzer_t* analyzer,
     program_t* program
 ) {
-    eprintf("TODO: analyze_unordered_symbols");
-    abort();
+    // record custom type symbols
+    for (size_t i = 0; i < program->items.len; i++) {
+        item_declaration_t* item = &program->items.data[i];
+        element_type_kind_t type_kind;
+        switch (item->kind) {
+        case ITEM_FUNCTION: continue;
+        case ITEM_STRUCT: type_kind = TYPE_STRUCT; break;
+        case ITEM_VARIANT: type_kind = TYPE_VARIANT; break;
+        }
+        symbol_t symbol = {
+            .name = item->name,
+            .kind = SYMBOL_TYPE,
+            .as.type = (element_type_t){
+                .kind = type_kind,
+                .as.composite = &item->as.composite
+            }
+        };
+        if (!add_symbol(analyzer->current_scope, symbol)) {
+            report_symbol_defined_multiple_times(analyzer->reporter, item->name);
+            return ERROR;
+        }
+    }
 
-    // for (size_t i = 0; i < program->items.len; i++) {
-    //     item_declaration_t* item = &program->items.data[i];
-    //     element_type_kind_t type_kind;
-    //     switch (item->kind) {
-    //     case ITEM_FUNCTION:;
-    //         function_item_t function_item = { .name = item->name, .function = &item->as.function };
-    //         break;
-    //     case ITEM_STRUCT: type_kind = TYPE_STRUCT; break;
-    //     case ITEM_VARIANT: type_kind = TYPE_VARIANT; break;
-    //     }
-    //     symbol_t symbol = {
-    //         .name = item->name,
-    //         .kind = SYMBOL_TYPE,
-    //         .as.type = (element_type_t){
-    //             .kind = type_kind,
-    //             .as.composite = &item->as.composite
-    //         }
-    //     };
-    //     if (!add_symbol(analyzer->current_scope, symbol)) {
-    //         // where error?
-    //         report_error("type with name `%.*s` defined multiple times",
-    //             TEXT_FMT(symbol.name));
-    //     }
-    // }
+    for (size_t i = 0; i < program->items.len; i++) {
+        item_declaration_t* item = &program->items.data[i];
+        switch (item->kind) {
+        case ITEM_FUNCTION:;
+            symbol_t symbol = {
+                .name = item->name,
+                .kind = SYMBOL_FUNCTION,
+                .as.function = &item->as.function
+            };
+            if (!add_symbol(analyzer->current_scope, symbol)) {
+                report_symbol_defined_multiple_times(analyzer->reporter, item->name);
+                return ERROR;
+            }
+            function_signature_t* signature = &item->as.function.signature;
+            if (signature->has_return_type) {
+                exit(-1); // TODO
+            }
+            break;
 
-    // for (size_t i = 0; i < program->items.len; i++) {
-    //     item_declaration_t* item = &program->items.data[i];
-    //     switch (item->kind) {
-    //     case ITEM_FUNCTION:;
-    //         symbol_t symbol = {
-    //             .name = item->name,
-    //             .kind = SYMBOL_FUNCTION,
-    //             .as.function = &item->as.function
-    //         };
-    //         if (!add_symbol(analyzer->current_scope, symbol)) {
-    //             report_error("item with name `%.*s` defined multiple times",
-    //                 TEXT_FMT(symbol.name));
-    //         }
-    //         function_signature_t* signature = &item->as.function.signature;
-    //         if (signature->has_return_type) {
-    //             exit(-1); // TODO
-    //         }
-    //         break;
+        case ITEM_STRUCT:
+        case ITEM_VARIANT:
+            analyze_composite(analyzer, &item->as.composite);
+            break;
+        }
+    }
 
-    //     case ITEM_STRUCT:
-    //     case ITEM_VARIANT:
-    //         analyze_composite(analyzer, &item->as.composite);
-    //         break;
-    //     }
-    // }
-
-    return ANALYZE_SUCCESS;
+    return SUCCESS;
 }
 
-analyze_result_t analyze_expressions(analyzer_t* analyzer, program_t* program) {
+result_t analyze_expressions(analyzer_t* analyzer, program_t* program) {
     for (size_t i = 0; i < program->items.len; i++) {
         item_declaration_t* declaration = &program->items.data[i];
         if (declaration->kind != ITEM_FUNCTION) {
@@ -153,8 +162,10 @@ analyze_result_t analyze_expressions(analyzer_t* analyzer, program_t* program) {
         }
         analyze_function(analyzer, &declaration->as.function);
     }
-    return ANALYZE_SUCCESS;
+    return SUCCESS;
 }
+
+#endif
 
 void debug_item_declaration(
     item_declaration_t item_declaration,

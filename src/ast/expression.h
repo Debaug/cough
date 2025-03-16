@@ -159,6 +159,7 @@ typedef struct block {
 result_t parse_expression(parser_t* parser, expression_t* dst);
 result_t parse_block(parser_t* parser, block_t* dst);
 
+#if 0
 analyze_result_t analyze_expression(
     analyzer_t* analyzer,
     expression_t* expression,
@@ -171,6 +172,7 @@ analyze_result_t analyze_block(
     type_t* return_type,
     type_t* break_type
 );
+#endif
 
 void debug_unary_operation(unary_operation_t operation, ast_debugger_t* debugger);
 void debug_binary_operation(binary_operation_t operation, ast_debugger_t* debugger);

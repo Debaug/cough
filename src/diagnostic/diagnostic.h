@@ -120,6 +120,14 @@ typedef enum error_kind {
 
     ERROR_COMPOSITE_MISSING_FIELD_LIST,
     ERROR_COMPOSITE_UNCLOSED_FIELD_LIST, // FIXME: replace with `UNCLOSED_BRACES`
+
+    // analyzing
+
+    ERROR_DUPLICATE_SYMBOL_NAME,
+
+    // runtime
+
+    ERROR_INVALID_INSTRUCTION
 } error_kind_t;
 
 /// @brief The error type.

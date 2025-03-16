@@ -1,11 +1,11 @@
 #include <stdio.h>
 #include <stdbool.h>
+#include <inttypes.h>
 
 #include "text/text.h"
 #include "diagnostic/diagnostic.h"
 #include "tokens/scanner.h"
 #include "ast/ast.h"
-#include "compiler/compiler.h"
 #include "vm/vm.h"
 
 int test_parse(int argc, const char* argv[]) {
@@ -13,8 +13,8 @@ int test_parse(int argc, const char* argv[]) {
         print_error(
             "too many arguments\n\n"
             "\tUSAGE:\n"
-            "\t\tcough <FILE>\t scan file\n"
-            "\t\tcough\t\t scan from standard input"
+            "\t\tcough <FILE>\t parse file\n"
+            "\t\tcough\t\t parse from standard input"
         );
         return -1;
     }
@@ -78,30 +78,18 @@ int test_parse(int argc, const char* argv[]) {
 }
 
 int test_run(int argc, const char* argv[]) {
-    uint32_t instructions[] = {
+    default_reporter_t reporter = new_default_reporter(NULL);
+
+    byteword_t instructions[] = {
         [0] =
-        OP_CALL, 10,
-        OP_SYSCALL, SYS_EXIT, 0,
-
-        [10] =
-        OP_ENTER, 2,
-        OP_SYSCALL, SYS_SAY_BYE,
-        OP_CALL, 30,
-        OP_SCALAR, 20, 0,
-        OP_ADD_INT,
-        OP_RETURN,
-
-        [30] =
-        OP_ENTER, 5,
         OP_SYSCALL, SYS_SAY_HI,
-        OP_SCALAR, 1, 0,
-        OP_SCALAR, 2, 0,
-        OP_ADD_INT,
-        OP_RETURN,
+        OP_SYSCALL, SYS_SAY_BYE,
+        OP_LOAD_IMM, 0x11, 0x22,
+        OP_SYSCALL, SYS_EXIT,
     };
 
     printf("===== ASSEMBLY =====\n");
-    for (size_t i = 0; i * sizeof(uint32_t) < sizeof(instructions); i++) {
+    for (size_t i = 0; i * sizeof(byteword_t) < sizeof(instructions); i++) {
         printf("%02x ", instructions[i]);
         if (i % 16 == 15) {
             printf("\n");
@@ -109,26 +97,32 @@ int test_run(int argc, const char* argv[]) {
     }
     printf("\n\n");
 
-    instruction_buf_t instruction_buf = new_array_buf(uint32_t);
+    section_buf_t instruction_buf = new_array_buf();
     array_buf_extend(
         &instruction_buf,
         &instructions,
-        sizeof(instructions) / sizeof(uint32_t),
-        uint32_t
+        sizeof(instructions) / sizeof(byteword_t),
+        byteword_t
     );
 
-    bytecode_t bytecode = { .instructions = instruction_buf };
-    vm_t vm = new_vm(bytecode);
+    bytecode_t bytecode = {
+        .instructions = instruction_buf,
+        .rodata = new_array_buf(),
+    };
+    vm_t vm = new_vm(bytecode, &reporter.reporter);
 
     printf("== PROGRAM OUTPUT ==\n");
-    run_vm(vm);
+    run_vm(&vm);
 
-    printf("variable stack index: %zu\n", vm.variable_frame_index);
+    printf(
+        "\n=== PROGRAM EXIT ===\nexit code: %" PRId64 "/ 0x%" PRIx64 "\n",
+        vm.exit_code, vm.exit_code
+    );
     return 0;
 }
 
 int main(int argc, const char* argv[]) {
-#if 1
+#if 0
     return test_parse(argc, argv);
 #else
     return test_run(argc, argv);

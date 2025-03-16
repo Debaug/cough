@@ -1,49 +1,50 @@
 #include "ast/expression.h"
 #include "ast/function.h"
 
-static analyze_result_t analyze_symbol_expression(
+static result_t analyze_symbol_expression(
     analyzer_t* analyzer,
     symbol_expression_t* symbol_expression,
     type_t* dst
 ) {
     eprintf("TODO: analyze_symbol_expression\n");
     exit(EXIT_FAILURE);
-    return ANALYZE_SUCCESS;
+    return SUCCESS;
 
-    const symbol_t* symbol = find_symbol_of(
-        *analyzer->current_scope,
-        STRING_VIEW(symbol_expression->name),
-        SYMBOL_VARIABLE | SYMBOL_FUNCTION
-    );
+    // const symbol_t* symbol = find_symbol_of(
+    //     *analyzer->current_scope,
+    //     STRING_VIEW(symbol_expression->name),
+    //     SYMBOL_VARIABLE | SYMBOL_FUNCTION
+    // );
 
-    if (symbol == NULL) {
-        // FIXME: error reporting
-        // report_text_error(
-        //     symbol_expression->name,
-        //     "no variable or function named `%.*s`",
-        //     TEXT_FMT(symbol_expression->name)
-        // );
-        return ANALYZE_ERROR;
-    }
+    // if (symbol == NULL) {
+    //     // FIXME: error reporting
+    //     // report_text_error(
+    //     //     symbol_expression->name,
+    //     //     "no variable or function named `%.*s`",
+    //     //     TEXT_FMT(symbol_expression->name)
+    //     // );
+    //     return ANALYZE_ERROR;
+    // }
 
-    if (symbol->kind == SYMBOL_VARIABLE) {
-        symbol_expression->kind = SYMBOL_EXPRESSION_VARIABLE;
-        symbol_expression->as.variable = symbol->as.variable;
-        *dst = symbol->as.variable->type.type;
-    } else {
-        symbol_expression->kind = SYMBOL_EXPRESSION_FUNCTION;
-        symbol_expression->as.function = symbol->as.function;
-        element_type_t element_type = {
-            .kind = TYPE_FUNCTION,
-            .as.function_signature = &symbol->as.function->signature
-        };
-        *dst = (type_t){ .array_depth = 0, .element_type = element_type };
-    }
+    // if (symbol->kind == SYMBOL_VARIABLE) {
+    //     symbol_expression->kind = SYMBOL_EXPRESSION_VARIABLE;
+    //     symbol_expression->as.variable = symbol->as.variable;
+    //     *dst = symbol->as.variable->type.type;
+    // } else {
+    //     symbol_expression->kind = SYMBOL_EXPRESSION_FUNCTION;
+    //     symbol_expression->as.function = symbol->as.function;
+    //     element_type_t element_type = {
+    //         .kind = TYPE_FUNCTION,
+    //         .as.function_signature = &symbol->as.function->signature
+    //     };
+    //     *dst = (type_t){ .array_depth = 0, .element_type = element_type };
+    // }
 
-    return ANALYZE_SUCCESS;
+    // return ANALYZE_SUCCESS;
 }
 
-analyze_result_t analyze_block(
+#if 0
+result_t analyze_block(
     analyzer_t* analyzer,
     block_t* block,
     type_t* return_type,
@@ -69,6 +70,7 @@ analyze_result_t analyze_block(
     analyzer_exit_scope(analyzer);
     return ANALYZE_SUCCESS;
 }
+#endif
 
 #define TYPE_IS_SCALAR(type, k) (                                                   \
     (type).array_depth == 0                                                         \
@@ -92,6 +94,7 @@ analyze_result_t analyze_block(
     )                                               \
 )
 
+#if 0
 static analyze_result_t analyze_not(
     unary_operation_t operation,
     type_t* dst
@@ -510,3 +513,4 @@ analyze_result_t analyze_expression(
         exit(-1);
     }
 }
+#endif

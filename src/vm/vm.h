@@ -1,42 +1,44 @@
 #pragma once
 
 #include "alloc/array.h"
-#include "compiler/compiler.h"
+#include "bytecode/bytecode.h"
 #include "ast/type.h"
-
-typedef enum marker {
-    MARKER_A = 0,
-    MARKER_B = 1,
-} marker_t;
-
-marker_t flip_marker(marker_t marker);
-
-typedef struct allocation {
-    void* pointer; // null if freed
-    size_t* subobject_offsets;
-    size_t subobject_offsets_len;
-    marker_t marker;
-} allocation_t;
-
-typedef struct gc {
-    // array_buf_t /* allocation_t */ allocations;
-    // array_buf_t /* size_t */ freed;
-    // array_buf_t /* size_t */ roots;
-    marker_t garbage_marker;
-} gc_t;
-
-gc_t new_gc();
 
 typedef array_buf_t(uint64_t) uint64_array_buf_t;
 
+// == structure of the stack ==
+// ... [frame n-2] [pos n-2] [frame n-1] [pos n-1] [frame n]
+//                                                  ^^^^^^^
+//                                                  current frame
+//
+// == structure of a stack frame ==
+// [variables] [expressions]
+
+typedef struct vm_pos {
+    size_t frame_start;
+    byteword_t* ip;
+} vm_pos_t;
+
+typedef struct primitive {
+    union {
+        int64_t integer;
+        void* dynamic;
+        size_t function;
+    } as;
+} primitive_t;
+typedef array_buf_t(primitive_t) value_stack_t;
+
 typedef struct vm {
     bytecode_t bytecode;
-    uint64_array_buf_t variable_stack;
-    size_t variable_frame_index;
-    uint64_array_buf_t expression_stack;
-    uint32_t* ip;
-    gc_t gc;
+    value_stack_t stack;
+    vm_pos_t pos;
+    // gc_t gc;
+    reporter_t* reporter;
+    int64_t exit_code;
 } vm_t;
 
-vm_t new_vm(bytecode_t bytecode);
-void run_vm(vm_t vm);
+// is not responsible for destroying the bytecode
+vm_t new_vm(bytecode_t bytecode, reporter_t* reporter);
+void free_vm(vm_t vm);
+
+int run_vm(vm_t* vm);
