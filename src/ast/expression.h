@@ -9,35 +9,35 @@
 #include "ast/type.h"
 #include "alloc/array.h"
 
-typedef struct expression expression_t;
+typedef struct Expression Expression;
 
-typedef enum symbol_expression_kind {
+typedef enum SymbolExpressionKind {
     SYMBOL_EXPRESSION_VARIABLE,
     SYMBOL_EXPRESSION_FUNCTION,
-} symbol_expression_kind_t;
+} SymbolExpressionKind;
 
-typedef struct symbol_expression {
-    text_view_t name;
-    symbol_expression_kind_t kind;
+typedef struct SymbolExpression {
+    TextView name;
+    SymbolExpressionKind kind;
     union {
-        const variable_t* variable;
-        const function_t* function;
+        const Variable* variable;
+        const Function* function;
     } as;
-} symbol_expression_t;
+} SymbolExpression;
 
-typedef enum unary_operator {
+typedef enum UnaryOperator {
     OPERATOR_NEGATE,
     OPERATOR_NOT,
     OPERATOR_RETURN,
     OPERATOR_BREAK,
-} unary_operator_t;
+} UnaryOperator;
 
-typedef struct unary_operation {
-    unary_operator_t operator;
-    expression_t* operand;
-} unary_operation_t;
+typedef struct UnaryOperation {
+    UnaryOperator operator;
+    Expression* operand;
+} UnaryOperation;
 
-typedef enum binary_operator {
+typedef enum BinaryOperator {
     OPERATOR_ADD,
     OPERATOR_SUBTRACT,
     OPERATOR_MULTIPLY,
@@ -61,60 +61,60 @@ typedef enum binary_operator {
     OPERATOR_INDEX,
 
     OPERATOR_ASSIGN,
-} binary_operator_t;
+} BinaryOperator;
 
-typedef struct binary_operation {
-    binary_operator_t operator;
-    expression_t* left;
-    expression_t* right;
-} binary_operation_t;
+typedef struct BinaryOperation {
+    BinaryOperator operator;
+    Expression* left;
+    Expression* right;
+} BinaryOperation;
 
-typedef array_buf_t(expression_t) expression_array_buf_t;
+typedef ArrayBuf(Expression) ExpressionArrayBuf;
 
-typedef struct member_access {
-    expression_t* container;
-    text_view_t member_name;
-    const field_t* field;
-} member_access_t;
+typedef struct MemberAccess {
+    Expression* container;
+    TextView member_name;
+    const Field* field;
+} MemberAccess;
 
-typedef struct call {
-    expression_t* callee;
-    expression_array_buf_t arguments;
-} call_t;
+typedef struct Call {
+    Expression* callee;
+    ExpressionArrayBuf arguments;
+} Call;
 
-typedef struct binding {
-    variable_t variable;
-    expression_t* value;
-} binding_t;
+typedef struct Binding {
+    Variable variable;
+    Expression* value;
+} Binding;
 
-typedef struct block block_t;
+typedef struct Block Block;
 
-typedef enum conditional_else_kind {
+typedef enum ConditionalElseKind {
     CONDITIONAL_ELSE_NONE,
     CONDITIONAL_ELSE_BLOCK,
     CONDITIONAL_ELSE_CONDITIONAL,
-} conditional_else_kind_t;
+} ConditionalElseKind;
 
-typedef struct conditional {
-    expression_t* condition;
-    block_t* body;
-    conditional_else_kind_t else_kind;
+typedef struct Conditional {
+    Expression* condition;
+    Block* body;
+    ConditionalElseKind else_kind;
     union {
-        block_t* block;
-        struct conditional* conditional;
+        Block* block;
+        struct Conditional* conditional;
     } else_as;
-} conditional_t;
+} Conditional;
 
-typedef struct infinite_loop {
-    block_t* body;
-} infinite_loop_t;
+typedef struct InfiniteLoop {
+    Block* body;
+} InfiniteLoop;
 
-typedef struct while_loop {
-    expression_t* condition;
-    block_t* body;
-} while_loop_t;
+typedef struct WhileLoop {
+    Expression* condition;
+    Block* body;
+} WhileLoop;
 
-typedef enum expression_kind {
+typedef enum ExpressionKind {
     EXPRESSION_INVALID,
     EXPRESSION_UNIT,
     EXPRESSION_INTEGER,
@@ -129,57 +129,42 @@ typedef enum expression_kind {
     EXPRESSION_INFINITE_LOOP,
     EXPRESSION_WHILE_LOOP,
     // EXPRESSION_FOR_LOOP,
-} expression_kind_t;
+} ExpressionKind;
 
-typedef struct expression {
-    expression_kind_t kind;
+typedef struct Expression {
+    ExpressionKind kind;
     union {
-        int64_t integer;
-        symbol_expression_t symbol;
-        block_t* block;
-        unary_operation_t unary_operation;
-        binary_operation_t binary_operation;
-        member_access_t member_access;
-        call_t call;
-        binding_t binding;
-        conditional_t conditional;
-        infinite_loop_t infinite_loop;
-        while_loop_t while_loop;
+        i64 integer;
+        SymbolExpression symbol;
+        Block* block;
+        UnaryOperation unary_operation;
+        BinaryOperation binary_operation;
+        MemberAccess member_access;
+        Call call;
+        Binding binding;
+        Conditional conditional;
+        InfiniteLoop infinite_loop;
+        WhileLoop while_loop;
     } as;
-    type_t type;
-} expression_t;
+    Type type;
+} Expression;
 
-typedef struct block {
-    expression_array_buf_t statements;
+typedef struct Block {
+    ExpressionArrayBuf statements;
     bool has_tail : 1;
-    expression_t tail;
-    scope_t* scope;
-} block_t;
+    Expression tail;
+    Scope* scope;
+} Block;
 
-result_t parse_expression(parser_t* parser, expression_t* dst);
-result_t parse_block(parser_t* parser, block_t* dst);
+Result parse_expression(Parser* parser, Expression* dst);
+Result parse_block(Parser* parser, Block* dst);
 
-#if 0
-analyze_result_t analyze_expression(
-    analyzer_t* analyzer,
-    expression_t* expression,
-    type_t* return_type,
-    type_t* break_type
-);
-analyze_result_t analyze_block(
-    analyzer_t* analyzer,
-    block_t* block,
-    type_t* return_type,
-    type_t* break_type
-);
-#endif
-
-void debug_unary_operation(unary_operation_t operation, ast_debugger_t* debugger);
-void debug_binary_operation(binary_operation_t operation, ast_debugger_t* debugger);
-void debug_call(call_t call, ast_debugger_t* debugger);
-void debug_binding(binding_t binding, ast_debugger_t* debugger);
-void debug_block(block_t block, ast_debugger_t* debugger);
-void debug_conditional(conditional_t conditional, ast_debugger_t* debugger);
-void debug_infinite_loop(infinite_loop_t infinite_loop, ast_debugger_t* debugger);
-void debug_while_loop(while_loop_t while_loop, ast_debugger_t* debugger);
-void debug_expression(expression_t expression, ast_debugger_t* debugger);
+void debug_unary_operation(UnaryOperation operation, AstDebugger* debugger);
+void debug_binary_operation(BinaryOperation operation, AstDebugger* debugger);
+void debug_call(Call call, AstDebugger* debugger);
+void debug_binding(Binding binding, AstDebugger* debugger);
+void debug_block(Block block, AstDebugger* debugger);
+void debug_conditional(Conditional conditional, AstDebugger* debugger);
+void debug_infinite_loop(InfiniteLoop infinite_loop, AstDebugger* debugger);
+void debug_while_loop(WhileLoop while_loop, AstDebugger* debugger);
+void debug_expression(Expression expression, AstDebugger* debugger);

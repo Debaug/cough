@@ -1,16 +1,16 @@
 #include "ast/expression.h"
 #include "ast/function.h"
 
-static result_t analyze_symbol_expression(
-    analyzer_t* analyzer,
-    symbol_expression_t* symbol_expression,
-    type_t* dst
+static Result analyze_symbol_expression(
+    Analyzer* analyzer,
+    SymbolExpression* symbol_expression,
+    Type* dst
 ) {
     eprintf("TODO: analyze_symbol_expression\n");
     exit(EXIT_FAILURE);
     return SUCCESS;
 
-    // const symbol_t* symbol = find_symbol_of(
+    // const Symbol* symbol = find_symbol_of(
     //     *analyzer->current_scope,
     //     STRING_VIEW(symbol_expression->name),
     //     SYMBOL_VARIABLE | SYMBOL_FUNCTION
@@ -33,25 +33,25 @@ static result_t analyze_symbol_expression(
     // } else {
     //     symbol_expression->kind = SYMBOL_EXPRESSION_FUNCTION;
     //     symbol_expression->as.function = symbol->as.function;
-    //     element_type_t element_type = {
+    //     ElementType element_type = {
     //         .kind = TYPE_FUNCTION,
     //         .as.function_signature = &symbol->as.function->signature
     //     };
-    //     *dst = (type_t){ .array_depth = 0, .element_type = element_type };
+    //     *dst = (Type){ .array_depth = 0, .element_type = element_type };
     // }
 
     // return ANALYZE_SUCCESS;
 }
 
 #if 0
-result_t analyze_block(
-    analyzer_t* analyzer,
+Result analyze_block(
+    Analyzer* analyzer,
     block_t* block,
-    type_t* return_type,
-    type_t* break_type
+    Type* return_type,
+    Type* break_type
 ) {
     block->scope = analyzer_enter_new_scope(analyzer);
-    for (size_t i = 0; i < block->statements.len; i++) {
+    for (usize i = 0; i < block->statements.len; i++) {
         analyze_expression(
             analyzer,
             &block->statements.data[i],
@@ -96,8 +96,8 @@ result_t analyze_block(
 
 #if 0
 static analyze_result_t analyze_not(
-    unary_operation_t operation,
-    type_t* dst
+    UnaryOperation operation,
+    Type* dst
 ) {
     eprintf("TODO: analyze_not\n");
     exit(EXIT_FAILURE);
@@ -108,13 +108,13 @@ static analyze_result_t analyze_not(
         // report_error("operand to not operator must be of type `Bool`");
         return ANALYZE_ERROR;
     }
-    *dst = (type_t){ .array_depth = 0, .element_type.kind = TYPE_BOOL };
+    *dst = (Type){ .array_depth = 0, .element_type.kind = TYPE_BOOL };
     return ANALYZE_SUCCESS;
 }
 
 static analyze_result_t analyze_negate(
-    unary_operation_t operation,
-    type_t* dst
+    UnaryOperation operation,
+    Type* dst
 ) {
     eprintf("TODO: analyze_negate\n");
     exit(EXIT_FAILURE);
@@ -130,8 +130,8 @@ static analyze_result_t analyze_negate(
 }
 
 static analyze_result_t analyze_diverge(
-    unary_operation_t operation,
-    type_t* diverge_type
+    UnaryOperation operation,
+    Type* diverge_type
 ) {
     eprintf("TODO: analyze_diverge\n");
     exit(EXIT_FAILURE);
@@ -154,11 +154,11 @@ static analyze_result_t analyze_diverge(
 }
 
 static analyze_result_t analyze_unary_operation(
-    analyzer_t* analyzer,
-    unary_operation_t* operation,
-    type_t* return_type,
-    type_t* break_type,
-    type_t* dst
+    Analyzer* analyzer,
+    UnaryOperation* operation,
+    Type* return_type,
+    Type* break_type,
+    Type* dst
 ) {
     if (analyze_expression(
         analyzer,
@@ -177,8 +177,8 @@ static analyze_result_t analyze_unary_operation(
 }
 
 static analyze_result_t analyze_binary_arithmetic(
-    binary_operation_t operation,
-    type_t* dst
+    BinaryOperation operation,
+    Type* dst
 ) {
     eprintf("TODO: analyze_binary_arithmetic\n");
     exit(EXIT_FAILURE);
@@ -200,8 +200,8 @@ static analyze_result_t analyze_binary_arithmetic(
 }
 
 static analyze_result_t analyze_binary_bitwise(
-    binary_operation_t operation,
-    type_t* dst
+    BinaryOperation operation,
+    Type* dst
 ) {
     eprintf("TODO: analyze_binary_bitwise\n");
     exit(EXIT_FAILURE);
@@ -225,8 +225,8 @@ static analyze_result_t analyze_binary_bitwise(
 }
 
 static analyze_result_t analyze_binary_logical(
-    binary_operation_t operation,
-    type_t* dst
+    BinaryOperation operation,
+    Type* dst
 ) {
     eprintf("TODO: analyze_binary_logical\n");
     exit(EXIT_FAILURE);
@@ -243,8 +243,8 @@ static analyze_result_t analyze_binary_logical(
 }
 
 static analyze_result_t analyze_comparison(
-    binary_operation_t operation,
-    type_t* dst
+    BinaryOperation operation,
+    Type* dst
 ) {
     eprintf("TODO: analyze_comparison\n");
     exit(EXIT_FAILURE);
@@ -261,13 +261,13 @@ static analyze_result_t analyze_comparison(
         // report_error("operands to comparison must be of the same type");
         return ANALYZE_ERROR;
     }
-    *dst = (type_t){ .array_depth = 0, .element_type.kind = TYPE_BOOL };
+    *dst = (Type){ .array_depth = 0, .element_type.kind = TYPE_BOOL };
     return ANALYZE_SUCCESS;
 }
 
 static analyze_result_t analyze_index(
-    binary_operation_t operation,
-    type_t* dst
+    BinaryOperation operation,
+    Type* dst
 ) {
     eprintf("TODO: analyze_index\n");
     exit(EXIT_FAILURE);
@@ -289,11 +289,11 @@ static analyze_result_t analyze_index(
 }
 
 static analyze_result_t analyze_binary_operation(
-    analyzer_t* analyzer,
-    binary_operation_t* operation,
-    type_t* return_type,
-    type_t* break_type,
-    type_t* dst
+    Analyzer* analyzer,
+    BinaryOperation* operation,
+    Type* return_type,
+    Type* break_type,
+    Type* dst
 ) {
     eprintf("TODO: analyze_binary_operation\n");
     exit(EXIT_FAILURE);
@@ -339,11 +339,11 @@ static analyze_result_t analyze_binary_operation(
 
 static analyze_result_t
 analyze_member_access(
-    analyzer_t* analyzer,
-    member_access_t* member,
-    type_t* return_type,
-    type_t* break_type,
-    type_t* dst
+    Analyzer* analyzer,
+    MemberAccess* member,
+    Type* return_type,
+    Type* break_type,
+    Type* dst
 ) {
     eprintf("TODO: analyze_binary_operation\n");
     exit(EXIT_FAILURE);
@@ -352,7 +352,7 @@ analyze_member_access(
     if (analyze_expression(analyzer, member->container, return_type, break_type) != ANALYZE_SUCCESS) {
         return ANALYZE_ERROR;
     }
-    type_t container_type = member->container->type;
+    Type container_type = member->container->type;
     if (!TYPE_IS_COMPOSITE(container_type)) {
         // report_error("can't access a field of a non-composite type");
         return ANALYZE_ERROR;
@@ -370,11 +370,11 @@ analyze_member_access(
 }
 
 static analyze_result_t analyze_call(
-    analyzer_t* analyzer,
-    call_t* call,
-    type_t* return_type,
-    type_t* break_type,
-    type_t* dst
+    Analyzer* analyzer,
+    Call* call,
+    Type* return_type,
+    Type* break_type,
+    Type* dst
 ) {
     eprintf("TODO: analyze_call\n");
     exit(EXIT_FAILURE);
@@ -388,7 +388,7 @@ static analyze_result_t analyze_call(
         // report_error("can't call non-function value");
         result = ANALYZE_ERROR;
     }
-    for (size_t i = 0; i < call->arguments.len; i++) {
+    for (usize i = 0; i < call->arguments.len; i++) {
         if (analyze_expression(analyzer, &call->arguments.data[i], return_type, break_type) != ANALYZE_SUCCESS) {
             result = ANALYZE_ERROR;
         }
@@ -403,19 +403,19 @@ static analyze_result_t analyze_call(
     if (call->callee->type.element_type.as.function_signature->has_return_type) {
         *dst = call->callee->type.element_type.as.function_signature->return_type.type;
     } else {
-        *dst = (type_t){ .array_depth = 0, .element_type.kind = TYPE_UNIT }; 
+        *dst = (Type){ .array_depth = 0, .element_type.kind = TYPE_UNIT }; 
     }
     return result;
 }
 
 // static analyze_result_t analyze_binding(
-//     analyzer_t* analyzer,
-//     binding_t* binding,
-//     type_t* return_type,
-//     type_t* break_type,
-//     type_t* dst
+//     Analyzer* analyzer,
+//     Binding* binding,
+//     Type* return_type,
+//     Type* break_type,
+//     Type* dst
 // ) {
-//     symbol_t symbol = {
+//     Symbol symbol = {
 //         .name = binding->variable.name,
 //         .kind = SYMBOL_VARIABLE,
 //         .as.variable = &binding->variable,
@@ -429,10 +429,10 @@ static analyze_result_t analyze_call(
 // }
 
 analyze_result_t analyze_expression(
-    analyzer_t* analyzer,
-    expression_t* expression,
-    type_t* return_type,
-    type_t* break_type
+    Analyzer* analyzer,
+    Expression* expression,
+    Type* return_type,
+    Type* break_type
 ) {
     eprintf("TODO: analyze_expression\n");
     exit(EXIT_FAILURE);
@@ -440,7 +440,7 @@ analyze_result_t analyze_expression(
 
     switch (expression->kind) {
     case EXPRESSION_INTEGER:
-        expression->type = (type_t){
+        expression->type = (Type){
             .array_depth = 0,
             .element_type.kind = TYPE_INT
         };
@@ -465,7 +465,7 @@ analyze_result_t analyze_expression(
         }
         expression->type = (expression->as.block->has_tail)
             ? expression->as.block->tail.type
-            : (type_t){ .array_depth = 0, .element_type.kind = TYPE_UNIT };
+            : (Type){ .array_depth = 0, .element_type.kind = TYPE_UNIT };
         return ANALYZE_SUCCESS;
 
     case EXPRESSION_UNARY_OPERATION:

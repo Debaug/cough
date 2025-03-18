@@ -5,22 +5,22 @@
 
 #include "tokens/scanner.h"
 
-scanner_t new_scanner(const char* text, reporter_t* reporter) {
-    text_pos_t start = { .line = 0, .column = 0, .index = 0 };
-    return (scanner_t){ .text = text, .text_pos = start, .reporter = reporter };
+Scanner new_scanner(const char* text, Reporter* reporter) {
+    TextPos start = { .line = 0, .column = 0, .index = 0 };
+    return (Scanner){ .text = text, .text_pos = start, .reporter = reporter };
 }
 
-char peek_scanner(scanner_t scanner) {
+char peek_scanner(Scanner scanner) {
     return *scanner.text;
 }
 
-void step_scanner(scanner_t* scanner) {
+void step_scanner(Scanner* scanner) {
     scanner->text_pos = text_pos_next(scanner->text_pos, scanner->text);
     scanner->text++;
 }
 
-static bool is_unary_operator(token_t token) {
-    switch (token.type) {
+static bool is_unary_operator(Token token) {
+    switch (token.kind) {
     case TOKEN_PLUS:
     case TOKEN_MINUS:
     case TOKEN_BANG:
@@ -30,10 +30,10 @@ static bool is_unary_operator(token_t token) {
     }
 }
 
-text_view_t scanner_text_from(scanner_t scanner, text_pos_t start) {
-    size_t len = scanner.text_pos.index - start.index;
+TextView scanner_text_from(Scanner scanner, TextPos start) {
+    usize len = scanner.text_pos.index - start.index;
     const char* data = scanner.text - len;
-    return (text_view_t){
+    return (TextView){
         .data = data,
         .len = len,
         .start = start,
@@ -41,12 +41,12 @@ text_view_t scanner_text_from(scanner_t scanner, text_pos_t start) {
     };
 }
 
-static result_t scan_string(scanner_t* scanner, token_t* dst) {
-    text_pos_t start = scanner->text_pos;
+static Result scan_string(Scanner* scanner, Token* dst) {
+    TextPos start = scanner->text_pos;
     step_scanner(scanner); // skip opening '"' character
     while (peek_scanner(*scanner) != '"') {
         if (peek_scanner(*scanner) == '\0') {
-            error_t error = {
+            Error error = {
                 .kind = ERROR_UNCLOSED_STRING,
                 .source = scanner_text_from(*scanner, start),
                 .message = format("missing closing `\"` in string literal")
@@ -62,12 +62,12 @@ static result_t scan_string(scanner_t* scanner, token_t* dst) {
         }
     }
     step_scanner(scanner); // closing '"' character
-    *dst = (token_t){ .type = TOKEN_STRING, .text = scanner_text_from(*scanner, start) };
+    *dst = (Token){ .kind = TOKEN_STRING, .text = scanner_text_from(*scanner, start) };
     return SUCCESS;
 }
 
-static result_t scan_integer(scanner_t* scanner, token_t* dst) {
-    text_pos_t start = scanner->text_pos;
+static Result scan_integer(Scanner* scanner, Token* dst) {
+    TextPos start = scanner->text_pos;
 
     if (peek_scanner(*scanner) == '-') {
         step_scanner(scanner);
@@ -77,16 +77,16 @@ static result_t scan_integer(scanner_t* scanner, token_t* dst) {
         step_scanner(scanner);
     }
 
-    *dst = (token_t){ .type = TOKEN_INTEGER, .text = scanner_text_from(*scanner, start) };
+    *dst = (Token){ .kind = TOKEN_INTEGER, .text = scanner_text_from(*scanner, start) };
     return SUCCESS;
 }
 
-typedef struct keyword {
+typedef struct Keyword {
     const char* text;
-    token_type_t token_type;
-} keyword_t;
+    TokenKind token_type;
+} Keyword;
 
-static keyword_t keywords[] = {
+static Keyword keywords[] = {
     { "mut", TOKEN_MUT },
     { "struct", TOKEN_STRUCT },
     { "variant", TOKEN_VARIANT },
@@ -103,22 +103,22 @@ static keyword_t keywords[] = {
     { "return", TOKEN_RETURN },
 };
 
-static result_t scan_identifier_or_keyword(scanner_t* scanner, token_t* dst) {
-    text_pos_t start = scanner->text_pos;
+static Result scan_identifier_or_keyword(Scanner* scanner, Token* dst) {
+    TextPos start = scanner->text_pos;
     step_scanner(scanner); // first character
     while (isalnum(peek_scanner(*scanner)) || peek_scanner(*scanner) == '_') {
         step_scanner(scanner);
     }
-    text_view_t text = scanner_text_from(*scanner, start);
-    token_t token = { .type = TOKEN_IDENTIFIER, .text = text };
+    TextView text = scanner_text_from(*scanner, start);
+    Token token = { .kind = TOKEN_IDENTIFIER, .text = text };
 
-    for (size_t i = 0; i < sizeof(keywords) / sizeof(keywords[0]); i++) {
-        keyword_t keyword = keywords[i];
+    for (usize i = 0; i < sizeof(keywords) / sizeof(keywords[0]); i++) {
+        Keyword keyword = keywords[i];
         if (strlen(keyword.text) != text.len) {
             continue;
         }
         if (strncmp(keyword.text, text.data, text.len) == 0) {
-            token.type = keyword.token_type;
+            token.kind = keyword.token_type;
             break;
         }
     }
@@ -127,18 +127,18 @@ static result_t scan_identifier_or_keyword(scanner_t* scanner, token_t* dst) {
     return SUCCESS;
 }
 
-static result_t scan_one(scanner_t* scanner, token_t* dst) {
+static Result scan_one(Scanner* scanner, Token* dst) {
     while (isspace(peek_scanner(*scanner))) {
         step_scanner(scanner);
     }
     if (peek_scanner(*scanner) == '\0') {
-        text_view_t view = {
+        TextView view = {
             .data = scanner->text,
             .len = 0,
             .start = scanner->text_pos,
             .end = scanner->text_pos,
         };
-        *dst = (token_t){ .type = TOKEN_EOF, .text = view };
+        *dst = (Token){ .kind = TOKEN_EOF, .text = view };
         return SUCCESS;
     }
 
@@ -159,11 +159,11 @@ static result_t scan_one(scanner_t* scanner, token_t* dst) {
     }
 }
 
-token_array_buf_t scan(scanner_t* scanner) {
-    token_array_buf_t tokens = new_array_buf(token_t);
+TokenArrayBuf scan(Scanner* scanner) {
+    TokenArrayBuf tokens = new_array_buf(Token);
     while (true) {
-        token_t token;
-        result_t result = scan_one(scanner, &token);
+        Token token;
+        Result result = scan_one(scanner, &token);
 
         if (result != SUCCESS) {
             step_scanner(scanner);
@@ -171,7 +171,7 @@ token_array_buf_t scan(scanner_t* scanner) {
         }
 
         array_buf_push(&tokens, token);
-        if (token.type == TOKEN_EOF) {
+        if (token.kind == TOKEN_EOF) {
             break;
         }
     }

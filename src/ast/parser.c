@@ -1,7 +1,7 @@
 #include "ast/parser.h"
 
-parser_t new_parser(const token_t* tokens, reporter_t* reporter) {
-    return (parser_t){
+Parser new_parser(const Token* tokens, Reporter* reporter) {
+    return (Parser){
         .tokens = tokens,
         .pos = 0,
         .storage = new_ast_storage(),
@@ -9,43 +9,43 @@ parser_t new_parser(const token_t* tokens, reporter_t* reporter) {
     };
 }
 
-token_t peek_parser(parser_t parser) {
+Token peek_parser(Parser parser) {
     return peek_parser_nth(parser, 0);
 }
 
-token_t peek_parser_nth(parser_t parser, size_t offset) {
+Token peek_parser_nth(Parser parser, usize offset) {
     return parser.tokens[parser.pos + offset];
 }
 
-void step_parser(parser_t* parser) {
+void step_parser(Parser* parser) {
     parser->pos++;
 }
 
-void step_parser_by(parser_t* parser, size_t steps) {
+void step_parser_by(Parser* parser, usize steps) {
     parser->pos += steps;
 }
 
-parser_alloc_state_t parser_snapshot_alloc(parser_t parser) {
-    return (parser_alloc_state_t){
+ParserAllocState parser_snapshot_alloc(Parser parser) {
+    return (ParserAllocState){
         .arena_stack_state = arena_stack_snapshot(parser.storage.arena_stack),
         .allocations_state = alloc_stack_snapshot(parser.storage.alloc_stack)
     };
 }
 
-void parser_restore_alloc(parser_t* parser, parser_alloc_state_t state) {
+void parser_restore_alloc(Parser* parser, ParserAllocState state) {
     arena_stack_restore(&parser->storage.arena_stack, state.arena_stack_state);
     alloc_stack_restore(&parser->storage.alloc_stack, state.allocations_state);
 }
 
-bool match_parser(parser_t* parser, token_type_t pattern, token_t* dst) {
+bool match_parser(Parser* parser, TokenKind pattern, Token* dst) {
     return match_parser_sequence(parser, &pattern, dst, 1) == 1;
 }
 
-size_t match_parser_sequence(parser_t* parser, const token_type_t* pattern, token_t* dst, size_t len) {
-    size_t i;
+usize match_parser_sequence(Parser* parser, const TokenKind* pattern, Token* dst, usize len) {
+    usize i;
     for (i = 0; i < len; i++) {
-        token_t token = parser->tokens[parser->pos + i];
-        if (token.type != pattern[i] || token.type == TOKEN_EOF) {
+        Token token = parser->tokens[parser->pos + i];
+        if (token.kind != pattern[i] || token.kind == TOKEN_EOF) {
             break;
         }
         if (dst) {
@@ -58,33 +58,33 @@ size_t match_parser_sequence(parser_t* parser, const token_type_t* pattern, toke
     return i;
 }
 
-bool parser_is_eof(parser_t parser) {
-    return peek_parser(parser).type == TOKEN_EOF;
+bool parser_is_eof(Parser parser) {
+    return peek_parser(parser).kind == TOKEN_EOF;
 }
 
-text_view_t skip_parser_until(parser_t* parser, token_type_t token) {
+TextView skip_parser_until(Parser* parser, TokenKind token) {
     return skip_parser_until_any_of(parser, &token, 1);
 }
 
-static void match_closing_to_opening(token_type_array_buf_t* group_delimiters, token_type_t matching_left_token) {
+static void match_closing_to_opening(TokenKindArrayBuf* group_delimiters, TokenKind matching_left_token) {
     if (group_delimiters->len == 0) {
         return;
     }
     if (group_delimiters->data[group_delimiters->len - 1] == (matching_left_token)) {
-        array_buf_pop(group_delimiters, NULL, token_t);
+        array_buf_pop(group_delimiters, NULL);
     }
 }
 
-text_view_t skip_parser_until_any_of(parser_t* parser, token_type_t* tokens, size_t ntokens) {
-    text_view_t start = peek_parser(*parser).text;
+TextView skip_parser_until_any_of(Parser* parser, TokenKind* tokens, usize ntokens) {
+    TextView start = peek_parser(*parser).text;
 
-    token_type_array_buf_t group_delimiters = new_array_buf();
+    TokenKindArrayBuf group_delimiters = new_array_buf();
     while (!parser_is_eof(*parser)) {
-        token_t token = peek_parser(*(parser));
+        Token token = peek_parser(*(parser));
         if (group_delimiters.len == 0) {
             bool found_match = false;
-            for (size_t i = 0; i < ntokens; i++) {
-                if (token.type == tokens[i]) {
+            for (usize i = 0; i < ntokens; i++) {
+                if (token.kind == tokens[i]) {
                     found_match = true;
                     break;
                 }
@@ -94,11 +94,11 @@ text_view_t skip_parser_until_any_of(parser_t* parser, token_type_t* tokens, siz
             }
         }
 
-        switch (token.type) {
+        switch (token.kind) {
         case TOKEN_LEFT_PAREN:
         case TOKEN_LEFT_BRACKET:
         case TOKEN_LEFT_BRACE:
-            array_buf_push(&group_delimiters, token.type);
+            array_buf_push(&group_delimiters, token.kind);
             break;
         
         case TOKEN_RIGHT_PAREN:
@@ -118,6 +118,6 @@ text_view_t skip_parser_until_any_of(parser_t* parser, token_type_t* tokens, siz
     }
     free_array_buf(group_delimiters);
 
-    text_view_t end = peek_parser(*parser).text;
+    TextView end = peek_parser(*parser).text;
     return text_view_disjoint_union(start, end);
 }

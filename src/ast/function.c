@@ -1,28 +1,28 @@
 #include "ast/function.h"
 
-result_t parse_function(parser_t* parser, function_t* dst) {
-    parser_alloc_state_t state = parser_snapshot_alloc(*parser);
+Result parse_function(Parser* parser, Function* dst) {
+    ParserAllocState state = parser_snapshot_alloc(*parser);
 
-    function_signature_t signature;
+    FunctionSignature signature;
     if (parse_function_signature(parser, &signature) != SUCCESS) {
         parser_restore_alloc(parser, state);
         return ERROR;
     }
 
-    block_t body;
+    Block body;
     if (parse_block(parser, &body) != SUCCESS) {
         parser_restore_alloc(parser, state);
         return ERROR;
     }
 
-    *dst = (function_t){
+    *dst = (Function){
         .signature = signature,
         .body = body
     };
     return SUCCESS;
 }
 
-result_t analyze_function(analyzer_t* analyzer, function_t* function) {
+Result analyze_function(Analyzer* analyzer, Function* function) {
     eprintf("TODO: analyze_function\n");
     exit(EXIT_FAILURE);
     return SUCCESS;
@@ -30,9 +30,9 @@ result_t analyze_function(analyzer_t* analyzer, function_t* function) {
     // scope_t* scope = analyzer_enter_new_scope(analyzer);
 
     // bool error = false;
-    // for (size_t i = 0; i < function->signature.parameters.len; i++) {
-    //     variable_t* parameter = &function->signature.parameters.data[i];
-    //     const symbol_t* type_symbol = find_symbol_of(
+    // for (usize i = 0; i < function->signature.parameters.len; i++) {
+    //     Variable* parameter = &function->signature.parameters.data[i];
+    //     const Symbol* type_symbol = find_symbol_of(
     //         *analyzer->current_scope,
     //         STRING_VIEW(parameter->type.element_type_name),
     //         SYMBOL_TYPE
@@ -45,7 +45,7 @@ result_t analyze_function(analyzer_t* analyzer, function_t* function) {
     //         parameter->type.type.element_type = type_symbol->as.type;
     //     }
         
-    //     symbol_t parameter_symbol = {
+    //     Symbol parameter_symbol = {
     //         .name = parameter->name,
     //         .kind = SYMBOL_VARIABLE,
     //         .as.variable = parameter
@@ -57,9 +57,9 @@ result_t analyze_function(analyzer_t* analyzer, function_t* function) {
     //         error = true;
     //     }
     // }
-    // type_t return_type;
+    // Type return_type;
     // if (function->signature.has_return_type) {
-    //     const symbol_t* type_symbol = find_symbol_of(
+    //     const Symbol* type_symbol = find_symbol_of(
     //         *analyzer->current_scope,
     //         STRING_VIEW(function->signature.return_type.element_type_name),
     //         SYMBOL_TYPE
@@ -73,7 +73,7 @@ result_t analyze_function(analyzer_t* analyzer, function_t* function) {
     //         return_type = function->signature.return_type.type;
     //     }
     // } else {
-    //     return_type = (type_t){ .array_depth = 0, .element_type.kind = TYPE_UNIT };
+    //     return_type = (Type){ .array_depth = 0, .element_type.kind = TYPE_UNIT };
     // }
 
     // if (error) {
@@ -83,7 +83,7 @@ result_t analyze_function(analyzer_t* analyzer, function_t* function) {
     // return analyze_block(analyzer, &function->body, &return_type, NULL);
 }
 
-void debug_function(function_t function, ast_debugger_t* debugger) {
+void debug_function(Function function, AstDebugger* debugger) {
     ast_debug_start(debugger, "function");
     
     ast_debug_key(debugger, "signature");

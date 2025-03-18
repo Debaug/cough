@@ -1,6 +1,6 @@
 #include "ast/expression.h"
 
-void debug_unary_operation(unary_operation_t operation, ast_debugger_t* debugger) {
+void debug_unary_operation(UnaryOperation operation, AstDebugger* debugger) {
     ast_debug_start(debugger, "unary_operation");
     ast_debug_key(debugger, "operator");
     switch (operation.operator) {
@@ -14,7 +14,7 @@ void debug_unary_operation(unary_operation_t operation, ast_debugger_t* debugger
     ast_debug_end(debugger);
 }
 
-void debug_binary_operation(binary_operation_t operation, ast_debugger_t* debugger) {
+void debug_binary_operation(BinaryOperation operation, AstDebugger* debugger) {
     ast_debug_start(debugger, "binary_operation");
     ast_debug_key(debugger, "operator");
     switch (operation.operator) {
@@ -49,7 +49,7 @@ void debug_binary_operation(binary_operation_t operation, ast_debugger_t* debugg
     ast_debug_end(debugger);
 }
 
-void debug_member_access(member_access_t member_access, ast_debugger_t* debugger) {
+void debug_member_access(MemberAccess member_access, AstDebugger* debugger) {
     ast_debug_start(debugger, "member_access");
     ast_debug_key(debugger, "container");
     debug_expression(*member_access.container, debugger);
@@ -62,20 +62,20 @@ void debug_member_access(member_access_t member_access, ast_debugger_t* debugger
     ast_debug_end(debugger);
 }
 
-void debug_call(call_t call, ast_debugger_t* debugger) {
+void debug_call(Call call, AstDebugger* debugger) {
     ast_debug_start(debugger, "call");
     ast_debug_key(debugger, "callee");
     debug_expression(*call.callee, debugger);
     ast_debug_key(debugger, "arguments");
     ast_debug_start_sequence(debugger);
-    for (size_t i = 0; i < call.arguments.len; i++) {
+    for (usize i = 0; i < call.arguments.len; i++) {
         debug_expression(call.arguments.data[i], debugger);
     }
     ast_debug_end_sequence(debugger);
     ast_debug_end(debugger);
 }
 
-void debug_binding(binding_t binding, ast_debugger_t* debugger) {
+void debug_binding(Binding binding, AstDebugger* debugger) {
     ast_debug_start(debugger, "binding");
     ast_debug_key(debugger, "variable");
     debug_variable(binding.variable, debugger);
@@ -84,11 +84,11 @@ void debug_binding(binding_t binding, ast_debugger_t* debugger) {
     ast_debug_end(debugger);
 }
 
-void debug_block(block_t block, ast_debugger_t* debugger) {
+void debug_block(Block block, AstDebugger* debugger) {
     ast_debug_start(debugger, "block");
     ast_debug_key(debugger, "statements");
     ast_debug_start_sequence(debugger);
-    for (size_t i = 0; i < block.statements.len; i++) {
+    for (usize i = 0; i < block.statements.len; i++) {
         debug_expression(block.statements.data[i], debugger);
     }
     ast_debug_end_sequence(debugger);
@@ -99,7 +99,7 @@ void debug_block(block_t block, ast_debugger_t* debugger) {
     ast_debug_end(debugger);
 }
 
-void debug_conditional(conditional_t conditional, ast_debugger_t* debugger) {
+void debug_conditional(Conditional conditional, AstDebugger* debugger) {
     ast_debug_start(debugger, "conditional");
 
     ast_debug_key(debugger, "condition");
@@ -124,14 +124,14 @@ void debug_conditional(conditional_t conditional, ast_debugger_t* debugger) {
     ast_debug_end(debugger);
 }
 
-void debug_infinite_loop(infinite_loop_t infinite_loop, ast_debugger_t* debugger) {
+void debug_infinite_loop(InfiniteLoop infinite_loop, AstDebugger* debugger) {
     ast_debug_start(debugger, "infinite_loop");
     ast_debug_key(debugger, "body");
     debug_block(*infinite_loop.body, debugger);
     ast_debug_end(debugger);
 }
 
-void debug_while_loop(while_loop_t while_loop, ast_debugger_t* debugger) {
+void debug_while_loop(WhileLoop while_loop, AstDebugger* debugger) {
     ast_debug_start(debugger, "while_loop");
     ast_debug_key(debugger, "condition");
     debug_expression(*while_loop.condition, debugger);
@@ -140,7 +140,7 @@ void debug_while_loop(while_loop_t while_loop, ast_debugger_t* debugger) {
     ast_debug_end(debugger);
 }
 
-void debug_expression(expression_t expression, ast_debugger_t* debugger) {
+void debug_expression(Expression expression, AstDebugger* debugger) {
     switch (expression.kind) {
     case EXPRESSION_INVALID:
         ast_debug_string(debugger, "<invalid>");

@@ -6,15 +6,15 @@
 #include "ast/expression.h"
 #include "ast/debug.h"
 
-typedef struct function {
-    function_signature_t signature;
-    block_t body;
-    scope_t* scope;
-} function_t;
+typedef struct Function {
+    FunctionSignature signature;
+    Block body;
+    Scope* scope;
+} Function;
 
-result_t parse_function(parser_t* parser, function_t* dst);
+Result parse_function(Parser* parser, Function* dst);
 
-result_t analyze_function(analyzer_t* analyzer, function_t* function);
+Result analyze_function(Analyzer* analyzer, Function* function);
 
-void debug_parameter(variable_t parameter, ast_debugger_t* debugger);
-void debug_function(function_t function, ast_debugger_t* debugger);
+void debug_parameter(Variable parameter, AstDebugger* debugger);
+void debug_function(Function function, AstDebugger* debugger);

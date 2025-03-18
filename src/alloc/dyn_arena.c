@@ -1,36 +1,36 @@
 #include "alloc/dyn_arena.h"
 #include "alloc/array.h"
 
-dyn_arena_t new_dyn_arena(void) {
-    return (dyn_arena_t){ .data = NULL, .end = 0, .capacity = 0 };
+DynArena new_dyn_arena(void) {
+    return (DynArena){ .data = NULL, .end = 0, .capacity = 0 };
 }
 
-void free_dyn_arena(dyn_arena_t arena) {
+void free_dyn_arena(DynArena arena) {
     free(arena.data);
 }
 
-handle_t dyn_arena_alloc(dyn_arena_t* arena, size_t size, size_t alignment) {
-    handle_t handle = arena->end = __builtin_align_up(arena->end, alignment);
+Handle dyn_arena_alloc(DynArena* arena, usize size, usize alignment) {
+    Handle handle = arena->end = __builtin_align_up(arena->end, alignment);
     raw_array_buf_reserve(&arena->data, handle, &arena->capacity, size, 1);
     arena->end += size;
     return handle;
 }
 
-handle_t dyn_arena_extend(
-    dyn_arena_t* arena,
+Handle dyn_arena_extend(
+    DynArena* arena,
     void* data,
-    size_t size, 
-    size_t alignment
+    usize size, 
+    usize alignment
 ) {
-    handle_t handle = arena->end = __builtin_align_up(arena->end, alignment);
+    Handle handle = arena->end = __builtin_align_up(arena->end, alignment);
     raw_array_buf_extend(&arena->data, &arena->end, &arena->capacity, data, size, 1);
     return handle;
 }
 
-size_t arena_snapshot(dyn_arena_t arena) {
+usize arena_snapshot(DynArena arena) {
     return arena.end;
 }
 
-void arena_restore(dyn_arena_t* arena, size_t state) {
+void arena_restore(DynArena* arena, usize state) {
     arena->end = state;
 }

@@ -20,7 +20,7 @@ int test_parse(int argc, const char* argv[]) {
     }
 
     const char* path = (argc == 2) ? argv[1] : NULL;
-    source_t source;
+    Source source;
     if (load_source_file(path, &source) != SUCCESS) {
         print_errno();
         return EXIT_FAILURE;
@@ -29,21 +29,21 @@ int test_parse(int argc, const char* argv[]) {
     print_system_error("a system error, value: %d\n", 420);
     print_error("a regular error, value: %d\n", 69);
 
-    default_reporter_t reporter = new_default_reporter(&source);
+    DefaultReporter reporter = new_default_reporter(&source);
 
     printf("==== TOKENS ====\n");
 
-    scanner_t scanner = new_scanner(source.text.data, (reporter_t*)&reporter);
-    token_array_buf_t tokens = scan(&scanner);
-    for (size_t i = 0; tokens.data[i].type != TOKEN_EOF; i++) {
-        token_t token = tokens.data[i];
+    Scanner scanner = new_scanner(source.text.data, (Reporter*)&reporter);
+    TokenArrayBuf tokens = scan(&scanner);
+    for (usize i = 0; tokens.data[i].kind != TOKEN_EOF; i++) {
+        Token token = tokens.data[i];
         printf("%zu. \t%zu:%zu .. %zu:%zu: [%d] '%.*s'\n",
             i,
             token.text.start.line + 1,
             token.text.start.column + 1,
             token.text.end.line + 1,
             token.text.end.column + 1,
-            token.type,
+            token.kind,
             (int)token.text.len,
             token.text.data
         );
@@ -51,14 +51,14 @@ int test_parse(int argc, const char* argv[]) {
 
     printf("\n====== AST ======\n");
 
-    parser_t parser = new_parser(tokens.data, &reporter.reporter);
-    ast_t ast;
+    Parser parser = new_parser(tokens.data, &reporter.reporter);
+    Ast ast;
     if (parse(&parser, &ast) != SUCCESS) {
         eprintf("failed to parse program");
         return EXIT_FAILURE;
     }
 
-    // analyzer_t analyzer = new_analyzer();
+    // Analyzer analyzer = new_analyzer();
     // if (analyze_unordered_symbols(&analyzer, &ast.program) != ANALYZE_SUCCESS) {
     //     report_error("failed to analyze unordered symbols");
     //     return EXIT_FAILURE;
@@ -68,7 +68,7 @@ int test_parse(int argc, const char* argv[]) {
     //     return EXIT_FAILURE;
     // }
 
-    ast_debugger_t debugger = new_ast_debugger();
+    AstDebugger debugger = new_ast_debugger();
     debug_ast(ast, &debugger);
 
     free_ast(ast);
@@ -78,9 +78,9 @@ int test_parse(int argc, const char* argv[]) {
 }
 
 int test_run(int argc, const char* argv[]) {
-    default_reporter_t reporter = new_default_reporter(NULL);
+    DefaultReporter reporter = new_default_reporter(NULL);
 
-    byteword_t instructions[] = {
+    Byteword instructions[] = {
         [0] =
         OP_SYSCALL, SYS_SAY_HI,
         OP_SYSCALL, SYS_SAY_BYE,
@@ -89,7 +89,7 @@ int test_run(int argc, const char* argv[]) {
     };
 
     printf("===== ASSEMBLY =====\n");
-    for (size_t i = 0; i * sizeof(byteword_t) < sizeof(instructions); i++) {
+    for (usize i = 0; i * sizeof(Byteword) < sizeof(instructions); i++) {
         printf("%02x ", instructions[i]);
         if (i % 16 == 15) {
             printf("\n");
@@ -97,19 +97,19 @@ int test_run(int argc, const char* argv[]) {
     }
     printf("\n\n");
 
-    section_buf_t instruction_buf = new_array_buf();
+    SectionBuf instruction_buf = new_array_buf();
     array_buf_extend(
         &instruction_buf,
         &instructions,
-        sizeof(instructions) / sizeof(byteword_t),
-        byteword_t
+        sizeof(instructions) / sizeof(Byteword),
+        Byteword
     );
 
-    bytecode_t bytecode = {
+    Bytecode bytecode = {
         .instructions = instruction_buf,
         .rodata = new_array_buf(),
     };
-    vm_t vm = new_vm(bytecode, &reporter.reporter);
+    Vm vm = new_vm(bytecode, &reporter.reporter);
 
     printf("== PROGRAM OUTPUT ==\n");
     run_vm(&vm);

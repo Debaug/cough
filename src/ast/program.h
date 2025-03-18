@@ -6,34 +6,34 @@
 
 #include "alloc/array.h"
 
-typedef enum item_declaration_kind {
+typedef enum ItemDeclarationKind {
     ITEM_FUNCTION,
     ITEM_STRUCT,
     ITEM_VARIANT,
-} item_declaration_kind_t;
+} ItemDeclarationKind;
 
-typedef struct item_declaration {
-    text_view_t name;
-    item_declaration_kind_t kind;
+typedef struct ItemDeclaration {
+    TextView name;
+    ItemDeclarationKind kind;
     union {
-        function_t function;
-        composite_type_t composite;
+        Function function;
+        CompositeType composite;
     } as;
-} item_declaration_t;
+} ItemDeclaration;
 
-typedef array_buf_t(item_declaration_t) item_declaration_array_buf_t;
-typedef struct program {
-    item_declaration_array_buf_t items;
-} program_t;
+typedef ArrayBuf(ItemDeclaration) ItemDeclarationArrayBuf;
+typedef struct Program {
+    ItemDeclarationArrayBuf items;
+} Program;
 
-result_t parse_item_declaration(parser_t* parser, item_declaration_t* dst);
-result_t parse_program(parser_t* parser, program_t* program);
+Result parse_item_declaration(Parser* parser, ItemDeclaration* dst);
+Result parse_program(Parser* parser, Program* program);
 
-result_t analyze_unordered_symbols(analyzer_t* analyzer, program_t* program);
-result_t analyze_expressions(analyzer_t* analyzer, program_t* program);
+Result analyze_unordered_symbols(Analyzer* analyzer, Program* program);
+Result analyze_expressions(Analyzer* analyzer, Program* program);
 
-void debug_program(program_t program, ast_debugger_t* debugger);
+void debug_program(Program program, AstDebugger* debugger);
 void debug_item_declaration(
-    item_declaration_t item_declaration,
-    ast_debugger_t* debugger
+    ItemDeclaration item_declaration,
+    AstDebugger* debugger
 );

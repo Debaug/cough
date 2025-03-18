@@ -6,46 +6,46 @@
 #include "ast/storage.h"
 #include "diagnostic/diagnostic.h"
 
-typedef struct parser {
-    const token_t* tokens;
-    size_t pos;
-    ast_storage_t storage;
-    reporter_t* reporter;
-} parser_t;
+typedef struct Parser {
+    const Token* tokens;
+    usize pos;
+    AstStorage storage;
+    Reporter* reporter;
+} Parser;
 
-parser_t new_parser(const token_t* tokens, reporter_t* reporter);
+Parser new_parser(const Token* tokens, Reporter* reporter);
 
-token_t peek_parser(parser_t parser);
-token_t peek_parser_nth(parser_t parser, size_t offset);
-void step_parser(parser_t* parser);
-void step_parser_by(parser_t* parser, size_t steps);
+Token peek_parser(Parser parser);
+Token peek_parser_nth(Parser parser, usize offset);
+void step_parser(Parser* parser);
+void step_parser_by(Parser* parser, usize steps);
 
-bool parser_is_eof(parser_t parser);
+bool parser_is_eof(Parser parser);
 
 bool match_parser(
-    parser_t* parser,
-    token_type_t type,
-    token_t* dst
+    Parser* parser,
+    TokenKind type,
+    Token* dst
 );
-size_t match_parser_sequence(
-    parser_t* parser,
-    const token_type_t* pattern,
-    token_t* dst,
-    size_t len
+usize match_parser_sequence(
+    Parser* parser,
+    const TokenKind* pattern,
+    Token* dst,
+    usize len
 );
 
-text_view_t skip_parser_until(parser_t* parser, token_type_t token);
-text_view_t skip_parser_until_any_of(parser_t* parser, token_type_t* tokens, size_t len);
+TextView skip_parser_until(Parser* parser, TokenKind token);
+TextView skip_parser_until_any_of(Parser* parser, TokenKind* tokens, usize len);
 
 #define parser_error_restore_alloc(parser, state, error) do {   \
     parser_restore_alloc((parser), (state));                    \
     report((parser)->reporter, (error));                        \
 } while (0)
 
-typedef struct parser_alloc_state {
-    arena_stack_state_t arena_stack_state;
-    size_t allocations_state;
-} parser_alloc_state_t;
+typedef struct ParserAllocState {
+    ArenaStackState arena_stack_state;
+    usize allocations_state;
+} ParserAllocState;
 
-parser_alloc_state_t parser_snapshot_alloc(parser_t parser);
-void parser_restore_alloc(parser_t* parser, parser_alloc_state_t state);
+ParserAllocState parser_snapshot_alloc(Parser parser);
+void parser_restore_alloc(Parser* parser, ParserAllocState state);

@@ -7,7 +7,7 @@ void print_errno(void) {
     print_system_error("%s (errno %d)", strerror(errno), errno);
 }
 
-static void print_error_source(const source_t* source, text_view_t span) {
+static void print_error_source(const Source* source, TextView span) {
     bool snip;
     bool single_line;
     if (span.start.line == span.end.line) {
@@ -40,7 +40,7 @@ static void print_error_source(const source_t* source, text_view_t span) {
         );
     }
 
-    size_t* line_start_indices = source->line_start_indices.data;
+    usize* line_start_indices = source->line_start_indices.data;
     if (snip) {
         const char* first_line = source->text.data + line_start_indices[span.start.line];
         int head_len = span.start.column;
@@ -75,16 +75,16 @@ static void print_error_source(const source_t* source, text_view_t span) {
     }
 }
 
-static void default_send(reporter_t* raw_self, error_t error) {
-    default_reporter_t* self = (default_reporter_t*)raw_self;
-    print_error("%s\n", error.message.data);
-    print_error_source(self->source, error.source);
-    free_array_buf(error.message);
+static void default_send(Reporter* raw_self, Error* error) {
+    DefaultReporter* self = (DefaultReporter*)raw_self;
+    print_error("%s\n", error->message.data);
+    print_error_source(self->source, error->source);
+    free_array_buf(error->message);
 }
 
-default_reporter_t new_default_reporter(const source_t* source) {
-    return (default_reporter_t){
-        .reporter = (reporter_t){
+DefaultReporter new_default_reporter(const Source* source) {
+    return (DefaultReporter){
+        .reporter = (Reporter){
             .send = default_send,
             .nerrors = 0
         },

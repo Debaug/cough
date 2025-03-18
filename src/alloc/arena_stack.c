@@ -7,35 +7,35 @@
 #define ARENA_SIZE 2048
 #define ARENA_ALIGNMENT 2048
 
-typedef struct dyn_arena {
-    dyn_arena_t* previous;
+typedef struct DynArena {
+    DynArena* previous;
     void* end;
     // data...
-} dyn_arena_t;
+} DynArena;
 
-arena_stack_t new_arena_stack(void) {
-    return (arena_stack_t){
+ArenaStack new_arena_stack(void) {
+    return (ArenaStack){
         .top = NULL
     };
 }
 
-void free_arena_stack(arena_stack_t stack) {
+void free_arena_stack(ArenaStack stack) {
     while (stack.top != NULL) {
-        dyn_arena_t* arena_ptr = stack.top;
+        DynArena* arena_ptr = stack.top;
         stack.top = arena_ptr->previous;
         free(arena_ptr);
     }
 }
 
-static void push_arena(arena_stack_t* stack) {
-    dyn_arena_t* arena = aligned_alloc(ARENA_ALIGNMENT, ARENA_SIZE);
+static void push_arena(ArenaStack* stack) {
+    DynArena* arena = aligned_alloc(ARENA_ALIGNMENT, ARENA_SIZE);
     arena->previous = stack->top;
-    arena->end = arena + sizeof(dyn_arena_t);
+    arena->end = arena + sizeof(DynArena);
     stack->top = arena;
 }
 
-void* raw_arena_stack_alloc(arena_stack_t* stack, size_t size, size_t alignment) {
-    if (size + sizeof(dyn_arena_t) > ARENA_SIZE) {
+void* raw_arena_stack_alloc(ArenaStack* stack, usize size, usize alignment) {
+    if (size + sizeof(DynArena) > ARENA_SIZE) {
         print_error("tried to allocated too large of a memory block for a single arena (%zu bytes)", size);
     }
 
@@ -54,26 +54,26 @@ void* raw_arena_stack_alloc(arena_stack_t* stack, size_t size, size_t alignment)
 }
 
 void* raw_arena_stack_extend(
-    arena_stack_t* stack,
+    ArenaStack* stack,
     void* data,
-    size_t size,
-    size_t alignment
+    usize size,
+    usize alignment
 ) {
     void* ptr = raw_arena_stack_alloc(stack, size, alignment);
     memcpy(ptr, data, size);
     return ptr;
 }
 
-arena_stack_state_t arena_stack_snapshot(arena_stack_t stack) {
+ArenaStackState arena_stack_snapshot(ArenaStack stack) {
     if (stack.top == NULL) {
-        return (arena_stack_state_t){ .top = stack.top, .end = 0 };
+        return (ArenaStackState){ .top = stack.top, .end = 0 };
     }
-    return (arena_stack_state_t){ .top = stack.top, .end = stack.top->end };
+    return (ArenaStackState){ .top = stack.top, .end = stack.top->end };
 }
 
-void arena_stack_restore(arena_stack_t* stack, arena_stack_state_t state) {
+void arena_stack_restore(ArenaStack* stack, ArenaStackState state) {
     while (stack->top != state.top) {
-        dyn_arena_t* top_arena = stack->top;
+        DynArena* top_arena = stack->top;
         stack->top = top_arena->previous;
         free(top_arena);
     }

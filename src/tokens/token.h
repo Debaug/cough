@@ -2,7 +2,7 @@
 
 #include "text/text.h"
 
-typedef enum token_type {
+typedef enum TokenKind {
     TOKEN_LEFT_PAREN,
     TOKEN_RIGHT_PAREN,
     TOKEN_LEFT_BRACKET,
@@ -59,11 +59,11 @@ typedef enum token_type {
     TOKEN_RETURN,
 
     TOKEN_EOF,
-} token_type_t;
-typedef array_buf_t(token_type_t) token_type_array_buf_t;
+} TokenKind;
+typedef ArrayBuf(TokenKind) TokenKindArrayBuf;
 
-typedef struct token {
-    token_type_t type;
-    text_view_t text;
-} token_t;
-typedef array_buf_t(token_t) token_array_buf_t;
+typedef struct Token {
+    TokenKind kind;
+    TextView text;
+} Token;
+typedef ArrayBuf(Token) TokenArrayBuf;

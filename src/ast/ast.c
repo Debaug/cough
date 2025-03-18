@@ -1,7 +1,7 @@
 #include "ast/ast.h"
 
-result_t parse(parser_t* parser, ast_t* dst) {
-    ast_t ast;
+Result parse(Parser* parser, Ast* dst) {
+    Ast ast;
     if (parse_program(parser, &ast.program) != SUCCESS) {
         return ERROR;
     }
@@ -10,10 +10,10 @@ result_t parse(parser_t* parser, ast_t* dst) {
     return SUCCESS;
 }
 
-void free_ast(ast_t ast) {
+void free_ast(Ast ast) {
     free_ast_storage(ast.storage);
 }
 
-void debug_ast(ast_t ast, ast_debugger_t* debugger) {
+void debug_ast(Ast ast, AstDebugger* debugger) {
     debug_program(ast.program, debugger);
 }

@@ -5,15 +5,15 @@
 #include "text/text.h"
 #include "diagnostic/diagnostic.h"
 
-text_pos_t text_pos_next(text_pos_t pos, const char* text) {
+TextPos text_pos_next(TextPos pos, const char* text) {
     if (text[0] == '\n') {
-        return (text_pos_t){ 
+        return (TextPos){ 
             .line = pos.line + 1,
             .column = 0,
             .index = pos.index + 1,
         };
     } else {
-        return (text_pos_t){
+        return (TextPos){
             .line = pos.line,
             .column = pos.column + 1,
             .index = pos.index + 1,
@@ -21,20 +21,20 @@ text_pos_t text_pos_next(text_pos_t pos, const char* text) {
     }
 }
 
-bool text_eq(text_view_t a, text_view_t b) {
+bool text_eq(TextView a, TextView b) {
     if (a.len != b.len) {
         return false;
     }
     return strncmp(a.data, b.data, a.len) == 0;
 }
 
-text_view_t text_view_disjoint_union(text_view_t a, text_view_t b) {
+TextView text_view_disjoint_union(TextView a, TextView b) {
     if (a.data >= b.data) {
-        text_view_t tmp = a;
+        TextView tmp = a;
         a = b;
         b = tmp;
     }
-    return (text_view_t){
+    return (TextView){
         .data = a.data,
         .len = b.end.index - a.start.index,
         .start = a.start,
@@ -42,7 +42,7 @@ text_view_t text_view_disjoint_union(text_view_t a, text_view_t b) {
     };
 }
 
-errno_t load_source_file(const char* path, source_t* dst) {
+Errno load_source_file(const char* path, Source* dst) {
     FILE* input;
     char absolute_path[PATH_MAX];
     if (path == NULL) {
@@ -58,7 +58,7 @@ errno_t load_source_file(const char* path, source_t* dst) {
         }
     }
 
-    string_buf_t text = new_array_buf(char);
+    StringBuf text = new_array_buf(char);
     if (read_file(input, &text) != SUCCESS) {
         return errno;
     }
@@ -76,12 +76,12 @@ errno_t load_source_file(const char* path, source_t* dst) {
         }
     }
 
-    dst->line_start_indices = new_array_buf(size_t);
-    size_t start = 0;
+    dst->line_start_indices = new_array_buf(usize);
+    usize start = 0;
     array_buf_push(&dst->line_start_indices, start);
-    for (size_t i = 0; i < text.len; i++) {
+    for (usize i = 0; i < text.len; i++) {
         if (text.data[i] == '\n') {
-            size_t next_idx = i + 1;
+            usize next_idx = i + 1;
             array_buf_push(&dst->line_start_indices, next_idx);
         }
     }

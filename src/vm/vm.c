@@ -5,16 +5,13 @@
 #include "vm/vm.h"
 #include "diagnostic/diagnostic.h"
 
-// must be IEEE 754 float64
-typedef double float64_t;
-
-typedef enum control_flow {
+typedef enum ControlFlow {
     FLOW_EXIT = 0,
     FLOW_CONTINUE = 1,
-} control_flow_t;
+} ControlFlow;
 
-vm_t new_vm(bytecode_t bytecode, reporter_t* reporter) {
-    return (vm_t){
+Vm new_vm(Bytecode bytecode, Reporter* reporter) {
+    return (Vm){
         .bytecode = bytecode,
         .stack = new_array_buf(),
         .pos = {
@@ -26,39 +23,39 @@ vm_t new_vm(bytecode_t bytecode, reporter_t* reporter) {
     };
 }
 
-void free_vm(vm_t vm) {
+void free_vm(Vm vm) {
     free_array_buf(vm.stack);
 }
 
-static control_flow_t run_one(vm_t* vm);
+static ControlFlow run_one(Vm* vm);
 
-static control_flow_t run_syscall(vm_t* vm);
-static control_flow_t run_call(vm_t* vm);
-static control_flow_t run_enter(vm_t* vm);
-static control_flow_t run_return(vm_t* vm);
-static control_flow_t run_load_imm(vm_t* vm);
+static ControlFlow run_syscall(Vm* vm);
+static ControlFlow run_call(Vm* vm);
+static ControlFlow run_enter(Vm* vm);
+static ControlFlow run_return(Vm* vm);
+static ControlFlow run_load_imm(Vm* vm);
 
-static control_flow_t sys_exit(vm_t* vm);
-static control_flow_t sys_say_hi(vm_t* vm);
-static control_flow_t sys_say_bye(vm_t* vm);
+static ControlFlow sys_exit(Vm* vm);
+static ControlFlow sys_say_hi(Vm* vm);
+static ControlFlow sys_say_bye(Vm* vm);
 
-int run_vm(vm_t* vm) {
+int run_vm(Vm* vm) {
     while (run_one(vm) == FLOW_CONTINUE) {}
     return vm->exit_code;
 }
 
-static primitive_t pop(vm_t* vm) {
-    primitive_t val;
-    array_buf_pop(&vm->stack, &val, primitive_t);
+static Primitive pop(Vm* vm) {
+    Primitive val;
+    array_buf_pop(&vm->stack, &val);
     return val;
 }
 
-static void push(vm_t* vm, primitive_t value) {
+static void push(Vm* vm, Primitive value) {
     array_buf_push(&vm->stack, value);
 }
 
-static control_flow_t run_one(vm_t* vm) {
-    opcode_t op = (opcode_t)(*vm->pos.ip);
+static ControlFlow run_one(Vm* vm) {
+    Opcode op = (Opcode)(*vm->pos.ip);
     vm->pos.ip++;
     switch (op) {
     case OP_NOP: return FLOW_CONTINUE;
@@ -74,8 +71,8 @@ static control_flow_t run_one(vm_t* vm) {
     }
 }
 
-static control_flow_t run_syscall(vm_t* vm) {
-    syscall_t op = (syscall_t)(*vm->pos.ip);
+static ControlFlow run_syscall(Vm* vm) {
+    Syscall op = (Syscall)(*vm->pos.ip);
     vm->pos.ip++;
     switch (op) {
     case SYS_NOP: return FLOW_CONTINUE;
@@ -89,42 +86,42 @@ static control_flow_t run_syscall(vm_t* vm) {
     }
 }
 
-static control_flow_t run_call(vm_t* vm) {
+static ControlFlow run_call(Vm* vm) {
     // FIXME
-    assert(sizeof(vm_pos_t) % sizeof(primitive_t) == 0);
+    assert(sizeof(VmPos) % sizeof(Primitive) == 0);
 
     array_buf_extend(
         &vm->stack,
         &vm->pos,
-        sizeof(vm_pos_t) / sizeof(primitive_t),
-        primitive_t
+        sizeof(VmPos) / sizeof(Primitive),
+        Primitive
     );
-    size_t addr = pop(vm).as.function;
-    vm->pos = (vm_pos_t){
+    usize addr = pop(vm).as.function;
+    vm->pos = (VmPos){
         .frame_start = vm->stack.len,
         .ip = vm->bytecode.instructions.data + addr
     };
     return FLOW_CONTINUE;
 }
 
-static control_flow_t run_enter(vm_t* vm) {
+static ControlFlow run_enter(Vm* vm) {
     eprintf("TODO: run_enter");
     exit(-1);
     return 0;
 }
 
-static control_flow_t run_return(vm_t* vm) {
+static ControlFlow run_return(Vm* vm) {
     eprintf("TODO: run_return");
     exit(-1);
     return 0;
 }
 
-static control_flow_t run_load_imm(vm_t* vm) {
-    uint64_t low = *(vm->pos.ip++);
-    uint64_t high = *(vm->pos.ip++);
+static ControlFlow run_load_imm(Vm* vm) {
+    u64 low = *(vm->pos.ip++);
+    u64 high = *(vm->pos.ip++);
     union {
-        uint64_t as_bits;
-        primitive_t as_primitive;
+        u64 as_bits;
+        Primitive as_primitive;
     } value = {
         .as_bits = (high << 32) | low,
     };
@@ -132,17 +129,17 @@ static control_flow_t run_load_imm(vm_t* vm) {
     return FLOW_CONTINUE;
 }
 
-static control_flow_t sys_exit(vm_t* vm) {
+static ControlFlow sys_exit(Vm* vm) {
     vm->exit_code = pop(vm).as.integer;
     return FLOW_EXIT;
 }
 
-static control_flow_t sys_say_hi(vm_t* vm) {
+static ControlFlow sys_say_hi(Vm* vm) {
     eprintf("*coughs* hai!!\n");
     return FLOW_CONTINUE;
 }
 
-static control_flow_t sys_say_bye(vm_t* vm) {
+static ControlFlow sys_say_bye(Vm* vm) {
     eprintf("*coughs* bai...\n");
     return FLOW_CONTINUE;
 }

@@ -6,14 +6,14 @@
 #include "ast/analyzer.h"
 #include "ast/debug.h"
 
-typedef struct ast {
-    ast_storage_t storage;
-    program_t program;
-} ast_t;
+typedef struct Ast {
+    AstStorage storage;
+    Program program;
+} Ast;
 
-result_t parse(parser_t* parser, ast_t* dst);
-void free_ast(ast_t ast);
+Result parse(Parser* parser, Ast* dst);
+void free_ast(Ast ast);
 
-result_t analyze(analyzer_t* analyzer, ast_t* ast);
+Result analyze(Analyzer* analyzer, Ast* ast);
 
-void debug_ast(ast_t ast, ast_debugger_t* debugger);
+void debug_ast(Ast ast, AstDebugger* debugger);

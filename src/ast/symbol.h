@@ -3,22 +3,22 @@
 #include "text/text.h"
 #include "ast/type.h"
 
-typedef enum symbol_kind {
+typedef enum SymbolKind {
     SYMBOL_TYPE = 1,
     SYMBOL_FUNCTION = 2,
     SYMBOL_VARIABLE = 4,
-} symbol_kind_t;
+} SymbolKind;
 
-typedef struct function function_t;
+typedef struct Function Function;
 
-typedef struct symbol {
-    text_view_t name;
-    symbol_kind_t kind;
+typedef struct Symbol {
+    TextView name;
+    SymbolKind kind;
     union {
-        element_type_t type;
-        function_t* function;
-        variable_t* variable;
+        ElementType type;
+        Function* function;
+        Variable* variable;
     } as;
-} symbol_t;
+} Symbol;
 
-typedef array_buf_t(symbol_t) symbol_array_buf_t;
+typedef ArrayBuf(Symbol) SymbolArrayBuf;

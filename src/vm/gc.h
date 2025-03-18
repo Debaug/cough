@@ -2,25 +2,27 @@
 
 #include <stddef.h>
 
-typedef enum marker {
+#include "common/primitives.h"
+
+typedef enum Marker {
     MARKER_A = 0,
     MARKER_B = 1,
-} marker_t;
+} Marker;
 
-marker_t flip_marker(marker_t marker);
+Marker flip_marker(Marker marker);
 
-typedef struct allocation {
+typedef struct Allocation {
     void* pointer; // null if freed
-    size_t* subobject_offsets;
-    size_t subobject_offsets_len;
-    marker_t marker;
-} allocation_t;
+    usize* subobject_offsets;
+    usize subobject_offsets_len;
+    Marker marker;
+} Allocation;
 
-typedef struct gc {
-    // array_buf_t /* allocation_t */ allocations;
-    // array_buf_t /* size_t */ freed;
-    // array_buf_t /* size_t */ roots;
-    marker_t garbage_marker;
-} gc_t;
+typedef struct Gc {
+    // ArrayBuf /* Allocation */ allocations;
+    // ArrayBuf /* usize */ freed;
+    // ArrayBuf /* usize */ roots;
+    Marker garbage_marker;
+} Gc;
 
-gc_t new_gc();
+Gc new_gc();

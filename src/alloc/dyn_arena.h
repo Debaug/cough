@@ -3,28 +3,29 @@
 #include <stdlib.h>
 #include <stdalign.h>
 
+#include "common/primitives.h"
 #include "alloc/alloc.h"
 
-typedef struct dyn_arena {
+typedef struct DynArena {
     void* data;
-    size_t end;
-    size_t capacity;
-} dyn_arena_t;
+    usize end;
+    usize capacity;
+} DynArena;
 
-dyn_arena_t new_dyn_arena(void);
-void free_dyn_arena(dyn_arena_t arena);
+DynArena new_dyn_arena(void);
+void free_dyn_arena(DynArena arena);
 
-handle_t dyn_arena_alloc(dyn_arena_t* arena, size_t size, size_t alignment);
+Handle dyn_arena_alloc(DynArena* arena, usize size, usize alignment);
 #define dyn_arena_alloc_for(arena, elt) \
     dyn_arena_alloc((arena), LAYOUT_OF(elt))
 #define dyn_arena_alloc_for_array(arena, elt, n)    \
     dyn_arena_alloc((arena), LAYOUT_OF(elt, n))
 
-handle_t dyn_arena_extend(
-    dyn_arena_t* dyn_arena,
+Handle dyn_arena_extend(
+    DynArena* DynArena,
     void* data,
-    size_t size, 
-    size_t alignment
+    usize size, 
+    usize alignment
 );
 #define dyn_arena_push(arena, elt)  \
     dyn_arena_extend((arena), &(elt), LAYOUT_OF(elt))
@@ -32,7 +33,7 @@ handle_t dyn_arena_extend(
 #define dyn_arena_resolve(arena, handle, T) ((T*)((arena).data + (handle)))
 #define dyn_arena_get(arena, handle, T) *dyn_arena_resolve(arena, handle, T)
 
-typedef size_t dyn_arena_state_t;
+typedef usize DynArenaState;
 
-dyn_arena_state_t dyn_arena_snapshot(dyn_arena_t arena);
-void dyn_arena_restore(dyn_arena_t* arena, dyn_arena_state_t state);
+DynArenaState dyn_arena_snapshot(DynArena arena);
+void dyn_arena_restore(DynArena* arena, DynArenaState state);

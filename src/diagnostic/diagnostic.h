@@ -7,8 +7,7 @@
 
 /// @brief Formats and prints a message to stderr.
 ///
-/// The arguments follow the same format as `printf`, but the format string must
-/// be a literal.
+/// The arguments follow the same format as `printf`.
 #define eprintf(...) fprintf(stderr, __VA_ARGS__)
 
 // Keys for formatting diagnostic text.
@@ -55,7 +54,7 @@
 void print_errno(void);
 
 /// @brief The result type.
-typedef enum result {
+typedef enum Result {
     /// @brief Indicates the callee has returned properly and that the caller
     /// may continue normally.
     ///
@@ -78,9 +77,9 @@ typedef enum result {
     /// Regardless of success or failure, the *callee* is responsible for managing
     /// its resources like allocated memory.
     ERROR = -1,
-} result_t;
+} Result;
 
-typedef enum error_kind {
+typedef enum ErrorKind {
     // scanning
 
     ERROR_UNEXPECTED_CHARACTER,
@@ -128,33 +127,54 @@ typedef enum error_kind {
     // runtime
 
     ERROR_INVALID_INSTRUCTION
-} error_kind_t;
+} ErrorKind;
+
+typedef enum Severity {
+    SEVERITY_VERBOSE,
+    SEVERITY_DEBUG,
+    SEVERITY_INFO,
+    SEVERITY_WARNING,
+    SEVERITY_ERROR,
+    SEVERITY_SYSTEM_ERROR,
+} Severity;
+
+typedef struct DiagnosisVTable DiagnosisVTable;
+
+typedef struct Diagnosis {
+    const DiagnosisVTable* vtable;
+    // data goes here
+} Diagnosis;
+
+typedef struct DiagnosisVTable {
+    void(*free)(Diagnosis* self);
+} DiagnosisVTable;
 
 /// @brief The error type.
-typedef struct error {
-    error_kind_t kind;
-    text_view_t source;
-    string_buf_t message;
-} error_t;
+typedef struct Error {
+    ErrorKind kind;
+    TextView source;
+    StringBuf message;
+} Error;
 
 /// @brief The error reporter type.
-typedef struct reporter {
-    void(*send)(struct reporter* self, error_t error);
-    size_t nerrors;
+typedef struct Reporter {
+    // takes ownership of the error
+    void(*send)(struct Reporter* self, Error* error);
+    usize nerrors;
     // data goes here
-} reporter_t;
+} Reporter;
 
 /// @brief Reports the given error to the given reporter.
 #define report(reporter, error) do {        \
-    (reporter)->send((reporter), (error));  \
+    (reporter)->send((reporter), &(error)); \
     (reporter)->nerrors++;                  \
 } while(0)
 
 /// @brief A general-purpose reporter that prints errors to stderr.
-typedef struct default_reporter {
-    reporter_t reporter;
-    const source_t* source;
-} default_reporter_t;
+typedef struct DefaultReporter {
+    Reporter reporter;
+    const Source* source;
+} DefaultReporter;
 
-/// @brief Constructs a @ref default_reporter_t.
-default_reporter_t new_default_reporter(const source_t* source);
+/// @brief Constructs a @ref DefaultReporter.
+DefaultReporter new_default_reporter(const Source* source);

@@ -4,13 +4,13 @@
 #include "ast/program.h"
 #include "ast/debug.h"
 
-result_t parse_item_declaration(parser_t* parser, item_declaration_t* dst) {
-    parser_alloc_state_t state = parser_snapshot_alloc(*parser);
+Result parse_item_declaration(Parser* parser, ItemDeclaration* dst) {
+    ParserAllocState state = parser_snapshot_alloc(*parser);
 
-    token_t name;
+    Token name;
     if (!match_parser(parser, TOKEN_IDENTIFIER, &name)) {
-        token_t token = peek_parser(*parser);
-        error_t error = {
+        Token token = peek_parser(*parser);
+        Error error = {
             .kind = ERROR_INVALID_ITEM_DECLARATION,
             .source = peek_parser(*parser).text,
             .message = format(
@@ -24,8 +24,8 @@ result_t parse_item_declaration(parser_t* parser, item_declaration_t* dst) {
     dst->name = name.text;
 
     if (!match_parser(parser, TOKEN_COLON_COLON, NULL)) {
-        token_t token = peek_parser(*parser);
-        error_t error = {
+        Token token = peek_parser(*parser);
+        Error error = {
             .kind = ERROR_INVALID_ITEM_DECLARATION,
             .source = peek_parser(*parser).text,
             .message = format(
@@ -37,8 +37,8 @@ result_t parse_item_declaration(parser_t* parser, item_declaration_t* dst) {
         return ERROR;
     }
 
-    result_t result;
-    switch (peek_parser(*parser).type) {
+    Result result;
+    switch (peek_parser(*parser).kind) {
     case TOKEN_FN:
         dst->kind = ITEM_FUNCTION;
         result = parse_function(parser, &dst->as.function);
@@ -62,10 +62,10 @@ result_t parse_item_declaration(parser_t* parser, item_declaration_t* dst) {
     return SUCCESS;
 }
 
-result_t parse_program(parser_t* parser, program_t* program) {
-    item_declaration_array_buf_t items = new_array_buf(item_declaration_t);
+Result parse_program(Parser* parser, Program* program) {
+    ItemDeclarationArrayBuf items = new_array_buf(ItemDeclaration);
     while (!parser_is_eof(*parser)) {
-        item_declaration_t item_declaration;
+        ItemDeclaration item_declaration;
         if (parse_item_declaration(parser, &item_declaration) != SUCCESS) {
             // error gets reported in `parse_item_declaration`
             skip_parser_until(parser, TOKEN_IDENTIFIER);
@@ -74,18 +74,18 @@ result_t parse_program(parser_t* parser, program_t* program) {
         array_buf_push(&items, item_declaration);
     }
     ast_push_alloc(&parser->storage, items.data);
-    *program = (program_t){ .items = items };
+    *program = (Program){ .items = items };
     return SUCCESS;
 }
 
-typedef struct function_item {
-    text_view_t name;
-    function_t* function;
-} function_item_t;
-typedef array_buf_t(function_item_t) function_item_array_buf_t;
+typedef struct FunctionItem {
+    TextView name;
+    Function* function;
+} FunctionItem;
+typedef ArrayBuf(FunctionItem) FunctionItemArrayBuf;
 
-void report_symbol_defined_multiple_times(reporter_t* reporter, text_view_t name) {
-    error_t error = {
+void report_symbol_defined_multiple_times(Reporter* reporter, TextView name) {
+    Error error = {
         .kind = ERROR_DUPLICATE_SYMBOL_NAME,
         .message = format(
             "symbol with name `%.*s` was defined multiple times",
@@ -98,23 +98,23 @@ void report_symbol_defined_multiple_times(reporter_t* reporter, text_view_t name
 
 #if 0
 
-result_t analyze_unordered_symbols(
-    analyzer_t* analyzer,
-    program_t* program
+Result analyze_unordered_symbols(
+    Analyzer* analyzer,
+    Program* program
 ) {
     // record custom type symbols
-    for (size_t i = 0; i < program->items.len; i++) {
-        item_declaration_t* item = &program->items.data[i];
-        element_type_kind_t type_kind;
+    for (usize i = 0; i < program->items.len; i++) {
+        ItemDeclaration* item = &program->items.data[i];
+        ElementTypeKind type_kind;
         switch (item->kind) {
         case ITEM_FUNCTION: continue;
         case ITEM_STRUCT: type_kind = TYPE_STRUCT; break;
         case ITEM_VARIANT: type_kind = TYPE_VARIANT; break;
         }
-        symbol_t symbol = {
+        Symbol symbol = {
             .name = item->name,
             .kind = SYMBOL_TYPE,
-            .as.type = (element_type_t){
+            .as.type = (ElementType){
                 .kind = type_kind,
                 .as.composite = &item->as.composite
             }
@@ -125,11 +125,11 @@ result_t analyze_unordered_symbols(
         }
     }
 
-    for (size_t i = 0; i < program->items.len; i++) {
-        item_declaration_t* item = &program->items.data[i];
+    for (usize i = 0; i < program->items.len; i++) {
+        ItemDeclaration* item = &program->items.data[i];
         switch (item->kind) {
         case ITEM_FUNCTION:;
-            symbol_t symbol = {
+            Symbol symbol = {
                 .name = item->name,
                 .kind = SYMBOL_FUNCTION,
                 .as.function = &item->as.function
@@ -138,7 +138,7 @@ result_t analyze_unordered_symbols(
                 report_symbol_defined_multiple_times(analyzer->reporter, item->name);
                 return ERROR;
             }
-            function_signature_t* signature = &item->as.function.signature;
+            FunctionSignature* signature = &item->as.function.signature;
             if (signature->has_return_type) {
                 exit(-1); // TODO
             }
@@ -154,9 +154,9 @@ result_t analyze_unordered_symbols(
     return SUCCESS;
 }
 
-result_t analyze_expressions(analyzer_t* analyzer, program_t* program) {
-    for (size_t i = 0; i < program->items.len; i++) {
-        item_declaration_t* declaration = &program->items.data[i];
+Result analyze_expressions(Analyzer* analyzer, Program* program) {
+    for (usize i = 0; i < program->items.len; i++) {
+        ItemDeclaration* declaration = &program->items.data[i];
         if (declaration->kind != ITEM_FUNCTION) {
             continue;
         }
@@ -168,8 +168,8 @@ result_t analyze_expressions(analyzer_t* analyzer, program_t* program) {
 #endif
 
 void debug_item_declaration(
-    item_declaration_t item_declaration,
-    ast_debugger_t* debugger
+    ItemDeclaration item_declaration,
+    AstDebugger* debugger
 ) {
     ast_debug_start(debugger, "item_declaration");
 
@@ -192,13 +192,13 @@ void debug_item_declaration(
 }
 
 void debug_program(
-    program_t program,
-    ast_debugger_t* debugger
+    Program program,
+    AstDebugger* debugger
 ) {
     ast_debug_start(debugger, "program");
     ast_debug_key(debugger, "items");
     ast_debug_start_sequence(debugger);
-    for (size_t i = 0; i < program.items.len; i++) {
+    for (usize i = 0; i < program.items.len; i++) {
         debug_item_declaration(
             program.items.data[i],
             debugger

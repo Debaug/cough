@@ -1,7 +1,7 @@
 #include "vm/gc.h"
 
-gc_t new_gc() {
-    return (gc_t){
+Gc new_gc() {
+    return (Gc){
         // .allocations = new_array_buf(),
         // .freed = new_array_buf(),
         // .roots = new_array_buf(),
@@ -9,6 +9,6 @@ gc_t new_gc() {
     };
 }
 
-marker_t flip_marker(marker_t marker) {
+Marker flip_marker(Marker marker) {
     return marker ^ 1;
 }

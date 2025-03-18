@@ -1,16 +1,17 @@
 #pragma once
 
 #include "alloc/array.h"
+#include "common/primitives.h"
 
-typedef void* pointer_t;
-typedef array_buf_t(pointer_t) pointer_array_buf_t;
+typedef void* Pointer;
+typedef ArrayBuf(Pointer) PointerArrayBuf;
 
-typedef struct alloc_stack {
-    pointer_array_buf_t allocations;
-} alloc_stack_t;
+typedef struct AllocStack {
+    PointerArrayBuf allocations;
+} AllocStack;
 
-alloc_stack_t new_alloc_stack(void);
-void free_alloc_stack(alloc_stack_t registry);
-void alloc_stack_push(alloc_stack_t* registry, void* ptr);
-size_t alloc_stack_snapshot(alloc_stack_t registry);
-void alloc_stack_restore(alloc_stack_t* registry, size_t state);
+AllocStack new_alloc_stack(void);
+void free_alloc_stack(AllocStack registry);
+void alloc_stack_push(AllocStack* registry, void* ptr);
+usize alloc_stack_snapshot(AllocStack registry);
+void alloc_stack_restore(AllocStack* registry, usize state);

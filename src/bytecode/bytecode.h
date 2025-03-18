@@ -5,14 +5,14 @@
 // structure of an instruction:
 // [opcode] [immediate arguments] [register arguments]
 
-typedef enum opcode {
+typedef enum Opcode {
     /// @brief "nop" -- no operation.
     OP_NOP,
 
     /// @brief "syscall" - calls a function of the VM.
     ///
     /// Immediate parameters:
-    /// - syscall_t -- the system function to call.
+    /// - Syscall -- the system function to call.
     OP_SYSCALL,
 
     /// @brief "call" -- calls a function.
@@ -20,7 +20,7 @@ typedef enum opcode {
     /// Arguments are on the expression stack, last on top.
     ///
     /// Stack parameters:
-    /// - uint32_t -- the offset of the function from the start of the
+    /// - u32 -- the offset of the function from the start of the
     /// instructions section.
     OP_CALL,
 
@@ -29,7 +29,7 @@ typedef enum opcode {
     /// Should be called as the first instruction of a function.
     ///
     /// Immediate parameters:
-    /// - uint32_t -- the number of variables the function shall use.
+    /// - u32 -- the number of variables the function shall use.
     OP_ENTER,
 
     /// @brief "return" -- returns from a function.
@@ -41,8 +41,8 @@ typedef enum opcode {
     /// Currently, only Int is supported.
     ///
     /// immediate parameters:
-    /// - uint32_t -- the low 32 bits of the scalar
-    /// - uint32_t -- the high 32 bits of the scalar
+    /// - u32 -- the low 32 bits of the scalar
+    /// - u32 -- the high 32 bits of the scalar
     OP_LOAD_IMM,
 
     /// @brief "load" -- pushes the value of a variable to the expression stack.
@@ -62,9 +62,9 @@ typedef enum opcode {
     /// - Int, Int -- the terms of the addition
     /// - Int -- the destination register
     OP_ADD_INT,
-} opcode_t;
+} Opcode;
 
-typedef enum syscall {
+typedef enum Syscall {
     SYS_NOP,
 
     // exit the program.
@@ -82,12 +82,12 @@ typedef enum syscall {
     // - File -- the file to be written; this may also be stdout or stderr.
     // - String -- the string to be printed.
     SYS_WRITE_STRING,
-} syscall_t;
+} Syscall;
 
-typedef uint32_t byteword_t;
-typedef array_buf_t(byteword_t) section_buf_t;
+typedef u32 Byteword;
+typedef ArrayBuf(Byteword) SectionBuf;
 
-typedef struct bytecode {
-    section_buf_t rodata;
-    section_buf_t instructions;
-} bytecode_t;
+typedef struct Bytecode {
+    SectionBuf rodata;
+    SectionBuf instructions;
+} Bytecode;

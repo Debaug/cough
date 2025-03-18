@@ -13,7 +13,7 @@ def character_tree(punct):
 
 def character_switch(char_tree, indent = ""):
     if  list(char_tree.keys()) == [""]:
-        return indent + f"type = {"TOKEN_" + char_tree['']};\n"
+        return indent + f"kind = {"TOKEN_" + char_tree['']};\n"
     
     string = indent + "switch (peek_scanner(*scanner)) {\n"
 
@@ -26,7 +26,7 @@ def character_switch(char_tree, indent = ""):
         string += indent + "    break;\n"
 
     if "" in char_tree:
-        string += indent + f"default: type = {"TOKEN_" + char_tree['']}; break;\n"
+        string += indent + f"default: kind = {"TOKEN_" + char_tree['']}; break;\n"
     else:
         string += indent + f"default: error = true; error_char = peek_scanner(*scanner); break;\n"
 
@@ -49,18 +49,18 @@ def main():
 #include "tokens/scanner.h"
 #include "alloc/array.h"
 
-result_t scan_punctuation(scanner_t* scanner, token_t* dst) {
+Result scan_punctuation(Scanner* scanner, Token* dst) {
     bool error = false;
     char error_char;
-    token_type_t type;
-    text_pos_t start = scanner->text_pos;
+    TokenKind kind;
+    TextPos start = scanner->text_pos;
 '''
 
     string += character_switch(char_tree, indent = "    ")
 
     string += """
     if (error) {
-        error_t error = {
+        Error error = {
             .kind = ERROR_UNEXPECTED_CHARACTER,
             .source = scanner_text_from(*scanner, start),
             .message = format("unexpected character `%c` in punctuation token", error_char)
@@ -68,7 +68,7 @@ result_t scan_punctuation(scanner_t* scanner, token_t* dst) {
         report(scanner->reporter, error);
         return ERROR;
     } else {
-        *dst = (token_t){ .type = type, .text = scanner_text_from(*scanner, start) };
+        *dst = (Token){ .kind = kind, .text = scanner_text_from(*scanner, start) };
         return SUCCESS;
     }
 }"""
