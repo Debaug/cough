@@ -1,6 +1,6 @@
 #include <string.h>
 
-#include "compiler/diagnostics/diagnostics.h"
+#include "compiler/diagnostics.h"
 #include "compiler/ast/program.h"
 #include "compiler/ast/debug.h"
 

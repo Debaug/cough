@@ -1,4 +1,4 @@
-#include "compiler/diagnostics/diagnostics.h"
+#include "compiler/diagnostics.h"
 #include "compiler/ast/expression.h"
 
 typedef enum ParseDelimitedResult {

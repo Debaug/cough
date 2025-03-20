@@ -3,7 +3,7 @@
 #include <stdbool.h>
 #include <string.h>
 
-#include "compiler/diagnostics/diagnostics.h"
+#include "compiler/diagnostics.h"
 #include "compiler/tokens/scanner.h"
 
 Scanner new_scanner(const char* text, Reporter* reporter) {

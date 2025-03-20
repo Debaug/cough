@@ -4,7 +4,7 @@
 
 #include "text/text.h"
 #include "diagnostics/diagnostics.h"
-#include "compiler/diagnostics/diagnostics.h"
+#include "compiler/diagnostics.h"
 #include "compiler/tokens/scanner.h"
 #include "compiler/ast/ast.h"
 #include "vm/vm.h"

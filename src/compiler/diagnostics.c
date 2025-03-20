@@ -1,6 +1,6 @@
 #include <stdalign.h>
 
-#include "compiler/diagnostics/diagnostics.h"
+#include "compiler/diagnostics.h"
 
 static void destroy_simple_compiler_diagnosis(Diagnosis* raw) {
     SimpleCompilerDiagnosis* self = (SimpleCompilerDiagnosis*)raw;

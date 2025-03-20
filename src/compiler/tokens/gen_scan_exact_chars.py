@@ -46,7 +46,7 @@ def main():
 #include <stdio.h>
 #include <stdbool.h>
 
-#include "compiler/diagnostics/diagnostics.h"
+#include "compiler/diagnostics.h"
 #include "compiler/tokens/scanner.h"
 #include "alloc/array.h"
 
