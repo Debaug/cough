@@ -2,8 +2,8 @@
 
 #include <stdbool.h>
 
-#include "tokens/token.h"
-#include "diagnostic/diagnostic.h"
+#include "diagnostics/diagnostics.h"
+#include "compiler/tokens/token.h"
 
 typedef struct Scanner {
     const char* text;

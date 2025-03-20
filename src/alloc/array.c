@@ -4,7 +4,7 @@
 #include <stdarg.h>
 
 #include "alloc/array.h"
-#include "diagnostic/diagnostic.h"
+#include "diagnostics/diagnostics.h"
 
 void raw_array_buf_reserve(
     void** restrict data,

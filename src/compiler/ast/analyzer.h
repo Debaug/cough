@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ast/symbol.h"
+#include "compiler/ast/symbol.h"
 #include "alloc/array.h"
 #include "alloc/alloc_stack.h"
 

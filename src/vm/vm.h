@@ -2,7 +2,7 @@
 
 #include "alloc/array.h"
 #include "bytecode/bytecode.h"
-#include "ast/type.h"
+#include "compiler/ast/type.h"
 
 typedef ArrayBuf(u64) U64ArrayBuf;
 

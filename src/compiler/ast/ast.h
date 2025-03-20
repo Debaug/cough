@@ -1,10 +1,10 @@
 #pragma once
 
-#include "ast/storage.h"
-#include "ast/program.h"
-#include "ast/parser.h"
-#include "ast/analyzer.h"
-#include "ast/debug.h"
+#include "compiler/ast/storage.h"
+#include "compiler/ast/program.h"
+#include "compiler/ast/parser.h"
+#include "compiler/ast/analyzer.h"
+#include "compiler/ast/debug.h"
 
 typedef struct Ast {
     AstStorage storage;

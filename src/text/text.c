@@ -3,7 +3,7 @@
 #include <errno.h>
 
 #include "text/text.h"
-#include "diagnostic/diagnostic.h"
+#include "diagnostics/diagnostics.h"
 
 TextPos text_pos_next(TextPos pos, const char* text) {
     if (text[0] == '\n') {

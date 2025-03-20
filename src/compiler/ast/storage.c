@@ -1,4 +1,4 @@
-#include "ast/storage.h"
+#include "compiler/ast/storage.h"
 
 AstStorage new_ast_storage(void) {
     return (AstStorage){

@@ -9,7 +9,7 @@ typedef enum Opcode {
     /// @brief "nop" -- no operation.
     OP_NOP,
 
-    /// @brief "syscall" - calls a function of the VM.
+    /// @brief "syscall" -- calls a function of the VM.
     ///
     /// Immediate parameters:
     /// - Syscall -- the system function to call.

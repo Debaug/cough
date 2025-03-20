@@ -1,4 +1,4 @@
-#include "ast/ast.h"
+#include "compiler/ast/ast.h"
 
 Result parse(Parser* parser, Ast* dst) {
     Ast ast;

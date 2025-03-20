@@ -46,7 +46,8 @@ def main():
 #include <stdio.h>
 #include <stdbool.h>
 
-#include "tokens/scanner.h"
+#include "compiler/diagnostics/diagnostics.h"
+#include "compiler/tokens/scanner.h"
 #include "alloc/array.h"
 
 Result scan_punctuation(Scanner* scanner, Token* dst) {
@@ -60,12 +61,12 @@ Result scan_punctuation(Scanner* scanner, Token* dst) {
 
     string += """
     if (error) {
-        Error error = {
-            .kind = ERROR_UNEXPECTED_CHARACTER,
-            .source = scanner_text_from(*scanner, start),
-            .message = format("unexpected character `%c` in punctuation token", error_char)
-        };
-        report(scanner->reporter, error);
+        report_simple_compiler_error(
+            scanner->reporter,
+            ERROR_INVALID_TOKEN,
+            format("unexpected character `%c` in punctuation token", error_char),
+            scanner_text_from(*scanner, start)
+        );
         return ERROR;
     } else {
         *dst = (Token){ .kind = kind, .text = scanner_text_from(*scanner, start) };

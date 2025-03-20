@@ -1,7 +1,7 @@
 #include <stdio.h>
 
-#include "ast/debug.h"
-#include "diagnostic/diagnostic.h"
+#include "compiler/ast/debug.h"
+#include "diagnostics/diagnostics.h"
 
 AstDebugger new_ast_debugger() {
     return (AstDebugger){ .depth = 0, .in_field = false };

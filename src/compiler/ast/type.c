@@ -1,5 +1,6 @@
-#include "ast/type.h"
-#include "ast/analyzer.h"
+#include "compiler/diagnostics/diagnostics.h"
+#include "compiler/ast/type.h"
+#include "compiler/ast/analyzer.h"
 
 bool type_eq(Type a, Type b) {
     if (a.array_depth != b.array_depth) {
@@ -72,12 +73,12 @@ Result parse_type_name(Parser* parser, NamedType* dst) {
 
     Token type_name;
     if (!match_parser(parser, TOKEN_IDENTIFIER, &type_name)) {
-        Error error = {
-            .kind = ERROR_INVALID_TYPE_NAME,
-            .message = format("invalid type name (expected identifier)"),
-            .source = peek_parser(*parser).text,
-        };
-        report(parser->reporter, error);
+        report_simple_compiler_error(
+            parser->reporter,
+            ERROR_INVALID_TYPE_NAME,
+            format("invalid type name (expected identifier)"),
+            peek_parser(*parser).text
+        );
         return ERROR;
     }
     *dst = (NamedType){
@@ -95,22 +96,22 @@ static Result parse_field_or_variable_tail(Parser* parser, Field* dst) {
 
     Token name;
     if (!match_parser(parser, TOKEN_IDENTIFIER, &name)) {
-        Error error = {
-            .kind = ERROR_VARIABLE_DECLARATION_INVALID_NAME,
-            .message = format("invalid variable or field name (expected identifier)"),
-            .source = peek_parser(*parser).text,
-        };
-        report(parser->reporter, error);
+        report_simple_compiler_error(
+            parser->reporter,
+            ERROR_VARIABLE_DECLARATION_INVALID_NAME,
+            format("invalid variable or field name (expected identifier)"),
+            peek_parser(*parser).text
+        );
         return ERROR;
     }
 
     if (!match_parser(parser, TOKEN_COLON, NULL)) {
-        Error error = {
-            .kind = ERROR_VARIABLE_DECLARATION_INVALID_TYPE,
-            .message = format("missing type specification in variable or field declaration (expected `: <type>`)"),
-            .source = peek_parser(*parser).text,
-        };
-        report(parser->reporter, error);
+        report_simple_compiler_error(
+            parser->reporter,
+            ERROR_VARIABLE_DECLARATION_INVALID_TYPE,
+            format("missing type specification in variable or field declaration (expected `: <type>`)"),
+            peek_parser(*parser).text
+        );
         return ERROR;
     }
 
@@ -148,12 +149,13 @@ Result parse_function_signature(Parser* parser, FunctionSignature* dst) {
     TokenKind start_pattern[2] = { TOKEN_FN, TOKEN_LEFT_PAREN };
     usize nmatching_start = match_parser_sequence(parser, start_pattern, NULL, 2);
     if (nmatching_start != 2) {
-        Error error = {
-            .kind = ERROR_NOT_FUNCTION_SIGNATURE,
-            .message = format("invalid function signature (expected `fn(...)`)"),
-            .source = peek_parser_nth(*parser, nmatching_start).text,
-        };
-        parser_error_restore_alloc(parser, state, error);
+        report_simple_compiler_error(
+            parser->reporter,
+            ERROR_NOT_FUNCTION_SIGNATURE,
+            format("invalid function signature (expected `fn(...)`)"),
+            peek_parser_nth(*parser, nmatching_start).text
+        );
+        parser_restore_alloc(parser, state);
         return ERROR;
     }
 
@@ -171,12 +173,14 @@ Result parse_function_signature(Parser* parser, FunctionSignature* dst) {
         if (!match_parser(parser, TOKEN_COMMA, NULL)) {
             if (!match_parser(parser, TOKEN_RIGHT_PAREN, NULL)) {
                 free_array_buf(parameters);
-                Error error = {
-                    .kind = ERROR_UNCLOSED_PARAMETER_LIST,
-                    .message = format("expected right parenthesis `)` after parameter list"),
-                    .source = peek_parser(*parser).text,
-                };
-                parser_error_restore_alloc(parser, state, error);
+
+                report_simple_compiler_error(
+                    parser->reporter,
+                    ERROR_UNCLOSED_PARENS,
+                    format("expected right parenthesis `)` after parameter list"),
+                    peek_parser(*parser).text
+                );
+                parser_restore_alloc(parser, state);
                 return ERROR;
             }
             break;
@@ -206,12 +210,13 @@ static Result parse_composite(Parser* parser, CompositeType* dst) {
     step_parser(parser);
 
     if (!match_parser(parser, TOKEN_LEFT_BRACE, NULL)) {
-        Error error = {
-            .kind = ERROR_COMPOSITE_MISSING_FIELD_LIST,
-            .message = format("missing fields of struct or variant type declaration (expected `{ ... }`)"),
-            .source = peek_parser(*parser).text,
-        };
-        report(parser->reporter, error);
+        report_simple_compiler_error(
+            parser->reporter,
+            ERROR_COMPOSITE_MISSING_FIELD_LIST,
+            format("missing fields of struct or variant type declaration (expected `{ ... }`)"),
+            peek_parser(*parser).text
+        );
+
         return ERROR;
     }
     
@@ -231,12 +236,14 @@ static Result parse_composite(Parser* parser, CompositeType* dst) {
         }
         if (!match_parser(parser, TOKEN_RIGHT_BRACE, NULL)) {
             free_array_buf(fields);
-            Error error = {
-                .kind = ERROR_UNCLOSED_PARAMETER_LIST,
-                .message = format("expected right brace `}` after parameter list"),
-                .source = peek_parser(*parser).text,
-            };
-            parser_error_restore_alloc(parser, state, error);
+            
+            report_simple_compiler_error(
+                parser->reporter,
+                ERROR_UNCLOSED_BRACES,
+                format("expected right brace `}` after field list"),
+                peek_parser(*parser).text
+            );
+            parser_restore_alloc(parser, state);
             return ERROR;
         }
         break;

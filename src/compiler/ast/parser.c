@@ -1,4 +1,4 @@
-#include "ast/parser.h"
+#include "compiler/ast/parser.h"
 
 Parser new_parser(const Token* tokens, Reporter* reporter) {
     return (Parser){

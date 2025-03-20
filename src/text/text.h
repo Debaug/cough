@@ -22,7 +22,6 @@ typedef struct TextView {
 
 bool text_eq(TextView a, TextView b);
 TextView text_view_disjoint_union(TextView a, TextView b);
-#define TEXT_FMT(text_view) (int)(text_view).len, (text_view).data
 
 typedef struct Source {
     char path[PATH_MAX];

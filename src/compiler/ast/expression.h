@@ -3,10 +3,10 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#include "ast/parser.h"
-#include "ast/analyzer.h"
-#include "ast/debug.h"
-#include "ast/type.h"
+#include "compiler/ast/parser.h"
+#include "compiler/ast/analyzer.h"
+#include "compiler/ast/debug.h"
+#include "compiler/ast/type.h"
 #include "alloc/array.h"
 
 typedef struct Expression Expression;

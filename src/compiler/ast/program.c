@@ -1,8 +1,8 @@
 #include <string.h>
 
-#include "diagnostic/diagnostic.h"
-#include "ast/program.h"
-#include "ast/debug.h"
+#include "compiler/diagnostics/diagnostics.h"
+#include "compiler/ast/program.h"
+#include "compiler/ast/debug.h"
 
 Result parse_item_declaration(Parser* parser, ItemDeclaration* dst) {
     ParserAllocState state = parser_snapshot_alloc(*parser);
@@ -10,30 +10,32 @@ Result parse_item_declaration(Parser* parser, ItemDeclaration* dst) {
     Token name;
     if (!match_parser(parser, TOKEN_IDENTIFIER, &name)) {
         Token token = peek_parser(*parser);
-        Error error = {
-            .kind = ERROR_INVALID_ITEM_DECLARATION,
-            .source = peek_parser(*parser).text,
-            .message = format(
+        report_simple_compiler_error(
+            parser->reporter,
+            ERROR_INVALID_ITEM_DECLARATION,
+            format(
                 "invalid token in item declaration: expected an identifier, found `%.*s`",
-                TEXT_FMT(token.text)
-            )
-        };
-        parser_error_restore_alloc(parser, state, error);
+                STRING_FMT(token.text)
+            ),
+            token.text
+        );
+        parser_restore_alloc(parser, state);
         return ERROR;
     }
     dst->name = name.text;
 
     if (!match_parser(parser, TOKEN_COLON_COLON, NULL)) {
         Token token = peek_parser(*parser);
-        Error error = {
-            .kind = ERROR_INVALID_ITEM_DECLARATION,
-            .source = peek_parser(*parser).text,
-            .message = format(
+        report_simple_compiler_error(
+            parser->reporter,
+            ERROR_INVALID_ITEM_DECLARATION,
+            format(
                 "invalid token in item declaration: expected `::`, found `%.*s`",
-                TEXT_FMT(token.text)
-            )
-        };
-        parser_error_restore_alloc(parser, state, error);
+                STRING_FMT(token.text)
+            ),
+            token.text
+        );
+        parser_restore_alloc(parser, state);
         return ERROR;
     }
 
@@ -85,15 +87,15 @@ typedef struct FunctionItem {
 typedef ArrayBuf(FunctionItem) FunctionItemArrayBuf;
 
 void report_symbol_defined_multiple_times(Reporter* reporter, TextView name) {
-    Error error = {
-        .kind = ERROR_DUPLICATE_SYMBOL_NAME,
-        .message = format(
+    report_simple_compiler_error(
+        reporter,
+        ERROR_DUPLICATE_SYMBOL_NAME,
+        format(
             "symbol with name `%.*s` was defined multiple times",
-            TEXT_FMT(name)
+            STRING_FMT(name)
         ),
-        .source = name,
-    };
-    report(reporter, error);
+        name
+    );
 }
 
 #if 0

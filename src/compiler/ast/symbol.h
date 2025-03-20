@@ -1,7 +1,7 @@
 #pragma once
 
 #include "text/text.h"
-#include "ast/type.h"
+#include "compiler/ast/type.h"
 
 typedef enum SymbolKind {
     SYMBOL_TYPE = 1,

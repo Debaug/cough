@@ -3,10 +3,10 @@
 #include <stddef.h>
 
 #include "text/text.h"
-#include "ast/parser.h"
-#include "ast/debug.h"
+#include "compiler/ast/parser.h"
+#include "compiler/ast/debug.h"
 #include "alloc/array.h"
-#include "diagnostic/diagnostic.h"
+#include "diagnostics/diagnostics.h"
 
 typedef struct Analyzer Analyzer;
 

@@ -1,4 +1,5 @@
-#include "ast/expression.h"
+#include "compiler/diagnostics/diagnostics.h"
+#include "compiler/ast/expression.h"
 
 typedef enum ParseDelimitedResult {
     DELIMITED_SUCCESS,
@@ -60,12 +61,13 @@ Result parse_block(Parser* parser, Block* dst) {
 
     Token opening_brace;
     if (!match_parser(parser, TOKEN_LEFT_BRACE, &opening_brace)) {
-        Error error = {
-            .kind = ERROR_EXPECTED_BLOCK,
-            .source = peek_parser(*parser).text,
-            .message = format("expected block (delimited by curly braces `{`, `}`)"),
-        };
-        parser_error_restore_alloc(parser, state, error);
+        report_simple_compiler_error(
+            parser->reporter,
+            ERROR_EXPECTED_BLOCK,
+            format("expected block (delimited by curly braces `{`, `}`)"),
+            peek_parser(*parser).text
+        );
+        parser_restore_alloc(parser, state);
         return ERROR;
     }
 
@@ -75,12 +77,13 @@ Result parse_block(Parser* parser, Block* dst) {
     bool last_is_block = false;
     while (!match_parser(parser, TOKEN_RIGHT_BRACE, NULL)) {
         if (parser_is_eof(*parser)) {
-            Error error = {
-                .kind = ERROR_UNCLOSED_BRACES,
-                .source = opening_brace.text,
-                .message = format("unclosed block (delimited by curly braces `{` `}`)")
-            };
-            parser_error_restore_alloc(parser, state, error);
+            report_simple_compiler_error(
+                parser->reporter,
+                ERROR_UNCLOSED_BRACES,
+                format("unclosed block (delimited by curly braces `{` `}`)"),
+                opening_brace.text
+            );
+            parser_restore_alloc(parser, state);
             return ERROR;
         }
 
@@ -94,12 +97,12 @@ Result parse_block(Parser* parser, Block* dst) {
         }
 
         if (!last_is_block && has_tail) {
-            Error error = {
-                .kind = ERROR_EXPECTED_BLOCK_END,
-                .source = peek_parser(*parser).text,
-                .message = format("statements must be separated by a semicolon `;`")
-            };
-            report(parser->reporter, error);
+            report_simple_compiler_error(
+                parser->reporter,
+                ERROR_EXCESS_EXPRESSION_TOKENS,
+                format("statements must be separated by a semicolon `;`"),
+                peek_parser(*parser).text
+            );
             continue;
         }
         if (has_tail) {
@@ -178,14 +181,15 @@ static void error_integer_too_big(
     ParserAllocState state,
     TextView text
 ) {
-    Error error = {
-        .kind = ERROR_INTEGER_TOO_BIG,
-        .source = text,
-        .message = format(
+    report_simple_compiler_error(
+        parser->reporter,
+        ERROR_INTEGER_TOO_BIG,
+        format(
             "integer literal was too big (integer literals must be in the range -2^63 to 2^63 - 1)"
-        )
-    };
-    parser_error_restore_alloc(parser, state, error);
+        ),
+        text
+    );
+    parser_restore_alloc(parser, state);
 }
 
 static Result parse_integer(Parser* parser, Expression* dst) {
@@ -245,12 +249,13 @@ static Result parse_call(Parser* parser, Expression callee, Expression* dst) {
     while (!match_parser(parser, TOKEN_RIGHT_PAREN, NULL)) {
         if (parser_is_eof(*parser)) {
             free_array_buf(arguments);
-            Error error = {
-                .kind = ERROR_UNCLOSED_PARENS,
-                .source = opening_paren.text,
-                .message = format("unclosed parentheses `(`, `)`")
-            };
-            parser_error_restore_alloc(parser, state, error);
+            report_simple_compiler_error(
+                parser->reporter,
+                ERROR_UNCLOSED_PARENS,
+                format("unclosed parentheses `(`, `)`"),
+                opening_paren.text
+            );
+            parser_restore_alloc(parser, state);
             return ERROR;
         }
 
@@ -279,7 +284,6 @@ static Result parse_call(Parser* parser, Expression callee, Expression* dst) {
 static Result parse_index(Parser* parser, Expression indexee, Expression* dst) {
     Expression index;
     Token left_bracket;
-    Error error;
     Token invalid_closing_token;
     switch (parse_delimited_expression(
         parser,
@@ -290,32 +294,33 @@ static Result parse_index(Parser* parser, Expression indexee, Expression* dst) {
         &invalid_closing_token
     )) {
     case DELIMITED_EMPTY:
-        error = (Error){
-            .kind = ERROR_MISSING_INDEX,
-            .source = text_view_disjoint_union(left_bracket.text, peek_parser(*parser).text),
-            .message = format("missing index in index expression (empty brackets `[` `]`)")
-        };
+        report_simple_compiler_error(
+            parser->reporter,
+            ERROR_MISSING_EXPRESSION,
+            format("missing index in index expression (empty brackets `[` `]`)"),
+            text_view_disjoint_union(left_bracket.text, peek_parser(*parser).text)
+        );
         return ERROR;
 
     case DELIMITED_INVALID_INSIDE:
         return ERROR;
     
     case DELIMITED_EXCESS_INSIDE:
-        error = (Error){
-            .kind = ERROR_EXCESS_INDEX_TOKENS,
-            .source = invalid_closing_token.text,
-            .message = format("invalid token in index expression (expected closing bracket `]`)")
-        };
-        report(parser->reporter, error);
+        report_simple_compiler_error(
+            parser->reporter,
+            ERROR_EXCESS_EXPRESSION_TOKENS,
+            format("invalid token in index expression (expected closing bracket `]`)"),
+            invalid_closing_token.text
+        );
         return ERROR;
 
     case DELIMITED_UNCLOSED:
-        error = (Error){
-            .kind = ERROR_UNCLOSED_BRACKETS,
-            .source = left_bracket.text,
-            .message = format("unclosed brackets `[` `]`"),
-        };
-        report(parser->reporter, error);
+        report_simple_compiler_error(
+            parser->reporter,
+            ERROR_UNCLOSED_BRACKETS,
+            format("unclosed brackets `[` `]`"),
+            left_bracket.text
+        );
         return ERROR;
 
     // actually unreachable: this function only gets entered in `parse_expression_precendence`
@@ -480,12 +485,13 @@ static Result parse_binding(Parser* parser, Expression* dst) {
     }
 
     if (!match_parser(parser, TOKEN_EQUAL, NULL)) {
-        Error error = {
-            .kind = ERROR_MISSING_EQUALS_IN_BINDING,
-            .source = peek_parser(*parser).text,
-            .message = format("expected equals sign `=` in `let` binding")
-        };
-        parser_error_restore_alloc(parser, state, error);
+        report_simple_compiler_error(
+            parser->reporter,
+            ERROR_MISSING_EXPRESSION,
+            format("expected equals sign `=` in `let` binding"),
+            peek_parser(*parser).text
+        );
+        parser_restore_alloc(parser, state);
         return ERROR;
     }
 
@@ -611,12 +617,13 @@ static Result parse_member_access(Parser* parser, Expression container, Expressi
 
     Token field;
     if (!match_parser(parser, TOKEN_IDENTIFIER, &field)) {
-        Error error = {
-            .kind = ERROR_MEMBER_NOT_IDENTIFIER,
-            .source = peek_parser(*parser).text,
-            .message = format("member wasn't an identifier")
-        };
-        parser_error_restore_alloc(parser, state, error);
+        report_simple_compiler_error(
+            parser->reporter,
+            ERROR_MEMBER_NOT_IDENTIFIER,
+            format("member wasn't an identifier"),
+            peek_parser(*parser).text
+        );
+        parser_restore_alloc(parser, state);
         return ERROR;
     }
 
@@ -632,11 +639,10 @@ static Result parse_member_access(Parser* parser, Expression container, Expressi
 }
 
 static Result parse_paren(Parser* parser, Expression* dst) {
-    ParserAllocState state = parser_snapshot_alloc(*parser);
+    // FIXME: check if all allocations are properly freed
 
     Token opening_paren;
     Expression inside;
-    Error error;
     Token invalid_closing_token;
     switch (parse_delimited_expression(
         parser,
@@ -655,12 +661,12 @@ static Result parse_paren(Parser* parser, Expression* dst) {
         return SUCCESS;
     
     case DELIMITED_EXCESS_INSIDE:
-        error = (Error){
-            .kind = ERROR_EXCESS_TOKENS_IN_PARENS,
-            .source = invalid_closing_token.text,
-            .message = format("invalid token in parenthesized expression (expected closing parenthesis `)`)")
-        };
-        report(parser->reporter, error);
+        report_simple_compiler_error(
+            parser->reporter,
+            ERROR_EXCESS_EXPRESSION_TOKENS,
+            format("invalid token in parenthesized expression (expected closing parenthesis `)`)"),
+            invalid_closing_token.text
+        );
         // fallthrough
     case DELIMITED_INVALID_INSIDE:
         *dst = (Expression){
@@ -670,12 +676,12 @@ static Result parse_paren(Parser* parser, Expression* dst) {
         return SUCCESS;
 
     case DELIMITED_UNCLOSED:
-        error = (Error){
-            .kind = ERROR_UNCLOSED_PARENS,
-            .source = opening_paren.text,
-            .message = format("unclosed parentheses `(` `)`"),
-        };
-        report(parser->reporter, error);
+        report_simple_compiler_error(
+            parser->reporter,
+            ERROR_UNCLOSED_PARENS,
+            format("unclosed parentheses `(` `)`"),
+            opening_paren.text
+        );
         return ERROR;
 
     // actually unreachable: this function only gets entered in `parse_expression_precendence`
@@ -790,15 +796,16 @@ parse_binary_operation:
         Precedence operator_precedence = infix_operator_precedence(binary_operator);
 
         if (!precedence_compatible(precedence, operator_precedence)) {
-            Error error = {
-                .kind = ERROR_INCOMPATIBLE_BINARY_OPERATIONS,
-                .source = text_view_disjoint_union(start.text, peek_parser(*parser).text),
-                .message = format(
-                    "mixed binary operators with ambiguous precedence"
+            report_simple_compiler_error(
+                parser->reporter,
+                ERROR_INCOMPATIBLE_BINARY_OPERATIONS,
+                format(
+                    "mixed binary operators with ambiguous precedence "
                     "(introduce parentheses `(` `)` to resolve ambiguity)"
-                )
-            };
-            parser_error_restore_alloc(parser, state, error);
+                ),
+                text_view_disjoint_union(start.text, peek_parser(*parser).text)
+            );
+            parser_restore_alloc(parser, state);
             return ERROR;
         }
 

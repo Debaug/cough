@@ -2,11 +2,10 @@ target_sources(cough PRIVATE main.c)
 
 add_subdirectory(common)
 add_subdirectory(alloc)
-add_subdirectory(diagnostic)
+add_subdirectory(diagnostics)
 
 add_subdirectory(text)
-add_subdirectory(tokens)
-add_subdirectory(ast)
+add_subdirectory(compiler)
 add_subdirectory(bytecode)
 add_subdirectory(vm)
 

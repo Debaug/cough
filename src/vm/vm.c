@@ -3,7 +3,7 @@
 #include <assert.h>
 
 #include "vm/vm.h"
-#include "diagnostic/diagnostic.h"
+#include "diagnostics/diagnostics.h"
 
 typedef enum ControlFlow {
     FLOW_EXIT = 0,

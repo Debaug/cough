@@ -98,6 +98,7 @@ typedef struct StringView {
 } StringView;
 
 #define STRING_VIEW(src) (StringView){ .data = src.data, .len = src.len }
+#define STRING_FMT(str) (int)(str).len, (str).data
 
 bool string_views_eq(StringView a, StringView b);
 

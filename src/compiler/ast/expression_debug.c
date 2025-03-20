@@ -1,4 +1,4 @@
-#include "ast/expression.h"
+#include "compiler/ast/expression.h"
 
 void debug_unary_operation(UnaryOperation operation, AstDebugger* debugger) {
     ast_debug_start(debugger, "unary_operation");

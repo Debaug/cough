@@ -2,9 +2,9 @@
 
 #include <stdbool.h>
 
-#include "tokens/scanner.h"
-#include "ast/storage.h"
-#include "diagnostic/diagnostic.h"
+#include "diagnostics/diagnostics.h"
+#include "compiler/tokens/scanner.h"
+#include "compiler/ast/storage.h"
 
 typedef struct Parser {
     const Token* tokens;

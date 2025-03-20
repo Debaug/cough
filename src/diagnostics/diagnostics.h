@@ -79,64 +79,12 @@ typedef enum Result {
     ERROR = -1,
 } Result;
 
-typedef enum ErrorKind {
-    // scanning
-
-    ERROR_UNEXPECTED_CHARACTER,
-    ERROR_UNCLOSED_STRING,
-
-    // parsing
-
-    ERROR_UNCLOSED_PARENS,
-    ERROR_UNCLOSED_BRACKETS,
-    ERROR_UNCLOSED_BRACES,
-
-    ERROR_INVALID_ITEM_DECLARATION,
-
-    ERROR_INTEGER_TOO_BIG,
-
-    ERROR_EXPECTED_BLOCK,
-    ERROR_EXPECTED_BLOCK_END,
-
-    ERROR_MISSING_INDEX,
-    ERROR_EXCESS_INDEX_TOKENS,
-
-    ERROR_MISSING_EQUALS_IN_BINDING,
-
-    ERROR_MEMBER_NOT_IDENTIFIER,
-
-    ERROR_EXCESS_TOKENS_IN_PARENS,
-
-    ERROR_INCOMPATIBLE_BINARY_OPERATIONS,
-
-    ERROR_INVALID_TYPE_NAME,
-
-    ERROR_VARIABLE_DECLARATION_INVALID_NAME,
-    ERROR_VARIABLE_DECLARATION_INVALID_TYPE,
-
-    ERROR_NOT_FUNCTION_SIGNATURE,
-    ERROR_UNCLOSED_PARAMETER_LIST, // FIXME: replace with `UNCLOSED_PARENS`
-
-    ERROR_COMPOSITE_MISSING_FIELD_LIST,
-    ERROR_COMPOSITE_UNCLOSED_FIELD_LIST, // FIXME: replace with `UNCLOSED_BRACES`
-
-    // analyzing
-
-    ERROR_DUPLICATE_SYMBOL_NAME,
-
-    // runtime
-
-    ERROR_INVALID_INSTRUCTION
-} ErrorKind;
-
 typedef enum Severity {
-    SEVERITY_VERBOSE,
-    SEVERITY_DEBUG,
-    SEVERITY_INFO,
-    SEVERITY_WARNING,
     SEVERITY_ERROR,
     SEVERITY_SYSTEM_ERROR,
 } Severity;
+
+void log_message(StringView message, Severity severity);
 
 typedef struct DiagnosisVTable DiagnosisVTable;
 
@@ -145,36 +93,43 @@ typedef struct Diagnosis {
     // data goes here
 } Diagnosis;
 
+typedef enum DiagnosisPartKind {
+    DIAGNOSIS_PART_MESSAGE,
+    DIAGNOSIS_PART_SOURCE_CODE,
+} DiagnosisPartKind;
+
+typedef struct DiagnosisPart {
+    DiagnosisPartKind kind;
+    union {
+        StringView message;
+        TextView source_code;
+    } as;
+} DiagnosisPart;
+
 typedef struct DiagnosisVTable {
-    void(*free)(Diagnosis* self);
+    usize size;
+    usize alignment;
+    void(*destroy)(Diagnosis* self);
+    Severity(*severity)(const Diagnosis* self);
+    usize(*len)(const Diagnosis* self);
+    DiagnosisPart(*part)(const Diagnosis* self, usize index);
 } DiagnosisVTable;
 
-/// @brief The error type.
-typedef struct Error {
-    ErrorKind kind;
-    TextView source;
-    StringBuf message;
-} Error;
+typedef struct ReporterVTable ReporterVTable;
 
 /// @brief The error reporter type.
 typedef struct Reporter {
-    // takes ownership of the error
-    void(*send)(struct Reporter* self, Error* error);
-    usize nerrors;
+    const ReporterVTable* vtable;
     // data goes here
 } Reporter;
 
-/// @brief Reports the given error to the given reporter.
-#define report(reporter, error) do {        \
-    (reporter)->send((reporter), &(error)); \
-    (reporter)->nerrors++;                  \
-} while(0)
+typedef struct ReporterVTable {
+    // Takes ownership of the diagnosis. This function does not deallocate
+    // the memory where `diagnosis` itself is stored though.
+    void(*report)(Reporter* self, Diagnosis* diagnosis);
+    usize(*n_errors)(const Reporter* self);
+} ReporterVTable;
 
-/// @brief A general-purpose reporter that prints errors to stderr.
-typedef struct DefaultReporter {
-    Reporter reporter;
-    const Source* source;
-} DefaultReporter;
-
-/// @brief Constructs a @ref DefaultReporter.
-DefaultReporter new_default_reporter(const Source* source);
+// Takes ownership of the diagnosis. This function does not deallocate
+// the memory where `diagnosis` itself is stored though.
+void report(Reporter* reporter, Diagnosis* diagnosis);

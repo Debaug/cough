@@ -1,4 +1,4 @@
-#include "ast/function.h"
+#include "compiler/ast/function.h"
 
 Result parse_function(Parser* parser, Function* dst) {
     ParserAllocState state = parser_snapshot_alloc(*parser);
@@ -53,7 +53,7 @@ Result analyze_function(Analyzer* analyzer, Function* function) {
     //     if (!add_symbol(scope, parameter_symbol)) {
     //         // FIXME: where error?
     //         report_error("parameter with name `%.*s` defined multiple times",
-    //             TEXT_FMT(parameter->name));
+    //             STRING_FMT(parameter->name));
     //         error = true;
     //     }
     // }

@@ -3,7 +3,8 @@
 #include <stdbool.h>
 #include <string.h>
 
-#include "tokens/scanner.h"
+#include "compiler/diagnostics/diagnostics.h"
+#include "compiler/tokens/scanner.h"
 
 Scanner new_scanner(const char* text, Reporter* reporter) {
     TextPos start = { .line = 0, .column = 0, .index = 0 };
@@ -46,12 +47,12 @@ static Result scan_string(Scanner* scanner, Token* dst) {
     step_scanner(scanner); // skip opening '"' character
     while (peek_scanner(*scanner) != '"') {
         if (peek_scanner(*scanner) == '\0') {
-            Error error = {
-                .kind = ERROR_UNCLOSED_STRING,
-                .source = scanner_text_from(*scanner, start),
-                .message = format("missing closing `\"` in string literal")
-            };
-            report(scanner->reporter, error);
+            report_simple_compiler_error(
+                scanner->reporter,
+                ERROR_INVALID_TOKEN,
+                format("missing closing `\"` in string literal"),
+                scanner_text_from(*scanner, start)
+            );
             return ERROR;
         }
         if (peek_scanner(*scanner) == '\\') {

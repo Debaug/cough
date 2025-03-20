@@ -1,7 +1,7 @@
 #include <string.h>
 
 #include "alloc/arena_stack.h"
-#include "diagnostic/diagnostic.h"
+#include "diagnostics/diagnostics.h"
 
 // should fit in a page
 #define ARENA_SIZE 2048

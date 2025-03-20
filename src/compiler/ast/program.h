@@ -1,10 +1,9 @@
 #pragma once
 
-#include "ast/function.h"
-#include "ast/parser.h"
-#include "ast/debug.h"
-
 #include "alloc/array.h"
+#include "compiler/ast/function.h"
+#include "compiler/ast/parser.h"
+#include "compiler/ast/debug.h"
 
 typedef enum ItemDeclarationKind {
     ITEM_FUNCTION,

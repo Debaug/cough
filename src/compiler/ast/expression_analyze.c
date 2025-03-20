@@ -1,5 +1,5 @@
-#include "ast/expression.h"
-#include "ast/function.h"
+#include "compiler/ast/expression.h"
+#include "compiler/ast/function.h"
 
 static Result analyze_symbol_expression(
     Analyzer* analyzer,
@@ -21,7 +21,7 @@ static Result analyze_symbol_expression(
     //     // report_text_error(
     //     //     symbol_expression->name,
     //     //     "no variable or function named `%.*s`",
-    //     //     TEXT_FMT(symbol_expression->name)
+    //     //     STRING_FMT(symbol_expression->name)
     //     // );
     //     return ANALYZE_ERROR;
     // }
@@ -362,7 +362,7 @@ analyze_member_access(
         STRING_VIEW(member->member_name)
     );
     if (member->field == NULL) {
-        // report_error("no such field `%.*s`", TEXT_FMT(member->member_name));
+        // report_error("no such field `%.*s`", STRING_FMT(member->member_name));
         return ANALYZE_ERROR;
     }
     *dst = member->field->type.type;
@@ -423,7 +423,7 @@ static analyze_result_t analyze_call(
 //     if (!add_symbol(analyzer->current_scope, symbol)) {
 //         report_error(
 //             "variable `%.*s` defined multiple times in the same scope",
-//             TEXT_FMT(binding->variable.name)
+//             STRING_FMT(binding->variable.name)
 //         );
 //     }
 // }

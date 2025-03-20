@@ -1,1 +1,3 @@
-target_sources(cough PRIVATE primitives.h primitives.c)
+target_sources(cough PRIVATE
+    primitives.h
+)

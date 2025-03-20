@@ -3,9 +3,10 @@
 #include <inttypes.h>
 
 #include "text/text.h"
-#include "diagnostic/diagnostic.h"
-#include "tokens/scanner.h"
-#include "ast/ast.h"
+#include "diagnostics/diagnostics.h"
+#include "compiler/diagnostics/diagnostics.h"
+#include "compiler/tokens/scanner.h"
+#include "compiler/ast/ast.h"
 #include "vm/vm.h"
 
 int test_parse(int argc, const char* argv[]) {
@@ -29,7 +30,7 @@ int test_parse(int argc, const char* argv[]) {
     print_system_error("a system error, value: %d\n", 420);
     print_error("a regular error, value: %d\n", 69);
 
-    DefaultReporter reporter = new_default_reporter(&source);
+    CompilerReporter reporter = new_compiler_reporter(&source);
 
     printf("==== TOKENS ====\n");
 
@@ -51,7 +52,7 @@ int test_parse(int argc, const char* argv[]) {
 
     printf("\n====== AST ======\n");
 
-    Parser parser = new_parser(tokens.data, &reporter.reporter);
+    Parser parser = new_parser(tokens.data, (Reporter*)&reporter);
     Ast ast;
     if (parse(&parser, &ast) != SUCCESS) {
         eprintf("failed to parse program");
@@ -78,7 +79,8 @@ int test_parse(int argc, const char* argv[]) {
 }
 
 int test_run(int argc, const char* argv[]) {
-    DefaultReporter reporter = new_default_reporter(NULL);
+    // FIXME: vm reporter
+    CompilerReporter reporter = new_compiler_reporter(NULL);
 
     Byteword instructions[] = {
         [0] =
@@ -109,7 +111,7 @@ int test_run(int argc, const char* argv[]) {
         .instructions = instruction_buf,
         .rodata = new_array_buf(),
     };
-    Vm vm = new_vm(bytecode, &reporter.reporter);
+    Vm vm = new_vm(bytecode, (Reporter*)&reporter);
 
     printf("== PROGRAM OUTPUT ==\n");
     run_vm(&vm);
@@ -122,7 +124,7 @@ int test_run(int argc, const char* argv[]) {
 }
 
 int main(int argc, const char* argv[]) {
-#if 0
+#if 1
     return test_parse(argc, argv);
 #else
     return test_run(argc, argv);

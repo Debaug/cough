@@ -1,6 +1,6 @@
 #include <string.h>
 
-#include "ast/analyzer.h"
+#include "compiler/ast/analyzer.h"
 
 static Scope new_scope(Scope* parent) {
     return (Scope){
@@ -120,7 +120,7 @@ void analyzer_exit_scope(Analyzer* analyzer) {
 //     // };
 //     // if (!add_symbol(analyzer->current_scope, symbol)) {
 //     //     // where error?
-//     //     report_error("symbol with name `%.*s` already exists", TEXT_FMT(symbol.name));
+//     //     report_error("symbol with name `%.*s` already exists", STRING_FMT(symbol.name));
 //     //     return ANALYZE_ERROR;
 //     // }
 //     return ANALYZE_SUCCESS;
@@ -138,7 +138,7 @@ void analyzer_exit_scope(Analyzer* analyzer) {
 //     // if (type_symbol == NULL) {
 //     //     // where error?
 //     //     report_error("type `%.*s` not found",
-//     //         TEXT_FMT(field->type.element_type_name));
+//     //         STRING_FMT(field->type.element_type_name));
 //     // } else {
 //     //     field->type.type.element_type = type_symbol->as.type;
 //     // }
@@ -161,7 +161,7 @@ void analyzer_exit_scope(Analyzer* analyzer) {
 //                 // where error?
 //                 // report_error(
 //                 //     "field `%.*s` defined multiple times",
-//                 //     TEXT_FMT(field->name)
+//                 //     STRING_FMT(field->name)
 //                 // );
 //                 break;
 //             }
