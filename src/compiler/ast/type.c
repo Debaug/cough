@@ -75,7 +75,7 @@ Result parse_type_name(Parser* parser, NamedType* dst) {
     if (!match_parser(parser, TOKEN_IDENTIFIER, &type_name)) {
         report_simple_compiler_error(
             parser->reporter,
-            ERROR_INVALID_TYPE_NAME,
+            CE_INVALID_TYPE_NAME,
             format("invalid type name (expected identifier)"),
             peek_parser(*parser).text
         );
@@ -98,7 +98,7 @@ static Result parse_field_or_variable_tail(Parser* parser, Field* dst) {
     if (!match_parser(parser, TOKEN_IDENTIFIER, &name)) {
         report_simple_compiler_error(
             parser->reporter,
-            ERROR_VARIABLE_DECLARATION_INVALID_NAME,
+            CE_VARIABLE_DECLARATION_INVALID_NAME,
             format("invalid variable or field name (expected identifier)"),
             peek_parser(*parser).text
         );
@@ -108,7 +108,7 @@ static Result parse_field_or_variable_tail(Parser* parser, Field* dst) {
     if (!match_parser(parser, TOKEN_COLON, NULL)) {
         report_simple_compiler_error(
             parser->reporter,
-            ERROR_VARIABLE_DECLARATION_INVALID_TYPE,
+            CE_VARIABLE_DECLARATION_INVALID_TYPE,
             format("missing type specification in variable or field declaration (expected `: <type>`)"),
             peek_parser(*parser).text
         );
@@ -151,7 +151,7 @@ Result parse_function_signature(Parser* parser, FunctionSignature* dst) {
     if (nmatching_start != 2) {
         report_simple_compiler_error(
             parser->reporter,
-            ERROR_NOT_FUNCTION_SIGNATURE,
+            CE_NOT_FUNCTION_SIGNATURE,
             format("invalid function signature (expected `fn(...)`)"),
             peek_parser_nth(*parser, nmatching_start).text
         );
@@ -176,7 +176,7 @@ Result parse_function_signature(Parser* parser, FunctionSignature* dst) {
 
                 report_simple_compiler_error(
                     parser->reporter,
-                    ERROR_UNCLOSED_PARENS,
+                    CE_UNCLOSED_PARENS,
                     format("expected right parenthesis `)` after parameter list"),
                     peek_parser(*parser).text
                 );
@@ -212,7 +212,7 @@ static Result parse_composite(Parser* parser, CompositeType* dst) {
     if (!match_parser(parser, TOKEN_LEFT_BRACE, NULL)) {
         report_simple_compiler_error(
             parser->reporter,
-            ERROR_COMPOSITE_MISSING_FIELD_LIST,
+            CE_COMPOSITE_MISSING_FIELD_LIST,
             format("missing fields of struct or variant type declaration (expected `{ ... }`)"),
             peek_parser(*parser).text
         );
@@ -239,7 +239,7 @@ static Result parse_composite(Parser* parser, CompositeType* dst) {
             
             report_simple_compiler_error(
                 parser->reporter,
-                ERROR_UNCLOSED_BRACES,
+                CE_UNCLOSED_BRACES,
                 format("expected right brace `}` after field list"),
                 peek_parser(*parser).text
             );

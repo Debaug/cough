@@ -117,7 +117,7 @@ typedef struct DiagnosisVTable {
 
 typedef struct ReporterVTable ReporterVTable;
 
-/// @brief The error reporter type.
+/// @brief The reporter type.
 typedef struct Reporter {
     const ReporterVTable* vtable;
     // data goes here

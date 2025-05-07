@@ -1,6 +1,6 @@
 #pragma once
 
-#include "common/primitives.h"
+#include "primitives/primitives.h"
 
 #define LAYOUT_OF(elt, ...) sizeof(elt) __VA_OPT__(* __VA_ARGS__), alignof(elt)
 

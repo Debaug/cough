@@ -63,7 +63,7 @@ Result parse_block(Parser* parser, Block* dst) {
     if (!match_parser(parser, TOKEN_LEFT_BRACE, &opening_brace)) {
         report_simple_compiler_error(
             parser->reporter,
-            ERROR_EXPECTED_BLOCK,
+            CE_EXPECTED_BLOCK,
             format("expected block (delimited by curly braces `{`, `}`)"),
             peek_parser(*parser).text
         );
@@ -79,7 +79,7 @@ Result parse_block(Parser* parser, Block* dst) {
         if (parser_is_eof(*parser)) {
             report_simple_compiler_error(
                 parser->reporter,
-                ERROR_UNCLOSED_BRACES,
+                CE_UNCLOSED_BRACES,
                 format("unclosed block (delimited by curly braces `{` `}`)"),
                 opening_brace.text
             );
@@ -99,7 +99,7 @@ Result parse_block(Parser* parser, Block* dst) {
         if (!last_is_block && has_tail) {
             report_simple_compiler_error(
                 parser->reporter,
-                ERROR_EXCESS_EXPRESSION_TOKENS,
+                CE_EXCESS_EXPRESSION_TOKENS,
                 format("statements must be separated by a semicolon `;`"),
                 peek_parser(*parser).text
             );
@@ -183,7 +183,7 @@ static void error_integer_too_big(
 ) {
     report_simple_compiler_error(
         parser->reporter,
-        ERROR_INTEGER_TOO_BIG,
+        CE_INTEGER_TOO_BIG,
         format(
             "integer literal was too big (integer literals must be in the range -2^63 to 2^63 - 1)"
         ),
@@ -251,7 +251,7 @@ static Result parse_call(Parser* parser, Expression callee, Expression* dst) {
             free_array_buf(arguments);
             report_simple_compiler_error(
                 parser->reporter,
-                ERROR_UNCLOSED_PARENS,
+                CE_UNCLOSED_PARENS,
                 format("unclosed parentheses `(`, `)`"),
                 opening_paren.text
             );
@@ -296,7 +296,7 @@ static Result parse_index(Parser* parser, Expression indexee, Expression* dst) {
     case DELIMITED_EMPTY:
         report_simple_compiler_error(
             parser->reporter,
-            ERROR_MISSING_EXPRESSION,
+            CE_MISSING_EXPRESSION,
             format("missing index in index expression (empty brackets `[` `]`)"),
             text_view_disjoint_union(left_bracket.text, peek_parser(*parser).text)
         );
@@ -308,7 +308,7 @@ static Result parse_index(Parser* parser, Expression indexee, Expression* dst) {
     case DELIMITED_EXCESS_INSIDE:
         report_simple_compiler_error(
             parser->reporter,
-            ERROR_EXCESS_EXPRESSION_TOKENS,
+            CE_EXCESS_EXPRESSION_TOKENS,
             format("invalid token in index expression (expected closing bracket `]`)"),
             invalid_closing_token.text
         );
@@ -317,7 +317,7 @@ static Result parse_index(Parser* parser, Expression indexee, Expression* dst) {
     case DELIMITED_UNCLOSED:
         report_simple_compiler_error(
             parser->reporter,
-            ERROR_UNCLOSED_BRACKETS,
+            CE_UNCLOSED_BRACKETS,
             format("unclosed brackets `[` `]`"),
             left_bracket.text
         );
@@ -487,7 +487,7 @@ static Result parse_binding(Parser* parser, Expression* dst) {
     if (!match_parser(parser, TOKEN_EQUAL, NULL)) {
         report_simple_compiler_error(
             parser->reporter,
-            ERROR_MISSING_EXPRESSION,
+            CE_MISSING_EXPRESSION,
             format("expected equals sign `=` in `let` binding"),
             peek_parser(*parser).text
         );
@@ -619,7 +619,7 @@ static Result parse_member_access(Parser* parser, Expression container, Expressi
     if (!match_parser(parser, TOKEN_IDENTIFIER, &field)) {
         report_simple_compiler_error(
             parser->reporter,
-            ERROR_MEMBER_NOT_IDENTIFIER,
+            CE_MEMBER_NOT_IDENTIFIER,
             format("member wasn't an identifier"),
             peek_parser(*parser).text
         );
@@ -663,7 +663,7 @@ static Result parse_paren(Parser* parser, Expression* dst) {
     case DELIMITED_EXCESS_INSIDE:
         report_simple_compiler_error(
             parser->reporter,
-            ERROR_EXCESS_EXPRESSION_TOKENS,
+            CE_EXCESS_EXPRESSION_TOKENS,
             format("invalid token in parenthesized expression (expected closing parenthesis `)`)"),
             invalid_closing_token.text
         );
@@ -678,7 +678,7 @@ static Result parse_paren(Parser* parser, Expression* dst) {
     case DELIMITED_UNCLOSED:
         report_simple_compiler_error(
             parser->reporter,
-            ERROR_UNCLOSED_PARENS,
+            CE_UNCLOSED_PARENS,
             format("unclosed parentheses `(` `)`"),
             opening_paren.text
         );
@@ -798,7 +798,7 @@ parse_binary_operation:
         if (!precedence_compatible(precedence, operator_precedence)) {
             report_simple_compiler_error(
                 parser->reporter,
-                ERROR_INCOMPATIBLE_BINARY_OPERATIONS,
+                CE_INCOMPATIBLE_BINARY_OPERATIONS,
                 format(
                     "mixed binary operators with ambiguous precedence "
                     "(introduce parentheses `(` `)` to resolve ambiguity)"

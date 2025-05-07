@@ -2,7 +2,7 @@
 
 #include <stddef.h>
 
-#include "common/primitives.h"
+#include "primitives/primitives.h"
 
 typedef enum Marker {
     MARKER_A = 0,

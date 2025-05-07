@@ -75,12 +75,14 @@ StringBuf format(const char* restrict fmt, ...) {
         print_system_error("failed to format string (please report)");
         exit(EXIT_FAILURE);
     }
-    array_buf_reserve(&buf, bufsz + 1, char);
+    array_buf_reserve(&buf, bufsz + 1);
 
     if (vsprintf(buf.data, fmt, args2) < 0) {
         print_system_error("failed to format string (please report)");
         exit(EXIT_FAILURE);
     }
+
+    buf.len = bufsz;
     return buf;
 }
 
@@ -93,7 +95,7 @@ bool string_views_eq(StringView a, StringView b) {
 
 Errno read_file(FILE* file, StringBuf* dst) {
     while (!feof(file)) {
-        array_buf_reserve(dst, 1, char);
+        array_buf_reserve(dst, 1);
         usize nread =
             fread(dst->data + dst->len, 1, dst->capacity_bytes - dst->len, file);
         dst->len += nread;

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "alloc/array.h"
-#include "common/primitives.h"
+#include "primitives/primitives.h"
 
 typedef void* Pointer;
 typedef ArrayBuf(Pointer) PointerArrayBuf;

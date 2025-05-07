@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <stdalign.h>
 
-#include "common/primitives.h"
+#include "primitives/primitives.h"
 #include "alloc/alloc.h"
 
 typedef struct DynArena {

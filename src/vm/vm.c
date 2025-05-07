@@ -3,7 +3,7 @@
 #include <assert.h>
 
 #include "vm/vm.h"
-#include "diagnostics/diagnostics.h"
+#include "vm/diagnostics.h"
 
 typedef enum ControlFlow {
     FLOW_EXIT = 0,
@@ -65,8 +65,11 @@ static ControlFlow run_one(Vm* vm) {
     case OP_RETURN: return run_return(vm);
     case OP_LOAD_IMM: return run_load_imm(vm);
     default:
-        // FIXME: better error reporting
-        eprintf("invalid instruction 0x%02x\n", op);
+        report_simple_runtime_error(
+            vm->reporter,
+            RE_INVALID_INSTRUCTION,
+            format("invalid instruction 0x%02x", op)
+        );
         return FLOW_EXIT;
     }
 }
@@ -80,21 +83,23 @@ static ControlFlow run_syscall(Vm* vm) {
     case SYS_SAY_HI: return sys_say_hi(vm);
     case SYS_SAY_BYE: return sys_say_bye(vm);
     default:
-        // FIXME: better error reporting
-        eprintf("invalid syscall 0x%02x\n", op);
+        report_simple_runtime_error(
+            vm->reporter,
+            RE_INVALID_INSTRUCTION,
+            format("invalid syscall 0x%02x", op)
+        );
         return FLOW_EXIT;
     }
 }
 
 static ControlFlow run_call(Vm* vm) {
     // FIXME
-    assert(sizeof(VmPos) % sizeof(Primitive) == 0);
+    static_assert(sizeof(VmPos) % sizeof(Primitive) == 0, "");
 
     array_buf_extend(
         &vm->stack,
         &vm->pos,
-        sizeof(VmPos) / sizeof(Primitive),
-        Primitive
+        sizeof(VmPos) / sizeof(Primitive)
     );
     usize addr = pop(vm).as.function;
     vm->pos = (VmPos){

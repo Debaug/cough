@@ -12,7 +12,7 @@ Result parse_item_declaration(Parser* parser, ItemDeclaration* dst) {
         Token token = peek_parser(*parser);
         report_simple_compiler_error(
             parser->reporter,
-            ERROR_INVALID_ITEM_DECLARATION,
+            CE_INVALID_ITEM_DECLARATION,
             format(
                 "invalid token in item declaration: expected an identifier, found `%.*s`",
                 STRING_FMT(token.text)
@@ -28,7 +28,7 @@ Result parse_item_declaration(Parser* parser, ItemDeclaration* dst) {
         Token token = peek_parser(*parser);
         report_simple_compiler_error(
             parser->reporter,
-            ERROR_INVALID_ITEM_DECLARATION,
+            CE_INVALID_ITEM_DECLARATION,
             format(
                 "invalid token in item declaration: expected `::`, found `%.*s`",
                 STRING_FMT(token.text)
@@ -89,7 +89,7 @@ typedef ArrayBuf(FunctionItem) FunctionItemArrayBuf;
 void report_symbol_defined_multiple_times(Reporter* reporter, TextView name) {
     report_simple_compiler_error(
         reporter,
-        ERROR_DUPLICATE_SYMBOL_NAME,
+        CE_DUPLICATE_SYMBOL_NAME,
         format(
             "symbol with name `%.*s` was defined multiple times",
             STRING_FMT(name)

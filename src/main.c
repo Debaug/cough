@@ -3,11 +3,11 @@
 #include <inttypes.h>
 
 #include "text/text.h"
-#include "diagnostics/diagnostics.h"
 #include "compiler/diagnostics.h"
 #include "compiler/tokens/scanner.h"
 #include "compiler/ast/ast.h"
 #include "vm/vm.h"
+#include "vm/diagnostics.h"
 
 int test_parse(int argc, const char* argv[]) {
     if (argc >= 3) {
@@ -79,14 +79,14 @@ int test_parse(int argc, const char* argv[]) {
 }
 
 int test_run(int argc, const char* argv[]) {
-    // FIXME: vm reporter
-    CompilerReporter reporter = new_compiler_reporter(NULL);
+    RuntimeReporter reporter = new_runtime_reporter();
 
     Byteword instructions[] = {
         [0] =
         OP_SYSCALL, SYS_SAY_HI,
         OP_SYSCALL, SYS_SAY_BYE,
         OP_LOAD_IMM, 0x11, 0x22,
+        OP_SYSCALL, 0xdead,
         OP_SYSCALL, SYS_EXIT,
     };
 
@@ -103,8 +103,7 @@ int test_run(int argc, const char* argv[]) {
     array_buf_extend(
         &instruction_buf,
         &instructions,
-        sizeof(instructions) / sizeof(Byteword),
-        Byteword
+        sizeof(instructions) / sizeof(Byteword)
     );
 
     Bytecode bytecode = {
@@ -117,14 +116,14 @@ int test_run(int argc, const char* argv[]) {
     run_vm(&vm);
 
     printf(
-        "\n=== PROGRAM EXIT ===\nexit code: %" PRId64 "/ 0x%" PRIx64 "\n",
+        "\n=== PROGRAM EXIT ===\nexit code: %" PRId64 " 0x%" PRIx64 "\n",
         vm.exit_code, vm.exit_code
     );
     return 0;
 }
 
 int main(int argc, const char* argv[]) {
-#if 1
+#if 0
     return test_parse(argc, argv);
 #else
     return test_run(argc, argv);

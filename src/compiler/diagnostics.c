@@ -56,11 +56,11 @@ void report_simple_compiler_error(
         .base = {
             .vtable = &simple_compiler_diagnosis_vtable,
         },
-        .severity = SEVERITY_ERROR,
         .kind = kind,
         .message = message,
         .source = source,
     };
+    eprintf("msg len = %zu\n", message.len);
     report(reporter, &diagnosis.base);
 }
 
@@ -137,11 +137,12 @@ static void compiler_reporter_report(Reporter* raw, Diagnosis* diagnosis) {
     self->n_errors++;
 
     usize len = diagnosis->vtable->len(diagnosis);
+    Severity severity = diagnosis->vtable->severity(diagnosis);
     for (usize i = 0; i < len; i++) {
         DiagnosisPart part = diagnosis->vtable->part(diagnosis, i);
         switch (part.kind) {
         case DIAGNOSIS_PART_MESSAGE:
-            log_message(part.as.message, diagnosis->vtable->severity(diagnosis));
+            log_message(part.as.message, severity);
             break;
         case DIAGNOSIS_PART_SOURCE_CODE:
             print_error_source_code(self->source, part.as.source_code);
@@ -157,7 +158,7 @@ static usize compiler_reporter_n_errors(const Reporter* raw) {
     return self->n_errors;
 }
 
-ReporterVTable compiler_reporter_vtable = {
+static const ReporterVTable compiler_reporter_vtable = {
     .report = compiler_reporter_report,
     .n_errors = compiler_reporter_n_errors,
 };

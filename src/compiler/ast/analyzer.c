@@ -75,7 +75,7 @@ static Symbol default_symbols[] = {
 Analyzer new_analyzer(Reporter* reporter) {
     Scope* root = malloc(sizeof(Scope));
     *root = new_scope(NULL);
-    array_buf_extend(&root->symbols, default_symbols, 5, Symbol);
+    array_buf_extend(&root->symbols, default_symbols, 5);
     return (Analyzer){
         .root = root,
         .current_scope = root,

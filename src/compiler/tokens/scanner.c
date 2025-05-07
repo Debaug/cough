@@ -49,7 +49,7 @@ static Result scan_string(Scanner* scanner, Token* dst) {
         if (peek_scanner(*scanner) == '\0') {
             report_simple_compiler_error(
                 scanner->reporter,
-                ERROR_INVALID_TOKEN,
+                CE_INVALID_TOKEN,
                 format("missing closing `\"` in string literal"),
                 scanner_text_from(*scanner, start)
             );

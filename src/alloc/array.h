@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 
-#include "common/primitives.h"
+#include "primitives/primitives.h"
 
 #define ArrayBuf(T) struct ArrayBuf_ ## T { \
     T* data;                                \
@@ -31,13 +31,13 @@ void raw_array_buf_reserve(
     usize element_size
 );
 
-#define array_buf_reserve(array, additional, T) \
+#define array_buf_reserve(array, additional)    \
     raw_array_buf_reserve(                      \
         (void**)&(array)->data,                 \
         (array)->len,                           \
         &(array)->capacity_bytes,               \
         (additional),                           \
-        sizeof(T)                               \
+        sizeof(*(array)->data)                  \
     )
 
 void raw_array_buf_extend(
@@ -59,14 +59,14 @@ void raw_array_buf_extend(
         sizeof(elt)                 \
     )
 
-#define array_buf_extend(array, src, length, T) \
+#define array_buf_extend(array, src, length)    \
     raw_array_buf_extend(                       \
         (void**)&(array)->data,                 \
         &(array)->len,                          \
         &(array)->capacity_bytes,               \
         (src),                                  \
         (length),                               \
-        sizeof(T)                               \
+        sizeof(*(array)->data)                  \
     )
 
 void raw_array_buf_pop(

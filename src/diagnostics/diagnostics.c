@@ -6,9 +6,11 @@
 void log_message(StringView message, Severity severity) {
     switch (severity) {
     case SEVERITY_ERROR:
-        print_error("%.*s", (int)message.len, message.data);
+        print_error("%.*s\n", STRING_FMT(message));
+        break;
     case SEVERITY_SYSTEM_ERROR:
-        print_system_error("%.*s", (int)message.len, message.data);
+        print_system_error("%.*s\n", STRING_FMT(message));
+        break;
     }
 }
 

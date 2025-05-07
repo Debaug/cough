@@ -1,6 +1,8 @@
-target_sources(cough PRIVATE main.c)
+target_sources(cough PRIVATE
+    main.c
+)
 
-add_subdirectory(common)
+add_subdirectory(primitives)
 add_subdirectory(alloc)
 add_subdirectory(diagnostics)
 
