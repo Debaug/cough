@@ -55,41 +55,13 @@ static void push(Vm* vm, Primitive value) {
 }
 
 static ControlFlow run_one(Vm* vm) {
-    Opcode op = (Opcode)(*vm->pos.ip);
-    vm->pos.ip++;
-    switch (op) {
-    case OP_NOP: return FLOW_CONTINUE;
-    case OP_SYSCALL: return run_syscall(vm);
-    case OP_CALL: return run_call(vm);
-    case OP_ENTER: return run_enter(vm);
-    case OP_RETURN: return run_return(vm);
-    case OP_LOAD_IMM: return run_load_imm(vm);
-    default:
-        report_simple_runtime_error(
-            vm->reporter,
-            RE_INVALID_INSTRUCTION,
-            format("invalid instruction 0x%02x", op)
-        );
-        return FLOW_EXIT;
-    }
+    eprintf("TODO: vm::run_one");
+    exit(1);
 }
 
 static ControlFlow run_syscall(Vm* vm) {
-    Syscall op = (Syscall)(*vm->pos.ip);
-    vm->pos.ip++;
-    switch (op) {
-    case SYS_NOP: return FLOW_CONTINUE;
-    case SYS_EXIT: return sys_exit(vm);
-    case SYS_SAY_HI: return sys_say_hi(vm);
-    case SYS_SAY_BYE: return sys_say_bye(vm);
-    default:
-        report_simple_runtime_error(
-            vm->reporter,
-            RE_INVALID_INSTRUCTION,
-            format("invalid syscall 0x%02x", op)
-        );
-        return FLOW_EXIT;
-    }
+    eprintf("TODO: vm::run_syscall");
+    exit(1);
 }
 
 static ControlFlow run_call(Vm* vm) {

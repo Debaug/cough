@@ -60,7 +60,6 @@ void report_simple_compiler_error(
         .message = message,
         .source = source,
     };
-    eprintf("msg len = %zu\n", message.len);
     report(reporter, &diagnosis.base);
 }
 

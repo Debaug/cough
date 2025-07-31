@@ -14,6 +14,6 @@ typedef struct Scanner {
 Scanner new_scanner(const char* text, Reporter* reporter);
 char peek_scanner(Scanner scanner);
 void step_scanner(Scanner* scanner);
+void step_scanner_by_same_line(Scanner* scanner, usize steps);
 TextView scanner_text_from(Scanner scanner, TextPos start);
-Result scan_punctuation(Scanner* scanner, Token* dst);
 TokenArrayBuf scan(Scanner* scanner);

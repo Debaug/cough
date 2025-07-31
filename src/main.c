@@ -78,6 +78,8 @@ int test_parse(int argc, const char* argv[]) {
     return EXIT_SUCCESS;
 }
 
+#if 0
+
 int test_run(int argc, const char* argv[]) {
     RuntimeReporter reporter = new_runtime_reporter();
 
@@ -122,8 +124,10 @@ int test_run(int argc, const char* argv[]) {
     return 0;
 }
 
+#endif
+
 int main(int argc, const char* argv[]) {
-#if 0
+#if 1
     return test_parse(argc, argv);
 #else
     return test_run(argc, argv);

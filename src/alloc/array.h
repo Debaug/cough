@@ -15,7 +15,7 @@
 typedef ArrayBuf(usize) UsizeArrayBuf;
 
 #define new_array_buf(...)                              \
-    __VA_OPT__((struct ArrayBuf_ ## __VA_ARGS__)) {   \
+    __VA_OPT__((struct ArrayBuf_ ## __VA_ARGS__)) {     \
         .data = NULL,                                   \
         .len = 0,                                       \
         .capacity_bytes = 0                             \
