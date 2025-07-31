@@ -84,52 +84,20 @@ typedef enum Severity {
     SEVERITY_SYSTEM_ERROR,
 } Severity;
 
-void log_message(StringView message, Severity severity);
-
-typedef struct DiagnosisVTable DiagnosisVTable;
-
-typedef struct Diagnosis {
-    const DiagnosisVTable* vtable;
-    // data goes here
-} Diagnosis;
-
-typedef enum DiagnosisPartKind {
-    DIAGNOSIS_PART_MESSAGE,
-    DIAGNOSIS_PART_SOURCE_CODE,
-} DiagnosisPartKind;
-
-typedef struct DiagnosisPart {
-    DiagnosisPartKind kind;
-    union {
-        StringView message;
-        TextView source_code;
-    } as;
-} DiagnosisPart;
-
-typedef struct DiagnosisVTable {
-    usize size;
-    usize alignment;
-    void(*destroy)(Diagnosis* self);
-    Severity(*severity)(const Diagnosis* self);
-    usize(*len)(const Diagnosis* self);
-    DiagnosisPart(*part)(const Diagnosis* self, usize index);
-} DiagnosisVTable;
-
-typedef struct ReporterVTable ReporterVTable;
-
-/// @brief The reporter type.
 typedef struct Reporter {
-    const ReporterVTable* vtable;
-    // data goes here
+    const struct ReporterVTable* vtable;
 } Reporter;
 
 typedef struct ReporterVTable {
-    // Takes ownership of the diagnosis. This function does not deallocate
-    // the memory where `diagnosis` itself is stored though.
-    void(*report)(Reporter* self, Diagnosis* diagnosis);
+    void(*start)(Reporter* self, Severity severity, int code);
+    void(*end)(Reporter* self);
+    void(*message)(Reporter* self, StringBuf message);
+    void(*source_code)(Reporter* self, TextView source_code);
     usize(*n_errors)(const Reporter* self);
 } ReporterVTable;
 
-// Takes ownership of the diagnosis. This function does not deallocate
-// the memory where `diagnosis` itself is stored though.
-void report(Reporter* reporter, Diagnosis* diagnosis);
+void report_start(Reporter* reporter, Severity severity, int code);
+void report_end(Reporter* reporter);
+void report_message(Reporter* reporter, StringBuf message);
+void report_source_code(Reporter* reporter, TextView source_code);
+usize report_n_errors(const Reporter* reporter);

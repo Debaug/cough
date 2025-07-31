@@ -4,16 +4,6 @@
 #include "bytecode/bytecode.h"
 #include "compiler/ast/type.h"
 
-typedef ArrayBuf(u64) U64ArrayBuf;
-
-// == structure of the stack ==
-// ... [frame n-2] [pos n-2] [frame n-1] [pos n-1] [frame n]
-//                                                  ^^^^^^^
-//                                                  current frame
-//
-// == structure of a stack frame ==
-// [variables] [expressions]
-
 typedef struct VmPos {
     usize frame_start;
     Byteword* ip;

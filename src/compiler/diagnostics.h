@@ -40,14 +40,6 @@ typedef enum CompilerErrorKind {
     CE_DUPLICATE_SYMBOL_NAME,
 } CompilerErrorKind;
 
-typedef struct SimpleCompilerDiagnosis {
-    Diagnosis base;
-    Severity severity;
-    CompilerErrorKind kind;
-    StringBuf message;
-    TextView source;
-} SimpleCompilerDiagnosis;
-
 typedef struct CompilerReporter {
     Reporter base;
     const Source* source;

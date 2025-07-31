@@ -17,7 +17,7 @@ int test_parse(int argc, const char* argv[]) {
             "\t\tcough <FILE>\t parse file\n"
             "\t\tcough\t\t parse from standard input"
         );
-        return -1;
+        return EXIT_FAILURE;
     }
 
     const char* path = (argc == 2) ? argv[1] : NULL;

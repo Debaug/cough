@@ -3,21 +3,26 @@
 
 #include "diagnostics/diagnostics.h"
 
-void log_message(StringView message, Severity severity) {
-    switch (severity) {
-    case SEVERITY_ERROR:
-        print_error("%.*s\n", STRING_FMT(message));
-        break;
-    case SEVERITY_SYSTEM_ERROR:
-        print_system_error("%.*s\n", STRING_FMT(message));
-        break;
-    }
-}
-
 void print_errno(void) {
     print_system_error("%s (errno %d)", strerror(errno), errno);
 }
 
-void report(Reporter* reporter, Diagnosis* diagnosis) {
-    reporter->vtable->report(reporter, diagnosis);
+void report_start(Reporter* reporter, Severity severity, int code) {
+    (reporter->vtable->start)(reporter, severity, code);
+}
+
+void report_end(Reporter* reporter) {
+    (reporter->vtable->end)(reporter);
+}
+
+void report_message(Reporter* reporter, StringBuf message) {
+    (reporter->vtable->message)(reporter, message);
+}
+
+void report_source_code(Reporter* reporter, TextView source_code) {
+    (reporter->vtable->source_code)(reporter, source_code);
+}
+
+usize report_n_errors(const Reporter* reporter) {
+    return (reporter->vtable->n_errors)(reporter);
 }

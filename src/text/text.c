@@ -88,3 +88,8 @@ Errno load_source_file(const char* path, Source* dst) {
 
     return 0;
 }
+
+void destroy_source(Source source) {
+    free_array_buf(source.text);
+    free_array_buf(source.line_start_indices);
+}

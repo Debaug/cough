@@ -12,7 +12,18 @@
     usize capacity_bytes;                   \
 }
 
+typedef ArrayBuf(u8) U8ArrayBuf;
+typedef ArrayBuf(u16) U16ArrayBuf;
+typedef ArrayBuf(u32) U32ArrayBuf;
+typedef ArrayBuf(u64) U64ArrayBuf;
 typedef ArrayBuf(usize) UsizeArrayBuf;
+typedef ArrayBuf(umax) UmaxArrayBuf;
+
+typedef ArrayBuf(i8) I8ArrayBuf;
+typedef ArrayBuf(i16) I16ArrayBuf;
+typedef ArrayBuf(i32) I32ArrayBuf;
+typedef ArrayBuf(i64) I64ArrayBuf;
+typedef ArrayBuf(imax) ImaxArrayBuf;
 
 #define new_array_buf(...)                              \
     __VA_OPT__((struct ArrayBuf_ ## __VA_ARGS__)) {     \

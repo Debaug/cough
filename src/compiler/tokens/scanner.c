@@ -22,6 +22,7 @@ void step_scanner(Scanner* scanner) {
 
 void step_scanner_by_same_line(Scanner* scanner, usize steps) {
     scanner->text_pos.column += steps;
+    scanner->text_pos.index += steps;
     scanner->text += steps;
 }
 

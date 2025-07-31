@@ -31,4 +31,4 @@ typedef struct Source {
 
 typedef int Errno; // FIXME: duplicate declaration
 Errno load_source_file(const char* path, Source* dst);
-Errno destroy_source(Source source);
+void destroy_source(Source source);
