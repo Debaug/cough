@@ -26,15 +26,15 @@ typedef enum Opcode {
     /// @param func the offset of first instruction within the instructions section (64-bit immediate).
     OP_CAS,
 
-    /// @brief "res" -- reserve the specified number of words as additional stack space.
+    /// @brief "res" -- reserve the specified number of registers as additional stack space.
     ///
-    /// @param space the number of words to be added (16-bit immediate).
+    /// @param space the number of registers to be added (16-bit immediate).
     OP_RES,
 
     /// @brief "ret" -- return from the current function.
     ///
-    /// @param val the start of the return value (64-bit register).
-    /// @param len the number of words of the return value (16-bit immediate).
+    /// @param val the start of the return value (register).
+    /// @param len the number of registers of the return value (16-bit immediate).
     OP_RET,
 
     /// @brief "sca" -- load a 64-bit constant into a register.
@@ -63,6 +63,8 @@ typedef enum Opcode {
 
     /// @brief "adu" -- add two `UInt`s together.
     ///
+    /// This operation currently simply wraps around on overflow.
+    ///
     /// @param dst the destination register (64-bit register).
     /// @param op1 the first source operand (64-bit register).
     /// @param op2 the second source operand (64-bit register).
@@ -72,16 +74,21 @@ typedef enum Opcode {
 typedef enum Syscall {
     SYS_NOP,
 
-    /// @brief "sys exi" -- exit the program with the specified exit code.
+    /// @brief "sys exit" -- exit the program with the specified exit code.
     ///
     /// @param exit_code the exit code (64-bit register).
-    SYS_EXI,
+    SYS_EXIT,
 
-    SYS_SAY_HI,
-    SYS_SAY_BYE,
+    SYS_HI,
+    SYS_BYE,
+
+    /// @brief "sys dbg" -- print the content of a register as a `UInt`.
+    ///
+    /// @param reg the register (64-bit register).
+    SYS_DBG,
 } Syscall;
 
-typedef u32 Byteword;
+typedef u16 Byteword;
 typedef ArrayBuf(Byteword) SectionBuf;
 
 typedef struct Bytecode {

@@ -4,31 +4,35 @@
 #include "bytecode/bytecode.h"
 #include "compiler/ast/type.h"
 
-typedef struct VmPos {
-    usize frame_start;
-    Byteword* ip;
-} VmPos;
+typedef u64 Register;
 
-typedef struct Primitive {
-    union {
-        i64 integer;
-        void* dynamic;
-        usize function;
-    } as;
-} Primitive;
-typedef ArrayBuf(Primitive) ValueStack;
+typedef struct VmStack {
+    Register* data;
+    Register* fp;
+    Register* sp;
+    Register* ap;
+    usize capacity;
+} VmStack;
+
+VmStack new_vm_stack(void);
+void free_vm_stack(VmStack stack);
+void vm_stack_reserve(VmStack* stack, usize additional_registers);
+
+/// @brief 
+/// @param stack the stack.
+/// @param additional additional registers (after sp)
+void vm_stack_reserve(VmStack* stack, usize additional);
 
 typedef struct Vm {
-    Bytecode bytecode;
-    ValueStack stack;
-    VmPos pos;
-    // Gc gc;
     Reporter* reporter;
+    Bytecode bytecode;
+    const Byteword* ip;
+    VmStack stack;
     i64 exit_code;
 } Vm;
 
-// is not responsible for destroying the bytecode
+// the VM is not responsible for destroying the bytecode
 Vm new_vm(Bytecode bytecode, Reporter* reporter);
 void free_vm(Vm vm);
 
-int run_vm(Vm* vm);
+void run_vm(Vm* vm);
