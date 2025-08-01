@@ -5,33 +5,9 @@
 #include "vm/vm.h"
 #include "vm/diagnostics.h"
 
-typedef enum ControlFlow {
-    FLOW_EXIT = 0,
-    FLOW_CONTINUE = 1,
-} ControlFlow;
-
-typedef struct VmFrameCapture {
-    const Byteword* ip;
-    u64 fp_offset;
-} VmFrameCapture;
-#define VM_FRAME_CAPTURE_REGISTERS \
-    (sizeof(VmFrameCapture) / sizeof(Register))
-
-static VmFrameCapture vm_capture_frame(Vm vm) {
-    return (VmFrameCapture){
-        .ip = vm.ip,
-        .fp_offset = vm.stack.fp - vm.stack.data,
-    };
-}
-
-static void vm_restore_frame_capture(Vm* vm, VmFrameCapture capture) {
-    vm->ip = capture.ip;
-    vm->stack.fp = vm->stack.data + capture.fp_offset;
-}
-
 VmStack new_vm_stack(void) {
     usize capacity = 8;
-    Register* data = malloc(capacity * sizeof(Register));
+    Word* data = malloc(capacity * sizeof(Word));
     return (VmStack){
         .data = data,
         .fp = data,
@@ -56,7 +32,7 @@ void vm_stack_reserve(VmStack* stack, usize additional_registers) {
     usize sp_offset = stack->sp - stack->data;
     usize ap_offset = stack->ap - stack->data;
 
-    stack->data = realloc(stack->data, new_capacity * sizeof(Register));
+    stack->data = realloc(stack->data, new_capacity * sizeof(Word));
     if (stack->data == NULL) {
         print_errno();
         exit(EXIT_FAILURE);
@@ -80,6 +56,11 @@ Vm new_vm(Bytecode bytecode, Reporter* reporter) {
 void free_vm(Vm vm) {
     free_array_buf(vm.stack);
 }
+
+typedef enum ControlFlow {
+    FLOW_EXIT = 0,
+    FLOW_CONTINUE = 1,
+} ControlFlow;
 
 static ControlFlow run_one(Vm* vm);
 
@@ -111,6 +92,63 @@ void run_vm(Vm* vm) {
     }
 }
 
+typedef struct VmFrameCapture {
+    const Byteword* ip;
+    u64 fp_offset;
+} VmFrameCapture;
+#define VM_FRAME_CAPTURE_REGISTERS \
+    (sizeof(VmFrameCapture) / sizeof(Word))
+
+static VmFrameCapture vm_capture_frame(Vm vm) {
+    return (VmFrameCapture){
+        .ip = vm.ip,
+        .fp_offset = vm.stack.fp - vm.stack.data,
+    };
+}
+
+static void vm_restore_frame_capture(Vm* vm, VmFrameCapture capture) {
+    vm->ip = capture.ip;
+    vm->stack.fp = vm->stack.data + capture.fp_offset;
+}
+
+static const Byteword* align_up(const Byteword* ptr, usize alignment) {
+    uptr addr = (uptr)ptr;
+    uptr mask = -alignment;
+    addr = (addr + ~mask) & mask;
+    return (const Byteword*)addr;
+}
+
+static Word* reg_ptr(Vm* vm, usize idx) {
+    return vm->stack.fp + idx;
+}
+
+static Word reg_val(const Vm* vm, usize idx) {
+    return vm->stack.fp[idx];
+}
+
+static Byteword fetch_imm_byteword(Vm* vm) {
+    return *(vm->ip++);
+}
+
+static Word fetch_imm_word(Vm* vm) {
+    const Word* ptr = (const Word*)align_up(vm->ip, alignof(Word));
+    Word imm = *(ptr++);
+    vm->ip = (const Byteword*)ptr;
+    return imm;
+}
+
+static usize fetch_reg(Vm* vm) {
+    return fetch_imm_byteword(vm);
+}
+
+static Word* fetch_reg_ptr(Vm* vm) {
+    return reg_ptr(vm, fetch_reg(vm));
+}
+
+static Word fetch_reg_val(Vm* vm) {
+    return *fetch_reg_ptr(vm);
+}
+
 static ControlFlow run_one(Vm* vm) {
     switch ((Opcode)(*(vm->ip++))) {
     case OP_NOP: return FLOW_CONTINUE;
@@ -134,13 +172,6 @@ static ControlFlow run_one(Vm* vm) {
     }
 }
 
-static const Byteword* align_up(const Byteword* ptr, usize alignment) {
-    uptr addr = (uptr)ptr;
-    uptr mask = -alignment;
-    addr = (addr + ~mask) & mask;
-    return (const Byteword*)addr;
-}
-
 static ControlFlow op_sys(Vm* vm) {
     switch ((Syscall)(*(vm->ip++))) {
     case SYS_NOP: return FLOW_CONTINUE;
@@ -157,7 +188,7 @@ static ControlFlow op_sys(Vm* vm) {
 }
 
 static ControlFlow op_frm(Vm* vm) {
-    usize nargs = *(vm->ip++);
+    usize nargs = fetch_imm_byteword(vm);
     vm_stack_reserve(&vm->stack, VM_FRAME_CAPTURE_REGISTERS + nargs);
 
     VmFrameCapture capture = vm_capture_frame(*vm);
@@ -168,43 +199,39 @@ static ControlFlow op_frm(Vm* vm) {
 }
 
 static ControlFlow op_arg(Vm* vm) {
-    Byteword reg = *(vm->ip++);
-    *(vm->stack.ap++) = *(vm->stack.fp + reg);
+    *(vm->stack.ap++) = fetch_reg_val(vm);
     return FLOW_CONTINUE;
 }
 
 static ControlFlow op_cas(Vm* vm) {
-    // FIXME: portable alignment
-    const u64* ip = (const u64*)align_up(vm->ip, alignof(u64));
-    u64 func = *(ip++);
+    Word func = fetch_imm_word(vm);
 
     VmFrameCapture* capture = (VmFrameCapture*)vm->stack.sp;
-    capture->ip = (const Byteword*)ip;
+    capture->ip = vm->ip;
 
-    vm->ip = vm->bytecode.instructions.data + func;
+    vm->ip = vm->bytecode.instructions.data + func.as_uint;
     vm->stack.fp = vm->stack.sp + VM_FRAME_CAPTURE_REGISTERS;
     vm->stack.sp = vm->stack.ap;
     return FLOW_CONTINUE;
 }
 
 static ControlFlow op_res(Vm* vm) {
-    Byteword nregs = *(vm->ip++);
+    usize nregs = fetch_imm_byteword(vm);
     vm_stack_reserve(&vm->stack, nregs);
     vm->stack.sp += nregs;
     return FLOW_CONTINUE;
 }
 
 static ControlFlow op_ret(Vm* vm) {
-    Byteword value_start = *(vm->ip++);
-    Byteword value_nregs = *(vm->ip++);
-    Register* value = vm->stack.fp + value_start;
+    Word* value = fetch_reg_ptr(vm);
+    usize len = fetch_imm_byteword(vm);
 
     VmFrameCapture* capture = (VmFrameCapture*)(vm->stack.fp - VM_FRAME_CAPTURE_REGISTERS);
     vm_restore_frame_capture(vm, *capture);
-    vm->stack.sp = (Register*)capture;
+    vm->stack.sp = (Word*)capture;
 
     // correct as sp < value: value[..] won't be overwritten.
-    for (size_t i = 0; i < value_nregs; i++) {
+    for (size_t i = 0; i < len; i++) {
         vm->stack.sp[i] = value[i];
     }
 
@@ -212,48 +239,42 @@ static ControlFlow op_ret(Vm* vm) {
 }
 
 static ControlFlow op_sca(Vm* vm) {
-    Byteword reg_idx = (*vm->ip++);
-    const Register* valp = (const Register*)align_up(vm->ip, alignof(u64));
-    Register val = *(valp++);
-    vm->ip = (const Byteword*)valp;
-    vm->stack.fp[reg_idx] = val;
+    Word* reg = fetch_reg_ptr(vm);
+    Word val = fetch_imm_word(vm);
+    *reg = val;
     return FLOW_CONTINUE;
 }
 
 static ControlFlow op_loa(Vm* vm) {
-    Byteword dst = *(vm->ip++);
-    Byteword src_ptr_idx = *(vm->ip++);
-    const Register* src_ptr = (const Register*)vm->stack.fp[src_ptr_idx];
-    vm->stack.fp[dst] = *src_ptr;
+    Word* dst = fetch_reg_ptr(vm);
+    const Word* src = (const Word*)(fetch_reg_val(vm).as_ptr);
     return FLOW_CONTINUE;
 }
 
 static ControlFlow op_sto(Vm* vm) {
-    Byteword dst_ptr_idx = *(vm->ip++);
-    Byteword src = *(vm->ip++);
-    Register* dst_ptr = (Register*)vm->stack.fp[dst_ptr_idx];
-    *dst_ptr = vm->stack.fp[src];
+    Word* dst = (Word*)(fetch_reg_val(vm).as_mut_ptr);
+    Word src = fetch_reg_val(vm);
+    *dst = src;
     return FLOW_CONTINUE;
 }
 
 static ControlFlow op_mov(Vm* vm) {
-    Byteword dst = *(vm->ip++);
-    Byteword src = *(vm->ip++);
-    vm->stack.fp[dst] = vm->stack.fp[src];
+    Word* dst = fetch_reg_ptr(vm);
+    Word src = fetch_reg_val(vm);
+    *dst = src;
     return FLOW_CONTINUE;
 }
 
 static ControlFlow op_adu(Vm* vm) {
-    Byteword dst = *(vm->ip++);
-    Byteword op1 = *(vm->ip++);
-    Byteword op2 = *(vm->ip++);
-    vm->stack.fp[dst] = (u64)(vm->stack.fp[op1]) + (u64)(vm->stack.fp[op2]);
+    Word* dst = fetch_reg_ptr(vm);
+    Word op1 = fetch_reg_val(vm);
+    Word op2 = fetch_reg_val(vm);
+    dst->as_uint = op1.as_uint + op2.as_uint;
     return FLOW_CONTINUE;
 }
 
 static ControlFlow sys_exit(Vm* vm) {
-    Byteword exit_code = *(vm->ip++);
-    vm->exit_code = vm->stack.fp[exit_code];
+    vm->exit_code = fetch_reg_val(vm).as_int;
     return FLOW_EXIT;
 }
 
@@ -268,8 +289,8 @@ static ControlFlow sys_bye(Vm* vm) {
 }
 
 static ControlFlow sys_dbg(Vm* vm) {
-    Byteword reg = *(vm->ip++);
-    u64 val = vm->stack.fp[reg];
+    usize reg = fetch_reg(vm);
+    u64 val = reg_val(vm, reg).as_uint;
     eprintf("[sys dbg]  %d: %" PRIu64 " %" PRIx64 "\n", (int)reg, val, val);
     return FLOW_CONTINUE;
 }

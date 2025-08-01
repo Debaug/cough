@@ -4,13 +4,19 @@
 #include "bytecode/bytecode.h"
 #include "compiler/ast/type.h"
 
-typedef u64 Register;
+typedef union Word {
+    const void* as_ptr;
+    void* as_mut_ptr;
+    u64 as_uint;
+    i64 as_int;
+    f64 as_float;
+} Word;
 
 typedef struct VmStack {
-    Register* data;
-    Register* fp;
-    Register* sp;
-    Register* ap;
+    Word* data;
+    Word* fp;
+    Word* sp;
+    Word* ap;
     usize capacity;
 } VmStack;
 

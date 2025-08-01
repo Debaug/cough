@@ -107,8 +107,8 @@ int test_run(int argc, const char* argv[]) {
 
     printf("===== ASSEMBLY =====\n");
     for (usize i = 0; i * sizeof(Byteword) < sizeof(instructions); i++) {
-        printf("%02x ", instructions[i]);
-        if (i % 16 == 15) {
+        printf("%04x ", instructions[i]);
+        if (i % 8 == 7) {
             printf("\n");
         }
     }
