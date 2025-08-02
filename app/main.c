@@ -78,66 +78,6 @@ int test_parse(int argc, const char* argv[]) {
     return EXIT_SUCCESS;
 }
 
-int test_run(int argc, const char* argv[]) {
-    DefaultVmSystem vm_system = new_default_vm_system();
-
-    RuntimeReporter reporter = new_runtime_reporter();
-
-    Byteword instructions[] = {
-        [0] =
-            OP_FRM, 0,
-            OP_CAS, [4] = 64, 0, 0, [8] =
-            OP_SYS, SYS_EXIT, 0,
-        
-        [64] =
-            OP_RES, 1,
-            OP_SCA, 0, [68] = 21, 0, 0, 0, [72] =
-            OP_SYS, SYS_HI,
-            OP_FRM, 1,
-            OP_ARG, 0,
-            OP_CAS, [80] = 128, 0, 0, 0, [84] =
-            OP_SYS, SYS_DBG, 1,
-            OP_SCA, 0, [92] = 0xdead, 0, 0, 0, [96] =
-            OP_RET, 0, 1,
-
-        [128] =
-            OP_RES, 1,
-            OP_MOV, 1, 0,
-            OP_ADU, 0, 0, 1,
-            OP_RET, 0, 1,
-    };
-
-    printf("===== ASSEMBLY =====\n");
-    for (usize i = 0; i * sizeof(Byteword) < sizeof(instructions); i++) {
-        printf("%04x ", instructions[i]);
-        if (i % 8 == 7) {
-            printf("\n");
-        }
-    }
-    printf("\n\n");
-
-    SectionBuf instruction_buf = new_array_buf();
-    array_buf_extend(
-        &instruction_buf,
-        &instructions,
-        sizeof(instructions) / sizeof(Byteword)
-    );
-
-    Bytecode bytecode = {
-        .instructions = instruction_buf,
-        .rodata = new_array_buf(),
-    };
-    Vm vm = new_vm((VmSystem*)&vm_system, bytecode, (Reporter*)&reporter);
-
-    printf("== PROGRAM OUTPUT ==\n");
-    run_vm(&vm);
-    return 0;
-}
-
 int main(int argc, const char* argv[]) {
-#if 0
     return test_parse(argc, argv);
-#else
-    return test_run(argc, argv);
-#endif
 }
