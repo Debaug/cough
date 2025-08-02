@@ -1,7 +1,3 @@
-target_sources(cough PRIVATE
-    main.c
-)
-
 add_subdirectory(primitives)
 add_subdirectory(alloc)
 add_subdirectory(diagnostics)
@@ -11,4 +7,4 @@ add_subdirectory(compiler)
 add_subdirectory(bytecode)
 add_subdirectory(vm)
 
-target_compile_options(cough PRIVATE "-Wno-gnu-alignof-expression")
+target_compile_options(libcough PRIVATE "-Wno-gnu-alignof-expression")

@@ -1,4 +1,4 @@
-target_sources(cough PRIVATE
+target_sources(libcough PRIVATE
     alloc.h
     array.h array.c
     alloc_stack.h alloc_stack.c

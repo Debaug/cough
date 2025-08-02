@@ -1,4 +1,4 @@
-target_sources(cough PRIVATE
+target_sources(libcough PRIVATE
     token.h
     scanner.h scanner.c
 )

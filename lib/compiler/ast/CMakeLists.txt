@@ -1,4 +1,4 @@
-target_sources(cough PRIVATE
+target_sources(libcough PRIVATE
     parser.h parser.c
     analyzer.h analyzer.c
     debug.h debug.c
