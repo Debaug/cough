@@ -43,13 +43,13 @@ void vm_stack_reserve(VmStack* stack, usize additional_registers) {
     stack->ap = stack->data + ap_offset;
 }
 
-Vm new_vm(Bytecode bytecode, Reporter* reporter) {
+Vm new_vm(VmSystem* system, Bytecode bytecode, Reporter* reporter) {
     return (Vm){
+        .system = system,
         .reporter = reporter,
         .bytecode = bytecode,
         .ip = bytecode.instructions.data,
         .stack = new_vm_stack(),
-        .exit_code = 0,
     };
 }
 
@@ -77,8 +77,17 @@ static ControlFlow op_loa(Vm* vm);
 static ControlFlow op_sto(Vm* vm);
 static ControlFlow op_mov(Vm* vm);
 
+static ControlFlow op_jmp(Vm* vm);
+static ControlFlow op_jnz(Vm* vm);
+
+static ControlFlow op_equ(Vm* vm);
+static ControlFlow op_neu(Vm* vm);
+static ControlFlow op_geu(Vm* vm);
+static ControlFlow op_gtu(Vm* vm);
+
 static ControlFlow op_adu(Vm* vm);
 
+static ControlFlow sys_nop(Vm* vm);
 static ControlFlow sys_exit(Vm* vm);
 static ControlFlow sys_hi(Vm* vm);
 static ControlFlow sys_bye(Vm* vm);
@@ -166,6 +175,14 @@ static ControlFlow run_one(Vm* vm) {
     case OP_STO: return op_sto(vm);
     case OP_MOV: return op_mov(vm);
 
+    case OP_JMP: return op_jmp(vm);
+    case OP_JNZ: return op_jnz(vm);
+
+    case OP_EQU: return op_equ(vm);
+    case OP_NEU: return op_neu(vm);
+    case OP_GEU: return op_geu(vm);
+    case OP_GTU: return op_gtu(vm);
+
     case OP_ADU: return op_adu(vm);
 
     // FIXME: invalid opcode
@@ -174,7 +191,7 @@ static ControlFlow run_one(Vm* vm) {
 
 static ControlFlow op_sys(Vm* vm) {
     switch ((Syscall)(*(vm->ip++))) {
-    case SYS_NOP: return FLOW_CONTINUE;
+    case SYS_NOP: return sys_nop(vm);
 
     case SYS_EXIT: return sys_exit(vm);
     
@@ -204,12 +221,12 @@ static ControlFlow op_arg(Vm* vm) {
 }
 
 static ControlFlow op_cas(Vm* vm) {
-    Word func = fetch_imm_word(vm);
+    usize func = fetch_imm_word(vm).as_uint;
 
     VmFrameCapture* capture = (VmFrameCapture*)vm->stack.sp;
     capture->ip = vm->ip;
 
-    vm->ip = vm->bytecode.instructions.data + func.as_uint;
+    vm->ip = vm->bytecode.instructions.data + func;
     vm->stack.fp = vm->stack.sp + VM_FRAME_CAPTURE_REGISTERS;
     vm->stack.sp = vm->stack.ap;
     return FLOW_CONTINUE;
@@ -265,6 +282,53 @@ static ControlFlow op_mov(Vm* vm) {
     return FLOW_CONTINUE;
 }
 
+static ControlFlow op_jmp(Vm* vm) {
+    usize dst = fetch_imm_word(vm).as_uint;
+    vm->ip = vm->bytecode.instructions.data + dst;
+    return FLOW_CONTINUE;
+}
+
+static ControlFlow op_jnz(Vm* vm) {
+    usize dst = fetch_imm_word(vm).as_uint;
+    Word val = fetch_reg_val(vm);
+    if (val.as_uint != 0) {
+        vm->ip = vm->bytecode.instructions.data + dst;
+    }
+    return FLOW_CONTINUE;
+}
+
+static ControlFlow op_equ(Vm* vm) {
+    Word* dst = fetch_reg_ptr(vm);
+    Word op1 = fetch_reg_val(vm);
+    Word op2 = fetch_reg_val(vm);
+    dst->as_uint = op1.as_uint == op2.as_uint;
+    return FLOW_CONTINUE;
+}
+
+static ControlFlow op_neu(Vm* vm) {
+    Word* dst = fetch_reg_ptr(vm);
+    Word op1 = fetch_reg_val(vm);
+    Word op2 = fetch_reg_val(vm);
+    dst->as_uint = op1.as_uint != op2.as_uint;
+    return FLOW_CONTINUE;
+}
+
+static ControlFlow op_geu(Vm* vm) {
+    Word* dst = fetch_reg_ptr(vm);
+    Word op1 = fetch_reg_val(vm);
+    Word op2 = fetch_reg_val(vm);
+    dst->as_uint = op1.as_uint >= op2.as_uint;
+    return FLOW_CONTINUE;
+}
+
+static ControlFlow op_gtu(Vm* vm) {
+    Word* dst = fetch_reg_ptr(vm);
+    Word op1 = fetch_reg_val(vm);
+    Word op2 = fetch_reg_val(vm);
+    dst->as_uint = op1.as_uint > op2.as_uint;
+    return FLOW_CONTINUE;
+}
+
 static ControlFlow op_adu(Vm* vm) {
     Word* dst = fetch_reg_ptr(vm);
     Word op1 = fetch_reg_val(vm);
@@ -272,25 +336,30 @@ static ControlFlow op_adu(Vm* vm) {
     dst->as_uint = op1.as_uint + op2.as_uint;
     return FLOW_CONTINUE;
 }
+static ControlFlow sys_nop(Vm* vm) {
+    (vm->system)->vtable->nop(vm->system);
+    return FLOW_CONTINUE;
+}
 
 static ControlFlow sys_exit(Vm* vm) {
-    vm->exit_code = fetch_reg_val(vm).as_int;
+    i64 exit_code = fetch_reg_val(vm).as_int;
+    (vm->system)->vtable->exit(vm->system, exit_code);
     return FLOW_EXIT;
 }
 
 static ControlFlow sys_hi(Vm* vm) {
-    eprintf("[sys hi]   *coughs* hi!!\n");
+    (vm->system)->vtable->hi(vm->system);
     return FLOW_CONTINUE;
 }
 
 static ControlFlow sys_bye(Vm* vm) {
-    eprintf("[sys bye]  *coughs* bye!!\n");
+    (vm->system)->vtable->bye(vm->system);
     return FLOW_CONTINUE;
 }
 
 static ControlFlow sys_dbg(Vm* vm) {
-    usize reg = fetch_reg(vm);
-    u64 val = reg_val(vm, reg).as_uint;
-    eprintf("[sys dbg]  %d: %" PRIu64 " %" PRIx64 "\n", (int)reg, val, val);
+    usize idx = fetch_reg(vm);
+    Word val = reg_val(vm, idx);
+    (vm->system)->vtable->dbg(vm->system, idx, val);
     return FLOW_CONTINUE;
 }

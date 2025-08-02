@@ -79,6 +79,8 @@ int test_parse(int argc, const char* argv[]) {
 }
 
 int test_run(int argc, const char* argv[]) {
+    DefaultVmSystem vm_system = new_default_vm_system();
+
     RuntimeReporter reporter = new_runtime_reporter();
 
     Byteword instructions[] = {
@@ -125,15 +127,10 @@ int test_run(int argc, const char* argv[]) {
         .instructions = instruction_buf,
         .rodata = new_array_buf(),
     };
-    Vm vm = new_vm(bytecode, (Reporter*)&reporter);
+    Vm vm = new_vm((VmSystem*)&vm_system, bytecode, (Reporter*)&reporter);
 
     printf("== PROGRAM OUTPUT ==\n");
     run_vm(&vm);
-
-    printf(
-        "\n=== PROGRAM EXIT ===\nexit code: %" PRId64 " 0x%" PRIx64 "\n",
-        vm.exit_code, vm.exit_code
-    );
     return 0;
 }
 
