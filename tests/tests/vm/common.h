@@ -1,7 +1,10 @@
 #pragma once
 
+#include <assert.h>
+
 #include "diagnostics/diagnostics.h"
 #include "vm/system.h"
+#include "vm/vm.h"
 
 typedef struct TestReporter {
     Reporter base;

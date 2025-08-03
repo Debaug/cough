@@ -2,13 +2,14 @@
 
 #include "diagnostics/diagnostics.h"
 
-#include "tests/vm/function_call.h"
+#include "tests/vm/tests.h"
 
 static const struct {
     const char* name;
     int(*test)(void);
 } tests[] = {
-    { .name = "vm/function_call", .test = test_function_call }
+    {   .name = "vm/function_call", .test = test_vm_function_call   },
+    {   .name = "vm/conditional",  .test = test_vm_conditional    }
 };
 
 int main(int argc, char const *argv[]) {

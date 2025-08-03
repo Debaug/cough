@@ -1,11 +1,7 @@
-#include <assert.h>
-
-#include "vm/vm.h"
-
 #include "tests/vm/common.h"
-#include "tests/vm/function_call.h"
+#include "tests/vm/tests.h"
 
-int test_function_call() {
+int test_vm_function_call() {
     TestVmSystem vm_system = new_test_vm_system();
     TestReporter reporter = new_test_reporter();
 

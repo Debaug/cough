@@ -12,7 +12,7 @@ typedef union Word {
 
 typedef enum Opcode {
     /// @brief `nop` -- no operation.
-    OP_NOP,
+    OP_NOP = 0,
 
     /// @brief `sys` -- execute a given syscall.
     ///
