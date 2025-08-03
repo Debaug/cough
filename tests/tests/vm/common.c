@@ -48,7 +48,6 @@ static void test_vm_system_exit(VmSystem* raw, i64 exit_code) {
         .kind = SYS_EXIT,
         .as.exit = { .exit_code = exit_code },
     };
-    eprintf("[dbg] exit code: %d\n", (int)exit_code);
     array_buf_push(&self->syscalls, record);
 }
 

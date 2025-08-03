@@ -9,7 +9,8 @@ static const struct {
     int(*test)(void);
 } tests[] = {
     {   .name = "vm/function_call", .test = test_vm_function_call   },
-    {   .name = "vm/conditional",  .test = test_vm_conditional    }
+    {   .name = "vm/conditional",   .test = test_vm_conditional     },
+    {   .name = "vm/fibonacci",     .test = test_vm_fibonacci       },
 };
 
 int main(int argc, char const *argv[]) {
