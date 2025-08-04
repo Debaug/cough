@@ -12,10 +12,7 @@ target_link_libraries(cough PRIVATE libcough)
 
 include(CTest)
 enable_testing()
-add_executable(testcough "")
-add_subdirectory(tests)
-target_include_directories(testcough PRIVATE tests lib)
-target_link_libraries(testcough PRIVATE libcough)
+add_subdirectory(tests/tests)
 
 set(CPACK_PROJECT_NAME ${PROJECT_NAME})
 set(CPACK_PROJECT_VERSION ${PROJECT_VERSION})

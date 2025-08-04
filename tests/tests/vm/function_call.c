@@ -1,7 +1,6 @@
-#include "tests/vm/common.h"
-#include "tests/vm/tests.h"
+#include "tests/common.h"
 
-int test_vm_function_call() {
+int main(int argc, const char* argv[]) {
     TestVmSystem vm_system = new_test_vm_system();
     TestReporter reporter = new_test_reporter();
 

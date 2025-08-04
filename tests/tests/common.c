@@ -1,4 +1,4 @@
-#include "tests/vm/common.h"
+#include "tests/common.h"
 
 static void test_reporter_start(Reporter* raw, Severity severity, int code) {
     TestReporter* self = (TestReporter*)raw;
