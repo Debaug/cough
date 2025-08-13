@@ -99,6 +99,8 @@ void raw_array_buf_pop(
 
 #define array_buf_pop(array, dst) array_buf_pop_array(array, dst, 1)
 
+typedef const char* String;
+
 typedef ArrayBuf(char) StringBuf;
 
 StringBuf format(const char* restrict fmt, ...);

@@ -120,13 +120,6 @@ static void vm_restore_frame_capture(Vm* vm, VmFrameCapture capture) {
     vm->stack.fp = vm->stack.data + capture.fp_offset;
 }
 
-static const Byteword* align_up(const Byteword* ptr, usize alignment) {
-    uptr addr = (uptr)ptr;
-    uptr mask = -alignment;
-    addr = (addr + ~mask) & mask;
-    return (const Byteword*)addr;
-}
-
 static Word* reg_ptr(Vm* vm, usize idx) {
     return vm->stack.fp + idx;
 }

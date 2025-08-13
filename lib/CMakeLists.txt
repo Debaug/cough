@@ -1,4 +1,5 @@
 add_subdirectory(primitives)
+add_subdirectory(ops)
 add_subdirectory(alloc)
 add_subdirectory(diagnostics)
 

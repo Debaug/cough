@@ -12,6 +12,7 @@ target_link_libraries(cough PRIVATE libcough)
 
 include(CTest)
 enable_testing()
+set(CTEST_OUTPUT_ON_FAILURE 1)
 add_subdirectory(tests/tests)
 
 set(CPACK_PROJECT_NAME ${PROJECT_NAME})

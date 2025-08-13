@@ -5,6 +5,8 @@ function(cough_test name path)
     add_test(NAME ${name} COMMAND $<TARGET_FILE:${name}>)
 endfunction()
 
+cough_test(test_hash_map alloc/hash_map.c)
+
 cough_test(test_vm_function_call vm/function_call.c)
 cough_test(test_vm_conditional vm/conditional.c)
 cough_test(test_vm_fibonacci vm/fibonacci.c)
