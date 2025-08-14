@@ -64,34 +64,25 @@ typedef enum ControlFlow {
 
 static ControlFlow run_one(Vm* vm);
 
-static ControlFlow op_sys(Vm* vm);
+#define ARG_TYPE(mnemo, ...) Arg_##mnemo __VA_OPT__(,)
+typedef Syscall Arg_sys;
+typedef Byteword Arg_imb;
+typedef Word Arg_imw;
+typedef Word* Arg_preg;
+typedef Word Arg_reg;
+typedef usize Arg_sym;
 
-static ControlFlow op_frm(Vm* vm);
-static ControlFlow op_arg(Vm* vm);
-static ControlFlow op_cas(Vm* vm);
-static ControlFlow op_res(Vm* vm);
-static ControlFlow op_ret(Vm* vm);
+#define DECL_OP_FN(code, mnemo, ...) \
+    static ControlFlow op_ ## mnemo(Vm* vm __VA_OPT__(,)     \
+        FOR_ARGS(ARG_TYPE __VA_OPT__(,) __VA_ARGS__)    \
+    );
+FOR_INSTRUCTIONS(DECL_OP_FN)
 
-static ControlFlow op_sca(Vm* vm);
-static ControlFlow op_loa(Vm* vm);
-static ControlFlow op_sto(Vm* vm);
-static ControlFlow op_mov(Vm* vm);
-
-static ControlFlow op_jmp(Vm* vm);
-static ControlFlow op_jnz(Vm* vm);
-
-static ControlFlow op_equ(Vm* vm);
-static ControlFlow op_neu(Vm* vm);
-static ControlFlow op_geu(Vm* vm);
-static ControlFlow op_gtu(Vm* vm);
-
-static ControlFlow op_adu(Vm* vm);
-
-static ControlFlow sys_nop(Vm* vm);
-static ControlFlow sys_exit(Vm* vm);
-static ControlFlow sys_hi(Vm* vm);
-static ControlFlow sys_bye(Vm* vm);
-static ControlFlow sys_dbg(Vm* vm);
+#define DECL_SYS_FN(code, mnemo, ...)  \
+    static ControlFlow sys_ ## mnemo(Vm* vm __VA_OPT__(,)     \
+        FOR_ARGS(ARG_TYPE __VA_OPT__(,) __VA_ARGS__)    \
+    );
+FOR_SYSCALLS(DECL_SYS_FN)
 
 void run_vm(Vm* vm) {
     while (true){
@@ -120,85 +111,55 @@ static void vm_restore_frame_capture(Vm* vm, VmFrameCapture capture) {
     vm->stack.fp = vm->stack.data + capture.fp_offset;
 }
 
-static Word* reg_ptr(Vm* vm, usize idx) {
-    return vm->stack.fp + idx;
+static Opcode fetch_op(Vm* vm) {
+    return bytecode_read_opcode(&vm->ip);
 }
 
-static Word reg_val(const Vm* vm, usize idx) {
-    return vm->stack.fp[idx];
+static Syscall fetch_sys(Vm* vm) {
+    return bytecode_read_syscall(&vm->ip);
 }
 
-static Byteword fetch_imm_byteword(Vm* vm) {
-    return *(vm->ip++);
+static Byteword fetch_imb(Vm* vm) {
+    return bytecode_read_byteword(&vm->ip);
 }
 
-static Word fetch_imm_word(Vm* vm) {
-    const Word* ptr = (const Word*)align_up(vm->ip, alignof(Word));
-    Word imm = *(ptr++);
-    vm->ip = (const Byteword*)ptr;
-    return imm;
+static Word fetch_imw(Vm* vm) {
+    return bytecode_read_word(&vm->ip);
 }
 
-static usize fetch_reg(Vm* vm) {
-    return fetch_imm_byteword(vm);
+static Word* fetch_preg(Vm* vm) {
+    return vm->stack.fp + fetch_imb(vm);
 }
 
-static Word* fetch_reg_ptr(Vm* vm) {
-    return reg_ptr(vm, fetch_reg(vm));
+static Word fetch_reg(Vm* vm) {
+    return *fetch_preg(vm);
 }
 
-static Word fetch_reg_val(Vm* vm) {
-    return *fetch_reg_ptr(vm);
+static usize fetch_sym(Vm* vm) {
+    return bytecode_read_symbol(&vm->ip);
 }
 
 static ControlFlow run_one(Vm* vm) {
-    switch ((Opcode)(*(vm->ip++))) {
-    case OP_NOP: return FLOW_CONTINUE;
-    
-    case OP_SYS: return op_sys(vm);
-    
-    case OP_FRM: return op_frm(vm);
-    case OP_ARG: return op_arg(vm);
-    case OP_CAS: return op_cas(vm);
-    case OP_RES: return op_res(vm);
-    case OP_RET: return op_ret(vm);
-
-    case OP_SCA: return op_sca(vm);
-    case OP_LOA: return op_loa(vm);
-    case OP_STO: return op_sto(vm);
-    case OP_MOV: return op_mov(vm);
-
-    case OP_JMP: return op_jmp(vm);
-    case OP_JNZ: return op_jnz(vm);
-
-    case OP_EQU: return op_equ(vm);
-    case OP_NEU: return op_neu(vm);
-    case OP_GEU: return op_geu(vm);
-    case OP_GTU: return op_gtu(vm);
-
-    case OP_ADU: return op_adu(vm);
-
-    // FIXME: invalid opcode
-    }
+    #define FETCH_ARG(kind) fetch_##kind(vm)
+    #define OP(mnemo, ...) return op_##mnemo(vm __VA_OPT__(,) __VA_ARGS__)
+    PROCESS_INSTRUCTION(fetch_op(vm));
+    #undef FETCH_ARG
+    #undef OP
 }
 
-static ControlFlow op_sys(Vm* vm) {
-    switch ((Syscall)(*(vm->ip++))) {
-    case SYS_NOP: return sys_nop(vm);
-
-    case SYS_EXIT: return sys_exit(vm);
-    
-    case SYS_HI: return sys_hi(vm);
-    case SYS_BYE: return sys_bye(vm);
-
-    case SYS_DBG: return sys_dbg(vm);
-
-    // FIXME: invalid syscall
-    }
+static ControlFlow op_nop(Vm* vm) {
+    return FLOW_CONTINUE;
 }
 
-static ControlFlow op_frm(Vm* vm) {
-    usize nargs = fetch_imm_byteword(vm);
+static ControlFlow op_sys(Vm* vm, Syscall syscall) {
+    #define FETCH_ARG(kind) fetch_##kind(vm)
+    #define SYS(mnemo, ...) return sys_##mnemo(vm __VA_OPT__(,) __VA_ARGS__)
+    PROCESS_SYSCALL(syscall);
+    #undef FETCH_ARG
+    #undef OP
+}
+
+static ControlFlow op_frm(Vm* vm, Byteword nargs) {
     vm_stack_reserve(&vm->stack, VM_FRAME_CAPTURE_REGISTERS + nargs);
 
     VmFrameCapture capture = vm_capture_frame(*vm);
@@ -208,14 +169,12 @@ static ControlFlow op_frm(Vm* vm) {
     return FLOW_CONTINUE;
 }
 
-static ControlFlow op_arg(Vm* vm) {
-    *(vm->stack.ap++) = fetch_reg_val(vm);
+static ControlFlow op_arg(Vm* vm, Word val) {
+    *(vm->stack.ap++) = val;
     return FLOW_CONTINUE;
 }
 
-static ControlFlow op_cas(Vm* vm) {
-    usize func = fetch_imm_word(vm).as_uint;
-
+static ControlFlow op_cas(Vm* vm, usize func) {
     VmFrameCapture* capture = (VmFrameCapture*)vm->stack.sp;
     capture->ip = vm->ip;
 
@@ -225,107 +184,78 @@ static ControlFlow op_cas(Vm* vm) {
     return FLOW_CONTINUE;
 }
 
-static ControlFlow op_res(Vm* vm) {
-    usize nregs = fetch_imm_byteword(vm);
+static ControlFlow op_res(Vm* vm, Byteword nregs) {
     vm_stack_reserve(&vm->stack, nregs);
     vm->stack.sp += nregs;
     return FLOW_CONTINUE;
 }
 
-static ControlFlow op_ret(Vm* vm) {
-    Word* value = fetch_reg_ptr(vm);
-    usize len = fetch_imm_byteword(vm);
-
+static ControlFlow op_ret(Vm* vm, Word* start, Byteword len) {
     VmFrameCapture* capture = (VmFrameCapture*)(vm->stack.fp - VM_FRAME_CAPTURE_REGISTERS);
     vm_restore_frame_capture(vm, *capture);
     vm->stack.sp = (Word*)capture;
 
     // correct as sp < value: value[..] won't be overwritten.
     for (size_t i = 0; i < len; i++) {
-        vm->stack.sp[i] = value[i];
+        vm->stack.sp[i] = start[i];
     }
 
     return FLOW_CONTINUE;
 }
 
-static ControlFlow op_sca(Vm* vm) {
-    Word* reg = fetch_reg_ptr(vm);
-    Word val = fetch_imm_word(vm);
-    *reg = val;
+static ControlFlow op_sca(Vm* vm, Word* dst, Word val) {
+    *dst = val;
     return FLOW_CONTINUE;
 }
 
-static ControlFlow op_loa(Vm* vm) {
-    Word* dst = fetch_reg_ptr(vm);
-    const Word* src = (const Word*)(fetch_reg_val(vm).as_ptr);
+static ControlFlow op_loa(Vm* vm, Word* dst, Word src) {
+    *dst = *(const Word*)src.as_ptr;
     return FLOW_CONTINUE;
 }
 
-static ControlFlow op_sto(Vm* vm) {
-    Word* dst = (Word*)(fetch_reg_val(vm).as_mut_ptr);
-    Word src = fetch_reg_val(vm);
+static ControlFlow op_sto(Vm* vm, Word dst, Word src) {
+    *(Word*)dst.as_mut_ptr = src;
+    return FLOW_CONTINUE;
+}
+
+static ControlFlow op_mov(Vm* vm, Word* dst, Word src) {
     *dst = src;
     return FLOW_CONTINUE;
 }
 
-static ControlFlow op_mov(Vm* vm) {
-    Word* dst = fetch_reg_ptr(vm);
-    Word src = fetch_reg_val(vm);
-    *dst = src;
-    return FLOW_CONTINUE;
-}
-
-static ControlFlow op_jmp(Vm* vm) {
-    usize dst = fetch_imm_word(vm).as_uint;
+static ControlFlow op_jmp(Vm* vm, usize dst) {
     vm->ip = vm->bytecode.instructions.data + dst;
     return FLOW_CONTINUE;
 }
 
-static ControlFlow op_jnz(Vm* vm) {
-    usize dst = fetch_imm_word(vm).as_uint;
-    Word val = fetch_reg_val(vm);
-    if (val.as_uint != 0) {
+static ControlFlow op_jnz(Vm* vm, usize dst, Word test) {
+    if (test.as_uint != 0) {
         vm->ip = vm->bytecode.instructions.data + dst;
     }
     return FLOW_CONTINUE;
 }
 
-static ControlFlow op_equ(Vm* vm) {
-    Word* dst = fetch_reg_ptr(vm);
-    Word op1 = fetch_reg_val(vm);
-    Word op2 = fetch_reg_val(vm);
+static ControlFlow op_equ(Vm* vm, Word* dst, Word op1, Word op2) {
     dst->as_uint = op1.as_uint == op2.as_uint;
     return FLOW_CONTINUE;
 }
 
-static ControlFlow op_neu(Vm* vm) {
-    Word* dst = fetch_reg_ptr(vm);
-    Word op1 = fetch_reg_val(vm);
-    Word op2 = fetch_reg_val(vm);
+static ControlFlow op_neu(Vm* vm, Word* dst, Word op1, Word op2) {
     dst->as_uint = op1.as_uint != op2.as_uint;
     return FLOW_CONTINUE;
 }
 
-static ControlFlow op_geu(Vm* vm) {
-    Word* dst = fetch_reg_ptr(vm);
-    Word op1 = fetch_reg_val(vm);
-    Word op2 = fetch_reg_val(vm);
+static ControlFlow op_geu(Vm* vm, Word* dst, Word op1, Word op2) {
     dst->as_uint = op1.as_uint >= op2.as_uint;
     return FLOW_CONTINUE;
 }
 
-static ControlFlow op_gtu(Vm* vm) {
-    Word* dst = fetch_reg_ptr(vm);
-    Word op1 = fetch_reg_val(vm);
-    Word op2 = fetch_reg_val(vm);
+static ControlFlow op_gtu(Vm* vm, Word* dst, Word op1, Word op2) {
     dst->as_uint = op1.as_uint > op2.as_uint;
     return FLOW_CONTINUE;
 }
 
-static ControlFlow op_adu(Vm* vm) {
-    Word* dst = fetch_reg_ptr(vm);
-    Word op1 = fetch_reg_val(vm);
-    Word op2 = fetch_reg_val(vm);
+static ControlFlow op_adu(Vm* vm, Word* dst, Word op1, Word op2) {
     dst->as_uint = op1.as_uint + op2.as_uint;
     return FLOW_CONTINUE;
 }
@@ -334,9 +264,8 @@ static ControlFlow sys_nop(Vm* vm) {
     return FLOW_CONTINUE;
 }
 
-static ControlFlow sys_exit(Vm* vm) {
-    i64 exit_code = fetch_reg_val(vm).as_int;
-    (vm->system)->vtable->exit(vm->system, exit_code);
+static ControlFlow sys_exit(Vm* vm, Word exit_code) {
+    (vm->system)->vtable->exit(vm->system, exit_code.as_int);
     return FLOW_EXIT;
 }
 
@@ -350,9 +279,8 @@ static ControlFlow sys_bye(Vm* vm) {
     return FLOW_CONTINUE;
 }
 
-static ControlFlow sys_dbg(Vm* vm) {
-    usize idx = fetch_reg(vm);
-    Word val = reg_val(vm, idx);
-    (vm->system)->vtable->dbg(vm->system, idx, val);
+static ControlFlow sys_dbg(Vm* vm, Word* reg) {
+    usize idx = reg - vm->stack.fp;
+    (vm->system)->vtable->dbg(vm->system, idx, *reg);
     return FLOW_CONTINUE;
 }

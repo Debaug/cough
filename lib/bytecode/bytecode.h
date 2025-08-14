@@ -9,6 +9,7 @@ typedef union Word {
     i64 as_int;
     f64 as_float;
 } Word;
+typedef u16 Byteword;
 
 typedef enum Opcode {
     /// @brief `nop` -- no operation.
@@ -49,7 +50,7 @@ typedef enum Opcode {
     /// @brief `sca` -- load a 64-bit constant into a register.
     ///
     /// @param dst the destination register (64-bit register).
-    /// @param src the value to we written (64-bit immediate).
+    /// @param src the value to be written (64-bit immediate).
     OP_SCA,
     
     /// @brief `loa` -- load a value into a register.
@@ -144,7 +145,87 @@ typedef enum Syscall {
     SYS_DBG,
 } Syscall;
 
-typedef u16 Byteword;
+Opcode bytecode_read_opcode(const Byteword** ip);
+Syscall bytecode_read_syscall(const Byteword** ip);
+Byteword bytecode_read_byteword(const Byteword** ip);
+Word bytecode_read_word(const Byteword** ip);
+usize bytecode_read_register_index(const Byteword** ip);
+usize bytecode_read_symbol(const Byteword** ip);
+
+#define bytecode_read(kind) bytecode_read_ ## kind
+#define bytecode_read_sys bytecode_read_syscall
+#define bytecode_read_imb bytecode_read_byteword
+#define bytecode_read_imw bytecode_read_word
+#define bytecode_read_preg bytecode_read_register_index
+#define bytecode_read_reg bytecode_read_register_index
+#define bytecode_read_sym bytecode_read_symbol
+
+#define FOR_INSTRUCTIONS(proc)          \
+    proc(OP_NOP, nop)                   \
+    proc(OP_SYS, sys, sys)              \
+    proc(OP_FRM, frm, imb)              \
+    proc(OP_ARG, arg, reg)              \
+    proc(OP_CAS, cas, sym)              \
+    proc(OP_RES, res, imb)              \
+    proc(OP_RET, ret, preg, imb)        \
+    proc(OP_SCA, sca, preg, imw)        \
+    proc(OP_LOA, loa, preg, reg)        \
+    proc(OP_STO, sto, reg, reg)         \
+    proc(OP_MOV, mov, preg, reg)        \
+    proc(OP_JMP, jmp, sym)              \
+    proc(OP_JNZ, jnz, sym, reg)         \
+    proc(OP_EQU, equ, preg, reg, reg)   \
+    proc(OP_NEU, neu, preg, reg, reg)   \
+    proc(OP_GEU, geu, preg, reg, reg)   \
+    proc(OP_GTU, gtu, preg, reg, reg)   \
+    proc(OP_ADU, adu, preg, reg, reg)   \
+
+#define FOR_SYSCALLS(proc)      \
+    proc(SYS_NOP, nop)          \
+    proc(SYS_EXIT, exit, reg)   \
+    proc(SYS_HI, hi)            \
+    proc(SYS_BYE, bye)          \
+    proc(SYS_DBG, dbg, preg)    \
+
+#define FOR_ARGS(proc, ...) \
+    __VA_OPT__(FOR_ARGS1(proc, __VA_ARGS__))
+#define FOR_ARGS1(proc, arg, ...)   \
+    proc(arg __VA_OPT__(,0)) __VA_OPT__(FOR_ARGS2(proc, __VA_ARGS__))
+#define FOR_ARGS2(proc, arg, ...)   \
+    proc(arg __VA_OPT__(,0)) __VA_OPT__(FOR_ARGS3(proc, __VA_ARGS__))
+#define FOR_ARGS3(proc, arg) proc(arg)
+
+#define PROCESS_INSTRUCTION_CASE_ARG(kind, ...) \
+    FETCH_ARG(kind) __VA_OPT__(,)
+
+#define PROCESS_INSTRUCTION_CASE(op, mnemo, ...)                                \
+    case op:                                                                    \
+        OP(                                                                     \
+            mnemo,                                                              \
+            FOR_ARGS(PROCESS_INSTRUCTION_CASE_ARG __VA_OPT__(, __VA_ARGS__))    \
+        );                                                                      \
+        break;                                                                  \
+
+#define PROCESS_INSTRUCTION(opcode) do {        \
+    switch (opcode) {                           \
+    FOR_INSTRUCTIONS(PROCESS_INSTRUCTION_CASE)  \
+    }                                           \
+} while(0)
+
+#define PROCESS_SYSCALL_CASE(sys, mnemo, ...)                                   \
+    case sys:                                                                   \
+        SYS(                                                                    \
+            mnemo,                                                              \
+            FOR_ARGS(PROCESS_INSTRUCTION_CASE_ARG __VA_OPT__(, __VA_ARGS__))    \
+        );                                                                      \
+        break;                                                                  \
+
+#define PROCESS_SYSCALL(syscall) do {   \
+    switch (syscall) {                  \
+    FOR_SYSCALLS(PROCESS_SYSCALL_CASE)  \
+    }                                   \
+} while(0)
+
 typedef ArrayBuf(Byteword) SectionBuf;
 
 typedef struct Bytecode {

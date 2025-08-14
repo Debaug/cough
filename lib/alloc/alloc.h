@@ -1,5 +1,7 @@
 #pragma once
 
+#include <stdalign.h>
+
 #include "primitives/primitives.h"
 
 const void* align_down(const void* ptr, usize alignment);
