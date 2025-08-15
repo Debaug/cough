@@ -8,7 +8,7 @@
 #include "ops/hash.h"
 #include "alloc/alloc.h"
 
-#define HASH_MAP_NAME(name, KEY, VALUE) name ## _ ## KEY ## _ ## VALUE
+#define HASH_MAP_NAME(name, KEY, VALUE) name##_##KEY##_##VALUE
 
 #define HashMap(KEY, VALUE) HASH_MAP_NAME(HashMap, KEY, VALUE)
 #define HashMapEntry(KEY, VALUE) HASH_MAP_NAME(HashMapEntry, KEY, VALUE)
@@ -290,7 +290,7 @@ typedef enum HashMapSlotOccupancy {
 
 #define IMPL_HASH_MAP_ENTRY_INSERT(KEY, VALUE)                                  \
     static usize                                                                \
-    hash_map_insert_in_empty_slot ## KEY ## _ ## VALUE (                        \
+    hash_map_insert_in_empty_slot##KEY##_##VALUE(                               \
         HashMap(KEY, VALUE)* hash_map,                                          \
         KEY key,                                                                \
         u64 key_hash,                                                           \
@@ -359,7 +359,7 @@ typedef enum HashMapSlotOccupancy {
             hash(KEY)(&hasher, key);                                            \
             u64 key_hash = finish_hash(hasher);                                 \
                                                                                 \
-            hash_map_insert_in_empty_slot ## KEY ## _ ## VALUE(                 \
+            hash_map_insert_in_empty_slot##KEY##_##VALUE(                       \
                 &new_hash_map,                                                  \
                 key,                                                            \
                 key_hash,                                                       \
@@ -381,8 +381,8 @@ typedef enum HashMapSlotOccupancy {
             key_hash = finish_hash(hasher);                                     \
         }                                                                       \
                                                                                 \
-        usize i = hash_map_insert_in_empty_slot ## KEY ## _ ## VALUE(           \
-            entry->hash_map,                                                      \
+        usize i = hash_map_insert_in_empty_slot##KEY##_##VALUE(                 \
+            entry->hash_map,                                                    \
             entry->key,                                                         \
             key_hash,                                                           \
             value                                                               \

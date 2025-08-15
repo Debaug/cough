@@ -6,7 +6,7 @@
 
 #include "primitives/primitives.h"
 
-#define ArrayBuf(T) struct ArrayBuf_ ## T { \
+#define ArrayBuf(T) struct ArrayBuf_##T {   \
     T* data;                                \
     usize len;                              \
     usize capacity_bytes;                   \
@@ -26,7 +26,7 @@ typedef ArrayBuf(i64) I64ArrayBuf;
 typedef ArrayBuf(imax) ImaxArrayBuf;
 
 #define new_array_buf(...)                              \
-    __VA_OPT__((struct ArrayBuf_ ## __VA_ARGS__)) {     \
+    __VA_OPT__((struct ArrayBuf_##__VA_ARGS__)) {       \
         .data = NULL,                                   \
         .len = 0,                                       \
         .capacity_bytes = 0                             \

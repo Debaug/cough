@@ -3,7 +3,7 @@
 #include "primitives/primitives.h"
 #include "alloc/array.h"
 
-#define eq(T) eq_ ## T
+#define eq(T) eq_##T
 
 bool eq_u8(         u8          a,  u8          b);
 bool eq_u16(        u16         a,  u16         b);

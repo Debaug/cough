@@ -4,6 +4,7 @@ project(cough VERSION 0.1.0 LANGUAGES C)
 add_library(libcough "")
 add_subdirectory(lib)
 target_include_directories(libcough PRIVATE lib)
+set_target_properties(libcough PROPERTIES OUTPUT_NAME cough)
 
 add_executable(cough "")
 add_subdirectory(app)

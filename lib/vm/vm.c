@@ -72,14 +72,14 @@ typedef Word* Arg_preg;
 typedef Word Arg_reg;
 typedef usize Arg_sym;
 
-#define DECL_OP_FN(code, mnemo, ...) \
-    static ControlFlow op_ ## mnemo(Vm* vm __VA_OPT__(,)     \
+#define DECL_OP_FN(code, mnemo, ...)                    \
+    static ControlFlow op_##mnemo(Vm* vm __VA_OPT__(,)  \
         FOR_ARGS(ARG_TYPE __VA_OPT__(,) __VA_ARGS__)    \
     );
 FOR_INSTRUCTIONS(DECL_OP_FN)
 
-#define DECL_SYS_FN(code, mnemo, ...)  \
-    static ControlFlow sys_ ## mnemo(Vm* vm __VA_OPT__(,)     \
+#define DECL_SYS_FN(code, mnemo, ...)                   \
+    static ControlFlow sys_##mnemo(Vm* vm __VA_OPT__(,) \
         FOR_ARGS(ARG_TYPE __VA_OPT__(,) __VA_ARGS__)    \
     );
 FOR_SYSCALLS(DECL_SYS_FN)
@@ -96,8 +96,7 @@ typedef struct VmFrameCapture {
     const Byteword* ip;
     u64 fp_offset;
 } VmFrameCapture;
-#define VM_FRAME_CAPTURE_REGISTERS \
-    (sizeof(VmFrameCapture) / sizeof(Word))
+#define VM_FRAME_CAPTURE_REGISTERS (sizeof(VmFrameCapture) / sizeof(Word))
 
 static VmFrameCapture vm_capture_frame(Vm vm) {
     return (VmFrameCapture){

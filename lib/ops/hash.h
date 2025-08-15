@@ -10,7 +10,7 @@ typedef struct Hasher {
 Hasher new_hasher(void);
 u64 finish_hash(Hasher hasher);
 
-#define hash(T) hash_ ## T
+#define hash(T) hash_##T
 
 void hash_u8(           Hasher* hasher, u8          val);
 void hash_u16(          Hasher* hasher, u16         val);
