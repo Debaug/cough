@@ -1,6 +1,10 @@
 #pragma once
 
+#include <stdalign.h>
+
 #include "alloc/array.h"
+#include "ops/eq.h"
+#include "ops/hash.h"
 
 typedef union Word {
     const void* as_ptr;
@@ -9,6 +13,7 @@ typedef union Word {
     i64 as_int;
     f64 as_float;
 } Word;
+
 typedef u16 Byteword;
 
 typedef enum Opcode {
@@ -126,6 +131,8 @@ typedef enum Opcode {
     /// @param op1 the first source operand (64-bit register).
     /// @param op2 the second source operand (64-bit register).
     OP_ADU,
+
+    OPCODES_LEN,
 } Opcode;
 
 typedef enum Syscall {
@@ -143,6 +150,8 @@ typedef enum Syscall {
     ///
     /// @param reg the register (64-bit register).
     SYS_DBG,
+
+    SYSCALLS_LEN,
 } Syscall;
 
 Opcode bytecode_read_opcode(const Byteword** ip);
@@ -159,6 +168,21 @@ usize bytecode_read_symbol(const Byteword** ip);
 #define bytecode_read_preg bytecode_read_register_index
 #define bytecode_read_reg bytecode_read_register_index
 #define bytecode_read_sym bytecode_read_symbol
+
+void bytecode_write_opcode(Bytecode* bytecode, Opcode opcode);
+void bytecode_write_syscall(Bytecode* bytecode, Syscall syscall);
+void bytecode_write_byteword(Bytecode* bytecode, Byteword byteword);
+void bytecode_write_word(Bytecode* bytecode, Word word);
+void bytecode_write_register_index(Bytecode* bytecode, usize register_index);
+void bytecode_write_symbol(Bytecode* bytecode, usize symbol);
+
+#define bytecode_write(kind) bytecode_write_##kind
+#define bytecode_write_sys bytecode_write_syscall
+#define bytecode_write_imb bytecode_write_byteword
+#define bytecode_write_imw bytecode_write_word
+#define bytecode_write_preg bytecode_write_register_index
+#define bytecode_write_reg bytecode_write_register_index
+#define bytecode_write_sym bytecode_write_symbol
 
 #define FOR_INSTRUCTIONS(proc)          \
     proc(OP_NOP, nop)                   \
@@ -196,7 +220,7 @@ usize bytecode_read_symbol(const Byteword** ip);
 #define FOR_ARGS3(proc, arg) proc(arg)
 
 #define PROCESS_INSTRUCTION_CASE_ARG(kind, ...) \
-    FETCH_ARG(kind) __VA_OPT__(,)
+    PROCESS_ARG(kind) __VA_OPT__(,)
 
 #define PROCESS_INSTRUCTION_CASE(op, mnemo, ...)                                \
     case op:                                                                    \
@@ -209,6 +233,7 @@ usize bytecode_read_symbol(const Byteword** ip);
 #define PROCESS_INSTRUCTION(opcode) do {        \
     switch (opcode) {                           \
     FOR_INSTRUCTIONS(PROCESS_INSTRUCTION_CASE)  \
+    default: INVALID_OPCODE; break;             \
     }                                           \
 } while(0)
 
@@ -223,6 +248,7 @@ usize bytecode_read_symbol(const Byteword** ip);
 #define PROCESS_SYSCALL(syscall) do {   \
     switch (syscall) {                  \
     FOR_SYSCALLS(PROCESS_SYSCALL_CASE)  \
+    default: INVALID_SYSCALL; break;    \
     }                                   \
 } while(0)
 
@@ -232,3 +258,12 @@ typedef struct Bytecode {
     SectionBuf rodata;
     SectionBuf instructions;
 } Bytecode;
+
+typedef struct Mnemonic {
+    alignas(u64) char chars[8];
+} Mnemonic;
+bool eq(Mnemonic)(Mnemonic a, Mnemonic b);
+void hash(Mnemonic)(Hasher* hasher, Mnemonic mnemo);
+
+extern Mnemonic instruction_mnemonics[];
+extern Mnemonic syscall_mnemonics[];

@@ -93,11 +93,11 @@ typedef struct ReporterVTable {
     void(*end)(Reporter* self);
     void(*message)(Reporter* self, StringBuf message);
     void(*source_code)(Reporter* self, TextView source_code);
-    usize(*n_errors)(const Reporter* self);
+    usize(*error_count)(const Reporter* self);
 } ReporterVTable;
 
 void report_start(Reporter* reporter, Severity severity, int code);
 void report_end(Reporter* reporter);
 void report_message(Reporter* reporter, StringBuf message);
 void report_source_code(Reporter* reporter, TextView source_code);
-usize report_n_errors(const Reporter* reporter);
+usize reporter_error_count(const Reporter* reporter);

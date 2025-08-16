@@ -23,6 +23,6 @@ void report_source_code(Reporter* reporter, TextView source_code) {
     (reporter->vtable->source_code)(reporter, source_code);
 }
 
-usize report_n_errors(const Reporter* reporter) {
-    return (reporter->vtable->n_errors)(reporter);
+usize reporter_error_count(const Reporter* reporter) {
+    return (reporter->vtable->error_count)(reporter);
 }

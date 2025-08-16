@@ -10,7 +10,7 @@ typedef enum RuntimeErrorKind {
 
 typedef struct RuntimeReporter {
     Reporter base;
-    usize n_errors;
+    usize error_count;
 } RuntimeReporter;
 
 RuntimeReporter new_runtime_reporter(void);

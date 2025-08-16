@@ -139,11 +139,13 @@ static usize fetch_sym(Vm* vm) {
 }
 
 static ControlFlow run_one(Vm* vm) {
-    #define FETCH_ARG(kind) fetch_##kind(vm)
+    #define PROCESS_ARG(kind) fetch_##kind(vm)
     #define OP(mnemo, ...) return op_##mnemo(vm __VA_OPT__(,) __VA_ARGS__)
+    #define INVALID_OPCODE // TODO: invalid opcode
     PROCESS_INSTRUCTION(fetch_op(vm));
     #undef FETCH_ARG
     #undef OP
+    #define INVALID_OPCODE
 }
 
 static ControlFlow op_nop(Vm* vm) {
@@ -151,11 +153,13 @@ static ControlFlow op_nop(Vm* vm) {
 }
 
 static ControlFlow op_sys(Vm* vm, Syscall syscall) {
-    #define FETCH_ARG(kind) fetch_##kind(vm)
+    #define PROCESS_ARG(kind) fetch_##kind(vm)
     #define SYS(mnemo, ...) return sys_##mnemo(vm __VA_OPT__(,) __VA_ARGS__)
+    #define INVALID_SYSCALL // TODO: invalid syscall
     PROCESS_SYSCALL(syscall);
     #undef FETCH_ARG
     #undef OP
+    #undef INVALID_SYSCALL
 }
 
 static ControlFlow op_frm(Vm* vm, Byteword nargs) {

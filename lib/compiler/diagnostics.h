@@ -43,7 +43,7 @@ typedef enum CompilerErrorKind {
 typedef struct CompilerReporter {
     Reporter base;
     const Source* source;
-    usize n_errors;
+    usize error_count;
 } CompilerReporter;
 
 CompilerReporter new_compiler_reporter(const Source* source);

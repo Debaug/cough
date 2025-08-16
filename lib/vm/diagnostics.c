@@ -4,7 +4,7 @@
 
 static void runtime_report_start(Reporter* raw, Severity severity, int code) {
     RuntimeReporter* reporter = (RuntimeReporter*)raw;
-    reporter->n_errors++;
+    reporter->error_count++;
     switch (severity) {
     case SEVERITY_ERROR: print_error(""); break;
     case SEVERITY_SYSTEM_ERROR: print_system_error(""); break;
@@ -38,9 +38,9 @@ static void runtime_report_source_code(Reporter* raw, TextView span) {
     }
 }
 
-static usize runtime_report_n_errors(const Reporter* raw) {
+static usize runtime_report_error_count(const Reporter* raw) {
     const RuntimeReporter* reporter = (RuntimeReporter*)raw;
-    return reporter->n_errors;
+    return reporter->error_count;
 }
 
 static const ReporterVTable runtime_reporter_vtable = {
@@ -48,13 +48,13 @@ static const ReporterVTable runtime_reporter_vtable = {
     .end = runtime_report_end,
     .message = runtime_report_message,
     .source_code = runtime_report_source_code,
-    .n_errors = runtime_report_n_errors,
+    .error_count = runtime_report_error_count,
 };
 
 RuntimeReporter new_runtime_reporter(void) {
     return (RuntimeReporter){
         .base.vtable = &runtime_reporter_vtable,
-        .n_errors = 0,
+        .error_count = 0,
     };
 }
 

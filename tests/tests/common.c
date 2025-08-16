@@ -12,7 +12,7 @@ static void test_reporter_message(Reporter* self, StringBuf message) {}
 
 static void test_reporter_source_code(Reporter* self, TextView source_code) {}
 
-static usize test_reporter_n_errors(const Reporter* raw) {
+static usize test_reporter_error_count(const Reporter* raw) {
     const TestReporter* self = (const TestReporter*)raw;
     return self->error_codes.len;
 }
@@ -22,7 +22,7 @@ static const ReporterVTable test_reporter_vtable = {
     .end = test_reporter_end,
     .message = test_reporter_message,
     .source_code = test_reporter_source_code,
-    .n_errors = test_reporter_n_errors,
+    .error_count = test_reporter_error_count,
 };
 
 TestReporter new_test_reporter(void) {

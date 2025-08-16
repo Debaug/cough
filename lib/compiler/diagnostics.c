@@ -72,7 +72,7 @@ static void print_error_source_code(const Source* source, TextView span) {
 
 static void compiler_report_start(Reporter* raw, Severity severity, int code) {
     CompilerReporter* reporter = (CompilerReporter*)raw;
-    reporter->n_errors++;
+    reporter->error_count++;
     switch (severity) {
     case SEVERITY_ERROR: print_error(""); break;
     case SEVERITY_SYSTEM_ERROR: print_system_error(""); break;
@@ -92,9 +92,9 @@ static void compiler_report_source_code(Reporter* raw, TextView source_code) {
     print_error_source_code(reporter->source, source_code);
 }
 
-static usize compiler_report_n_errors(const Reporter* raw) {
+static usize compiler_report_error_count(const Reporter* raw) {
     const CompilerReporter* reporter = (CompilerReporter*)raw;
-    return reporter->n_errors;
+    return reporter->error_count;
 }
 
 static const ReporterVTable compiler_reporter_vtable = {
@@ -102,14 +102,14 @@ static const ReporterVTable compiler_reporter_vtable = {
     .end = compiler_report_end,
     .message = compiler_report_message,
     .source_code = compiler_report_source_code,
-    .n_errors = compiler_report_n_errors,
+    .error_count = compiler_report_error_count,
 };
 
 CompilerReporter new_compiler_reporter(const Source* source) {
     return (CompilerReporter){
         .base.vtable = &compiler_reporter_vtable,
         .source = source,
-        .n_errors = 0
+        .error_count = 0
     };
 }
 
