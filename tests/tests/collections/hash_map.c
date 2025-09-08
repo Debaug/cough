@@ -1,4 +1,4 @@
-#include "alloc/hash_map.h"
+#include "collections/hash_map.h"
 
 #include "tests/common.h"
 
@@ -11,8 +11,8 @@ IMPL_HASH_MAP(Person, i32);
 
 bool value_eq(const i32* a, i32 b);
 
-int main(int argc, char const *argv[]) {
-    HashMap(Person, i32) ages = new_hash_map(Person, i32)();
+int main(int argc, char const* argv[]) {
+    HashMap(Person, i32) ages = hash_map_new(Person, i32)();
 
     assert(ages.len == 0);
     hash_map_insert(Person, i32)(&ages, "Ada", 30);
@@ -58,7 +58,7 @@ int main(int argc, char const *argv[]) {
     assert(value_eq(hash_map_entry_get(Person, i32)(entry), 230));
     assert(value_eq(hash_map_get(Person, i32)(ages, "Ada"), 230));
 
-    free_hash_map(Person, i32)(ages);
+    hash_map_free(Person, i32)(ages);
 
     return 0;
 }

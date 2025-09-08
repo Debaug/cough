@@ -1,5 +1,7 @@
-#include "alloc/alloc.h"
 #include "bytecode/bytecode.h"
+#include "ops/ptr.h"
+
+IMPL_ARRAY_BUF(Byteword);
 
 Opcode bytecode_read_opcode(const Byteword** ip) {
     return (Opcode)bytecode_read_byteword(ip);
@@ -37,16 +39,20 @@ void bytecode_write_syscall(Bytecode* bytecode, Syscall syscall) {
 }
 
 void bytecode_write_byteword(Bytecode* bytecode, Byteword byteword) {
-    array_buf_push(&bytecode->instructions, byteword);
+    array_buf_push(Byteword)(&bytecode->instructions, byteword);
 }
 
 void bytecode_write_word(Bytecode* bytecode, Word word) {
-    SectionBuf instructions = bytecode->instructions;
+    ArrayBuf(Byteword) instructions = bytecode->instructions;
     while ((instructions.len * sizeof(Byteword)) % alignof(Word) != 0) {
         Byteword zero = 0;
-        array_buf_push(&instructions, zero);
+        array_buf_push(Byteword)(&instructions, zero);
     }
-    array_buf_extend(&instructions, &word, sizeof(Word) / sizeof(Byteword));
+    array_buf_extend(Byteword)(
+        &instructions,
+        &word,
+        sizeof(Word) / sizeof(Byteword)
+    );
     bytecode->instructions = instructions;
 }
 

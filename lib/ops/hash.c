@@ -37,13 +37,7 @@ IMPL_HASH_INTEGRAL(bool)
 
 IMPL_HASH_INTEGRAL(char)
 
-void hash(String)(Hasher* hasher, const char* val) {
-    for (; *val != '\0'; val++) {
-        hash_char(hasher, *val);
-    }
-}
-
-void hash(StringView)(Hasher* hasher, StringView val) {
+void hash(String)(Hasher* hasher, String val) {
     for (usize i = 0; i < val.len; i++) {
         hash_char(hasher, val.data[i]);
     }

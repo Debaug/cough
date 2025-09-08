@@ -28,10 +28,6 @@ IMPL_EQ_PRIMITIVE(f64)
 IMPL_EQ_PRIMITIVE(char)
 
 bool eq(String)(String a, String b) {
-    return strcmp(a, b) == 0;
-}
-
-bool eq(StringView)(StringView a, StringView b) {
     if (a.len != b.len) return false;
     return strncmp(a.data, b.data, a.len);
 }

@@ -19,7 +19,7 @@ void report_message(Reporter* reporter, StringBuf message) {
     (reporter->vtable->message)(reporter, message);
 }
 
-void report_source_code(Reporter* reporter, TextView source_code) {
+void report_source_code(Reporter* reporter, Range source_code) {
     (reporter->vtable->source_code)(reporter, source_code);
 }
 

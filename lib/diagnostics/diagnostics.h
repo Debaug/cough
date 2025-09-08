@@ -2,8 +2,8 @@
 
 #include <stdio.h>
 
-#include "text/text.h"
-#include "alloc/array.h"
+#include "collections/array.h"
+#include "collections/string.h"
 
 // Keys for formatting diagnostic text.
 
@@ -61,12 +61,12 @@ typedef struct ReporterVTable {
     void(*start)(Reporter* self, Severity severity, int code);
     void(*end)(Reporter* self);
     void(*message)(Reporter* self, StringBuf message);
-    void(*source_code)(Reporter* self, TextView source_code);
+    void(*source_code)(Reporter* self, Range source_code);
     usize(*error_count)(const Reporter* self);
 } ReporterVTable;
 
 void report_start(Reporter* reporter, Severity severity, int code);
 void report_end(Reporter* reporter);
 void report_message(Reporter* reporter, StringBuf message);
-void report_source_code(Reporter* reporter, TextView source_code);
+void report_source_code(Reporter* reporter, Range source_code);
 usize reporter_error_count(const Reporter* reporter);

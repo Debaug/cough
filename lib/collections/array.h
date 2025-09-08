@@ -5,6 +5,11 @@
 #include "primitives/primitives.h"
 #include "alloc/buf.h"
 
+typedef struct Range {
+    usize start;
+    usize end;
+} Range;
+
 #define ArrayBuf(T) ArrayBuf_##T
 
 #define array_buf_new(T)        array_buf_new_##T

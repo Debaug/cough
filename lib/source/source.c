@@ -1,20 +1,5 @@
 #include "source/source.h"
 
-Errno read_file(FILE* file, ArrayBuf(char)* dst) {
-    usize len = 0;
-    while (!feof(file)) {
-        array_buf_reserve(char)(dst, (len == 0) ? 64 : len);
-        usize additional =
-            fread(dst->data + dst->len, 1, dst->capacity - dst->len, file);
-        if (additional == 0) {
-            return errno;
-        }
-        dst->len += additional;
-    }
-
-    return 0;
-}
-
 SourceText source_text_new(char const* path, char const* text) {
     ArrayBuf(usize) line_indices;
     array_buf_push(usize)(&line_indices, 0);

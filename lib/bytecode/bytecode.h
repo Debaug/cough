@@ -2,7 +2,7 @@
 
 #include <stdalign.h>
 
-#include "alloc/array.h"
+#include "collections/array.h"
 #include "ops/eq.h"
 #include "ops/hash.h"
 
@@ -154,6 +154,22 @@ typedef enum Syscall {
     SYSCALLS_LEN,
 } Syscall;
 
+DECL_ARRAY_BUF(Byteword);
+
+typedef struct Bytecode {
+    ArrayBuf(Byteword) rodata;
+    ArrayBuf(Byteword) instructions;
+} Bytecode;
+
+typedef struct Mnemonic {
+    alignas(u64) char chars[8];
+} Mnemonic;
+bool eq(Mnemonic)(Mnemonic a, Mnemonic b);
+void hash(Mnemonic)(Hasher* hasher, Mnemonic mnemo);
+
+extern Mnemonic instruction_mnemonics[];
+extern Mnemonic syscall_mnemonics[];
+
 Opcode bytecode_read_opcode(const Byteword** ip);
 Syscall bytecode_read_syscall(const Byteword** ip);
 Byteword bytecode_read_byteword(const Byteword** ip);
@@ -251,19 +267,3 @@ void bytecode_write_symbol(Bytecode* bytecode, usize symbol);
     default: INVALID_SYSCALL; break;    \
     }                                   \
 } while(0)
-
-typedef ArrayBuf(Byteword) SectionBuf;
-
-typedef struct Bytecode {
-    SectionBuf rodata;
-    SectionBuf instructions;
-} Bytecode;
-
-typedef struct Mnemonic {
-    alignas(u64) char chars[8];
-} Mnemonic;
-bool eq(Mnemonic)(Mnemonic a, Mnemonic b);
-void hash(Mnemonic)(Hasher* hasher, Mnemonic mnemo);
-
-extern Mnemonic instruction_mnemonics[];
-extern Mnemonic syscall_mnemonics[];

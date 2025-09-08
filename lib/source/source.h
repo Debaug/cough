@@ -5,6 +5,7 @@
 
 #include "primitives/primitives.h"
 #include "collections/array.h"
+#include "collections/string.h"
 #include "diagnostics/errno.h"
 
 typedef struct LineColumn {
@@ -18,7 +19,7 @@ typedef struct SourceText {
     ArrayBuf(usize) line_indices;
 } SourceText;
 
-Errno read_file(FILE* file, ArrayBuf(char)* dst);
+Errno read_file(FILE* file, StringBuf* dst);
 
 SourceText source_text_new(char const* path, char const* text);
 void source_text_free(SourceText* source);

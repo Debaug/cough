@@ -2,19 +2,19 @@
 
 #include "bytecode/assembly.h"
 
-IMPL_HASH_MAP(StringView, usize)
+IMPL_HASH_MAP(String, usize)
 IMPL_HASH_MAP(Mnemonic, u8)
 
 Assembler new_assembler(
     const char* assembly,
     Reporter* reporter
 ) {
-    HashMap(Mnemonic, u8) mnemonic_instructions = new_hash_map(Mnemonic, u8)();
+    HashMap(Mnemonic, u8) mnemonic_instructions = hash_map_new(Mnemonic, u8)();
     for (usize i = 0; i < OPCODES_LEN; i++) {
         hash_map_insert(Mnemonic, u8)(&mnemonic_instructions, instruction_mnemonics[i], i);
     }
 
-    HashMap(Mnemonic, u8) mnemonic_syscalls = new_hash_map(Mnemonic, u8)();
+    HashMap(Mnemonic, u8) mnemonic_syscalls = hash_map_new(Mnemonic, u8)();
     for (usize i = 0; i < SYSCALLS_LEN; i++) {
         hash_map_insert(Mnemonic, u8)(&mnemonic_syscalls, syscall_mnemonics[i], i);
     }
@@ -26,10 +26,10 @@ Assembler new_assembler(
         .reporter = reporter,
         .error = false,
         .pos = 0,
-        .symbols = new_hash_map(StringView, usize),
+        .symbols = hash_map_new(String, usize)(),
         .output = (Bytecode){
-            .instructions = new_array_buf(),
-            .rodata = new_array_buf(),
+            .instructions = array_buf_new(Byteword)(),
+            .rodata = array_buf_new(Byteword)(),
         },
     };
 }
@@ -43,7 +43,7 @@ static void skip_whitespace(Assembler* assembler);
 static void skip_whitespace_same_line(Assembler* assembler);
 
 Bytecode assemble(Assembler* assembler) {
-
+    exit(-1); // TODO:
 }
 
 static void assemble_line(Assembler* assembler) {
@@ -100,6 +100,8 @@ static Result assemble_symbol(Assembler* assembler) {
         if (!isalnum(name[len])) break;
         len++;
     }
+
+    exit(-1); // TODO:
 }
 
 static Result assemble_sys(Assembler* assembler);
