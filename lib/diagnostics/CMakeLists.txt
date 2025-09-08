@@ -1,3 +1,4 @@
 target_sources(libcough PRIVATE
-    diagnostics.h diagnostics.c
+    log.h log.c
+    errno.h errno.c
 )

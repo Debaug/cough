@@ -1,32 +1,36 @@
+#include <string.h>
+
 #include "alloc/alloc.h"
+#include "diagnostics/errno.h"
 
-const void* align_down(const void* ptr, usize alignment) {
-    return (const void*)((uptr)ptr & -alignment);
+Errno try_malloc(usize size, void** dst) {
+    errno = 0;
+    void* ptr = malloc(size);
+    if (ptr == NULL) {
+        return errno ? errno : DUMMY_ERRNO;
+    }
+    *dst = ptr;
+    return 0;
 }
 
-void* align_down_mut(void* ptr, usize alignment) {
-    return (void*)((uptr)ptr & -alignment);
+void* malloc_or_exit(usize size) {
+    void* ptr;
+    exit_on_errno_or(try_malloc(&ptr, size), "memory allocation failed");
+    return ptr;
 }
 
-usize align_down_size(usize size, usize alignment) {
-    return size & -alignment;
+Errno try_realloc(void** ptr, usize new_size) {
+    errno = 0;
+    void* new_ptr = realloc(*ptr, new_size);
+    if (new_ptr == NULL) {
+        return errno ? errno : DUMMY_ERRNO;
+    }
+    *ptr = new_ptr;
+    return 0;
 }
 
-const void* align_up(const void* ptr, usize alignment) {
-    uptr addr = (uptr)ptr;
-    uptr mask = -alignment;
-    addr = (addr + ~mask) & mask;
-    return (const void*)addr;
-}
-
-void* align_up_mut(void* ptr, usize alignment) {
-    uptr addr = (uptr)ptr;
-    uptr mask = -alignment;
-    addr = (addr + ~mask) & mask;
-    return (void*)addr;
-}
-
-usize align_up_size(usize size, usize alignment) {
-    usize mask = -alignment;
-    return (size + ~mask) & mask;
+void* realloc_or_exit(void* ptr, usize size) {
+    void* ptr;
+    exit_on_errno_or(try_realloc(&ptr, size), "memory allocation failed");
+    return ptr;
 }

@@ -2,82 +2,41 @@
 
 #include "alloc/arena_stack.h"
 #include "diagnostics/diagnostics.h"
-
-// should fit in a page
-#define ARENA_SIZE 2048
-#define ARENA_ALIGNMENT 2048
-
-typedef struct DynArena {
-    DynArena* previous;
-    void* end;
-    // data...
-} DynArena;
+#include "ops/ptr.h"
 
 ArenaStack new_arena_stack(void) {
     return (ArenaStack){
-        .top = NULL
+        ._top = buf_new(0),
     };
 }
 
-void free_arena_stack(ArenaStack stack) {
-    while (stack.top != NULL) {
-        DynArena* arena_ptr = stack.top;
-        stack.top = arena_ptr->previous;
-        free(arena_ptr);
+void free_arena_stack(ArenaStack* stack) {
+    Buf node = stack->_top;
+    while (node.data != NULL) {
+        Buf next_node = *(const Buf*)node.data;
+        buf_free(&node);
+        node = next_node;
     }
 }
 
-static void push_arena(ArenaStack* stack) {
-    DynArena* arena = aligned_alloc(ARENA_ALIGNMENT, ARENA_SIZE);
-    arena->previous = stack->top;
-    arena->end = arena + sizeof(DynArena);
-    stack->top = arena;
+void* arena_stack_alloc(ArenaStack* stack, usize size, usize alignment) {
+    void* ptr = buf_alloc(&stack->_top, size, alignment);
+    if (ptr) {
+        return ptr;
+    }
+
+    usize next_capacity = (stack->_top.capacity <= 32) ? 64 : stack->_top.capacity * 2;
+    next_capacity = (next_capacity >= 2 * sizeof(Buf)) ? next_capacity : sizeof(Buf);
+    next_capacity = (next_capacity >= size) ? next_capacity : size;
+    next_capacity = align_up_size(next_capacity, alignof(max_align_t));
+    Buf next_buf = buf_new(next_capacity);
+    buf_extend(&next_buf, &stack->_top, sizeof(stack->_top), 1);
+    stack->_top = next_buf;
+    return buf_alloc(&stack->_top, size, alignment);
 }
 
-void* raw_arena_stack_alloc(ArenaStack* stack, usize size, usize alignment) {
-    if (size + sizeof(DynArena) > ARENA_SIZE) {
-        print_error("tried to allocated too large of a memory block for a single arena (%zu bytes)", size);
-    }
-
-    if (stack->top == NULL) {
-        push_arena(stack);
-    }
-
-    void* ptr = __builtin_align_up(stack->top->end, alignment);
-    if (ptr + size > (void*)stack->top + ARENA_SIZE) {
-        push_arena(stack);
-        ptr = __builtin_align_up(stack->top->end, alignment);
-    }
-
-    stack->top->end = ptr + size;
-    return ptr;
-}
-
-void* raw_arena_stack_extend(
-    ArenaStack* stack,
-    void* data,
-    usize size,
-    usize alignment
-) {
-    void* ptr = raw_arena_stack_alloc(stack, size, alignment);
-    memcpy(ptr, data, size);
-    return ptr;
-}
-
-ArenaStackState arena_stack_snapshot(ArenaStack stack) {
-    if (stack.top == NULL) {
-        return (ArenaStackState){ .top = stack.top, .end = 0 };
-    }
-    return (ArenaStackState){ .top = stack.top, .end = stack.top->end };
-}
-
-void arena_stack_restore(ArenaStack* stack, ArenaStackState state) {
-    while (stack->top != state.top) {
-        DynArena* top_arena = stack->top;
-        stack->top = top_arena->previous;
-        free(top_arena);
-    }
-    if (stack->top) {
-        stack->top->end = state.end;
-    }
+void* arena_stack_extend(ArenaStack* stack, void const* src, usize size, usize alignment) {
+    void* dst = arena_stack_alloc(stack, size, alignment);
+    memcpy(dst, src, size);
+    return dst;
 }
