@@ -1,6 +1,6 @@
 #include <inttypes.h>
 
-#include "diagnostics/diagnostics.h"
+#include "diagnostics/log.h"
 #include "vm/system.h"
 
 static void sys_nop(VmSystem* self) {}

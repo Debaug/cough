@@ -26,7 +26,7 @@ usize bytecode_read_register_index(const Byteword** ip) {
     return bytecode_read_byteword(ip);
 }
 
-usize bytecode_read_symbol(const Byteword** ip) {
+usize bytecode_read_location(const Byteword** ip) {
     return bytecode_read_word(ip).as_uint;
 }
 

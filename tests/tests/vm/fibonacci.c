@@ -2,7 +2,7 @@
 
 int main(int argc, const char* argv[]) {
     TestVmSystem vm_system = new_test_vm_system();
-    TestReporter reporter = new_test_reporter();
+    TestReporter reporter = test_reporter_new();
 
     Byteword instructions[] = {
         // entry point, calls main
@@ -20,7 +20,7 @@ int main(int argc, const char* argv[]) {
         // - %0: the index of the Fibonacci number to compute (F_0 = 0, F_1 = 1)
         // Return value: the Fibonacci number, one register.
         [64] =
-                OP_RES, 5,
+                OP_RES, 6,
 
                 // if %0 < 2, return %0.
                 OP_SCA, 1, [68] = 2, 0, 0, 0, // %1 = 2
@@ -53,20 +53,20 @@ int main(int argc, const char* argv[]) {
                 OP_RET, 3, 1,
     };
 
-    SectionBuf instruction_buf = new_array_buf();
-    array_buf_extend(
+    ArrayBuf(Byteword) instruction_buf = array_buf_new(Byteword)();
+    array_buf_extend(Byteword)(
         &instruction_buf,
-        &instructions,
+        instructions,
         sizeof(instructions) / sizeof(Byteword)
     );
 
     Bytecode bytecode = {
         .instructions = instruction_buf,
-        .rodata = new_array_buf(),
+        .rodata = array_buf_new(Byteword)(),
     };
 
-    Vm vm = new_vm((VmSystem*)&vm_system, bytecode, (Reporter*)&reporter);
-    run_vm(&vm);
+    Vm vm = vm_new((VmSystem*)&vm_system, bytecode, (Reporter*)&reporter);
+    vm_run(&vm);
 
     assert(vm_system.syscalls.len == 2);
 

@@ -9,6 +9,6 @@ add_subdirectory(source)
 add_subdirectory(bytecode)
 add_subdirectory(assembler)
 add_subdirectory(emitter)
-# add_subdirectory(vm)
+add_subdirectory(vm)
 
 target_compile_options(libcough PRIVATE "-Wno-gnu-alignof-expression")

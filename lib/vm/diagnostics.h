@@ -1,6 +1,6 @@
 #pragma once
 
-#include "diagnostics/diagnostics.h"
+#include "diagnostics/report.h"
 
 typedef enum RuntimeErrorKind {
     RE_INVALID_INSTRUCTION,
@@ -11,6 +11,7 @@ typedef enum RuntimeErrorKind {
 typedef struct RuntimeReporter {
     Reporter base;
     usize error_count;
+    Severity severity;
 } RuntimeReporter;
 
 RuntimeReporter new_runtime_reporter(void);

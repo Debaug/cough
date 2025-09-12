@@ -1,6 +1,5 @@
 function(cough_test name path)
-    # add_executable(${name} ${path} ${CMAKE_SOURCE_DIR}/tests/tests/common.c)
-    add_executable(${name} ${path})
+    add_executable(${name} ${path} ${CMAKE_SOURCE_DIR}/tests/tests/common.c)
     target_include_directories(${name} PRIVATE ${CMAKE_SOURCE_DIR}/lib ${CMAKE_SOURCE_DIR}/tests)
     target_link_libraries(${name} PRIVATE libcough)
     add_test(NAME ${name} COMMAND $<TARGET_FILE:${name}>)
@@ -12,6 +11,6 @@ cough_test(test_hash_map collections/hash_map.c)
 
 cough_test(test_assembler assembler.c)
 
-# cough_test(test_vm_function_call vm/function_call.c)
-# cough_test(test_vm_conditional vm/conditional.c)
-# cough_test(test_vm_fibonacci vm/fibonacci.c)
+cough_test(test_vm_function_call vm/function_call.c)
+cough_test(test_vm_conditional vm/conditional.c)
+cough_test(test_vm_fibonacci vm/fibonacci.c)

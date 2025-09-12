@@ -1,9 +1,8 @@
 #pragma once
 
-#include "alloc/array.h"
 #include "bytecode/bytecode.h"
-#include "compiler/ast/type.h"
 #include "vm/system.h"
+#include "diagnostics/report.h"
 
 typedef struct VmStack {
     Word* data;
@@ -13,8 +12,8 @@ typedef struct VmStack {
     usize capacity;
 } VmStack;
 
-VmStack new_vm_stack(void);
-void free_vm_stack(VmStack stack);
+VmStack vm_stack_new(void);
+void vm_stack_free(VmStack* stack);
 
 /// @brief
 /// @param stack the stack.
@@ -36,7 +35,7 @@ typedef struct Vm {
 } Vm;
 
 // the VM is not responsible for destroying the bytecode
-Vm new_vm(VmSystem* system, Bytecode bytecode, Reporter* reporter);
-void free_vm(Vm vm);
+Vm vm_new(VmSystem* system, Bytecode bytecode, Reporter* reporter);
+void vm_free(Vm* vm);
 
-void run_vm(Vm* vm);
+void vm_run(Vm* vm);

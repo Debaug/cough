@@ -2,22 +2,23 @@
 #include <inttypes.h>
 #include <assert.h>
 
+#include "alloc/alloc.h"
 #include "vm/vm.h"
 #include "vm/diagnostics.h"
 
-VmStack new_vm_stack(void) {
-    usize capacity = 8;
-    Word* data = malloc(capacity * sizeof(Word));
+VmStack vm_stack_new(void) {
+    Word* data = malloc_or_exit(8 * sizeof(Word));
     return (VmStack){
         .data = data,
         .fp = data,
         .sp = data,
         .ap = data,
+        .capacity = 8,
     };
 }
 
-void free_vm_stack(VmStack stack) {
-    free(stack.data);
+void vm_stack_free(VmStack* stack) {
+    free(stack->data);
 }
 
 void vm_stack_reserve(VmStack* stack, usize additional_registers) {
@@ -32,29 +33,25 @@ void vm_stack_reserve(VmStack* stack, usize additional_registers) {
     usize sp_offset = stack->sp - stack->data;
     usize ap_offset = stack->ap - stack->data;
 
-    stack->data = realloc(stack->data, new_capacity * sizeof(Word));
-    if (stack->data == NULL) {
-        print_errno();
-        exit(EXIT_FAILURE);
-    }
+    stack->data = realloc_or_exit(stack->data, new_capacity * sizeof(Word));
 
     stack->fp = stack->data + fp_offset;
     stack->sp = stack->data + sp_offset;
     stack->ap = stack->data + ap_offset;
 }
 
-Vm new_vm(VmSystem* system, Bytecode bytecode, Reporter* reporter) {
+Vm vm_new(VmSystem* system, Bytecode bytecode, Reporter* reporter) {
     return (Vm){
         .system = system,
         .reporter = reporter,
         .bytecode = bytecode,
         .ip = bytecode.instructions.data,
-        .stack = new_vm_stack(),
+        .stack = vm_stack_new(),
     };
 }
 
-void free_vm(Vm vm) {
-    free_array_buf(vm.stack);
+void vm_free(Vm* vm) {
+    vm_stack_free(&vm->stack);
 }
 
 typedef enum ControlFlow {
@@ -64,27 +61,30 @@ typedef enum ControlFlow {
 
 static ControlFlow run_one(Vm* vm);
 
-#define ARG_TYPE(mnemo, ...) Arg_##mnemo __VA_OPT__(,)
-typedef Syscall Arg_sys;
-typedef Byteword Arg_imb;
-typedef Word Arg_imw;
-typedef Word* Arg_preg;
-typedef Word Arg_reg;
-typedef usize Arg_sym;
+#define Arg(mnemo) Arg_##mnemo
+typedef Byteword    Arg(imb);
+typedef Word        Arg(imw);
+typedef Word*       Arg(preg);
+typedef Word        Arg(reg);
+typedef usize       Arg(loc);
 
-#define DECL_OP_FN(code, mnemo, ...)                    \
-    static ControlFlow op_##mnemo(Vm* vm __VA_OPT__(,)  \
-        FOR_ARGS(ARG_TYPE __VA_OPT__(,) __VA_ARGS__)    \
+#define DECL_ARG(idx, mnemo, ...) , Arg(mnemo) x##idx
+
+#define DECL_OP_FN(code, mnemo, ...)                            \
+    static ControlFlow op_##mnemo(                              \
+        Vm* vm                                                  \
+        FOR_ALL(DECL_ARG __VA_OPT__(, __VA_ARGS__))             \
     );
 FOR_OPERATIONS(DECL_OP_FN)
 
-#define DECL_SYS_FN(code, mnemo, ...)                   \
-    static ControlFlow sys_##mnemo(Vm* vm __VA_OPT__(,) \
-        FOR_ARGS(ARG_TYPE __VA_OPT__(,) __VA_ARGS__)    \
+#define DECL_SYS_FN(code, mnemo, ...)                           \
+    static ControlFlow sys_##mnemo(                             \
+        Vm* vm                                                  \
+        FOR_ALL(DECL_ARG __VA_OPT__(, __VA_ARGS__))             \
     );
 FOR_SYSCALLS(DECL_SYS_FN)
 
-void run_vm(Vm* vm) {
+void vm_run(Vm* vm) {
     while (true){
         if (run_one(vm) == FLOW_EXIT) {
             return;
@@ -134,32 +134,47 @@ static Word fetch_reg(Vm* vm) {
     return *fetch_preg(vm);
 }
 
-static usize fetch_sym(Vm* vm) {
-    return bytecode_read_symbol(&vm->ip);
+static usize fetch_loc(Vm* vm) {
+    return bytecode_read_location(&vm->ip);
 }
 
 static ControlFlow run_one(Vm* vm) {
-    #define PROCESS_ARG(kind) fetch_##kind(vm)
-    #define OP(mnemo, ...) return op_##mnemo(vm __VA_OPT__(,) __VA_ARGS__)
-    #define INVALID_OPCODE // TODO: invalid opcode
-    PROCESS_INSTRUCTION(fetch_op(vm));
-    #undef FETCH_ARG
-    #undef OP
-    #define INVALID_OPCODE
+    Opcode opcode = fetch_op(vm);
+    #define FETCH(idx, kind, ...) , fetch_##kind(vm)
+    switch (opcode) {
+    #define RUN_ONE_CASE(code, mnemo, ...)                  \
+        case code:                                          \
+            return op_##mnemo(                              \
+                vm                                          \
+                FOR_ALL(FETCH __VA_OPT__(, __VA_ARGS__))    \
+            );
+    FOR_OPERATIONS(RUN_ONE_CASE)
+
+    case OP_SYS:;
+        Syscall syscall = fetch_sys(vm);
+        switch (syscall) {
+        #define RUN_ONE_SYS_CASE(code, mnemo, ...)              \
+            case code:                                          \
+                return sys_##mnemo(                             \
+                    vm                                          \
+                    FOR_ALL(FETCH __VA_OPT__(, __VA_ARGS__))    \
+                );
+        FOR_SYSCALLS(RUN_ONE_SYS_CASE)
+        default:
+            // FIXME: invalid opcode
+            exit(-1);
+            return FLOW_EXIT;
+        }
+
+    default:
+        // FIXME: invalid opcode
+        exit(-1);
+        return FLOW_EXIT;
+    }
 }
 
 static ControlFlow op_nop(Vm* vm) {
     return FLOW_CONTINUE;
-}
-
-static ControlFlow op_sys(Vm* vm, Syscall syscall) {
-    #define PROCESS_ARG(kind) fetch_##kind(vm)
-    #define SYS(mnemo, ...) return sys_##mnemo(vm __VA_OPT__(,) __VA_ARGS__)
-    #define INVALID_SYSCALL // TODO: invalid syscall
-    PROCESS_SYSCALL(syscall);
-    #undef FETCH_ARG
-    #undef OP
-    #undef INVALID_SYSCALL
 }
 
 static ControlFlow op_frm(Vm* vm, Byteword nargs) {
@@ -207,7 +222,13 @@ static ControlFlow op_ret(Vm* vm, Word* start, Byteword len) {
 }
 
 static ControlFlow op_sca(Vm* vm, Word* dst, Word val) {
+    eprintf("dbg: op_sca with val: %d\n", (int)val.as_int);
     *dst = val;
+    return FLOW_CONTINUE;
+}
+
+static ControlFlow op_loc(Vm* vm, Word* dst, usize val) {
+    dst->as_uint = val;
     return FLOW_CONTINUE;
 }
 

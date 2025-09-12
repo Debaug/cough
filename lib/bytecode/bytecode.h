@@ -172,7 +172,7 @@ Syscall bytecode_read_syscall(const Byteword** ip);
 Byteword bytecode_read_byteword(const Byteword** ip);
 Word bytecode_read_word(const Byteword** ip);
 usize bytecode_read_register_index(const Byteword** ip);
-usize bytecode_read_symbol(const Byteword** ip);
+usize bytecode_read_location(const Byteword** ip);
 
 #define bytecode_read(kind) bytecode_read_##kind
 #define bytecode_read_sys bytecode_read_syscall

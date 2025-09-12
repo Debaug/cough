@@ -2,13 +2,10 @@
 
 #include "vm/diagnostics.h"
 
-static void runtime_report_start(Reporter* raw, Severity severity, int code) {
+static void runtime_report_start(Reporter* raw, Severity severity, i32 code) {
     RuntimeReporter* reporter = (RuntimeReporter*)raw;
     reporter->error_count++;
-    switch (severity) {
-    case SEVERITY_ERROR: print_error(""); break;
-    case SEVERITY_SYSTEM_ERROR: print_system_error(""); break;
-    }
+    reporter->severity = severity;
 }
 
 static void runtime_report_end(Reporter* raw) {
@@ -16,26 +13,12 @@ static void runtime_report_end(Reporter* raw) {
 }
 
 static void runtime_report_message(Reporter* raw, StringBuf message) {
-    eprintf("%.*s\n", STRING_FMT(message));
+    RuntimeReporter* reporter = (RuntimeReporter*)raw;
+    log_diagnostic(reporter->severity, "%.*s\n", (int)message.len, message.data);
 }
 
-static void runtime_report_source_code(Reporter* raw, TextView span) {
-    if (span.start.line == span.end.line) {
-        eprintf(
-            "at %zu.%zu-%zu\n",
-            span.start.line + 1,
-            span.start.column + 1,
-            span.end.column + 1
-        );
-    } else {
-        eprintf(
-            "at %zu.%zu-%zu.%zu\n",
-            span.start.line + 1,
-            span.start.column + 1,
-            span.end.line + 1,
-            span.end.column + 1
-        );
-    }
+static void runtime_report_source_code(Reporter* raw, Range span) {
+    eprintf("at [%zu]-[%zu]\n", span.start, span.end);
 }
 
 static usize runtime_report_error_count(const Reporter* raw) {

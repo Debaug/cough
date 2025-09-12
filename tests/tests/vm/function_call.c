@@ -2,7 +2,7 @@
 
 int main(int argc, const char* argv[]) {
     TestVmSystem vm_system = new_test_vm_system();
-    TestReporter reporter = new_test_reporter();
+    TestReporter reporter = test_reporter_new();
 
     Byteword instructions[] = {
         [0] =
@@ -27,20 +27,21 @@ int main(int argc, const char* argv[]) {
             OP_ADU, 0, 0, 1,
             OP_RET, 0, 1,
     };
-    SectionBuf instruction_buf = new_array_buf();
-    array_buf_extend(
+
+    ArrayBuf(Byteword) instruction_buf = array_buf_new(Byteword)();
+    array_buf_extend(Byteword)(
         &instruction_buf,
-        &instructions,
+        instructions,
         sizeof(instructions) / sizeof(Byteword)
     );
 
     Bytecode bytecode = {
         .instructions = instruction_buf,
-        .rodata = new_array_buf(),
+        .rodata = array_buf_new(Byteword)(),
     };
 
-    Vm vm = new_vm((VmSystem*)&vm_system, bytecode, (Reporter*)&reporter);
-    run_vm(&vm);
+    Vm vm = vm_new((VmSystem*)&vm_system, bytecode, (Reporter*)&reporter);
+    vm_run(&vm);
 
     assert(vm_system.syscalls.len == 3);
 

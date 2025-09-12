@@ -68,7 +68,7 @@ bool emitter_finish(Emitter* p_emitter, Bytecode* dst) {
         Byteword* const ref_ptr =
             emitter._bytecode.instructions.data + ref_location;
         Byteword const* reader = ref_ptr;
-        usize symbol_index = bytecode_read_symbol(&reader);
+        usize symbol_index = bytecode_read_location(&reader);
         usize symbol_location = emitter._symbol_locations.data[symbol_index];
         if (symbol_location >= emitter._bytecode.instructions.len) {
             return false;
