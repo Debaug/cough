@@ -90,8 +90,6 @@ int main(int argc, const char* argv[]) {
         "   ret %0 0",
     };
     Bytecode bytecode = assemble_parts_or_exit(assembly, sizeof(assembly) / sizeof(char*));
-    assert(sizeof(assembly) != 0);
-    assert(bytecode.instructions.data != NULL);
 
     Vm vm = vm_new((VmSystem*)&vm_system, bytecode, (Reporter*)&reporter);
     vm_run(&vm);

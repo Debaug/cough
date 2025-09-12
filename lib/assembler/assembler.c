@@ -439,6 +439,7 @@ static Result assemble_syscall(Assembler* assembler) {
 
 static Result assembler_finish(Assembler* assembler, Bytecode* dst) {
     if (!emitter_finish(&assembler->emitter, dst)) {
+        undefined_symbol(assembler);
         return ERROR;
     }
     hash_map_free(Mnemonic, u8)(&assembler->mnemonic_opcodes);
