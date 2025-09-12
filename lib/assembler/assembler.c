@@ -44,6 +44,7 @@ static void invalid_syscall(Assembler* assembler, Range source);
 static void invalid_arg(Assembler* assembler, Range source);
 static void invalid_symbol(Assembler* assembler, Range source);
 static void duplicate_symbol(Assembler* assembler, Range source);
+static void undefined_symbol(Assembler* assembler);
 
 Result assemble(String assembly, Reporter* reporter, Bytecode* dst) {
     Assembler assembler = assembler_new(assembly, reporter);
@@ -492,6 +493,13 @@ static void duplicate_symbol(Assembler* assembler, Range source) {
     report_start(reporter, SEVERITY_ERROR, 5);
     report_message(reporter, format("duplicate symbol"));
     report_source_code(reporter, source);
+    report_end(reporter);
+}
+
+static void undefined_symbol(Assembler* assembler) {
+    Reporter* reporter = assembler->reporter;
+    report_start(reporter, SEVERITY_ERROR, 5);
+    report_message(reporter, format("undefined symbol"));
     report_end(reporter);
 }
 

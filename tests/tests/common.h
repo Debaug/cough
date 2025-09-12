@@ -5,6 +5,7 @@
 #include "collections/array.h"
 #include "diagnostics/report.h"
 #include "bytecode/bytecode.h"
+#include "assembler/assembler.h"
 #include "vm/system.h"
 #include "vm/vm.h"
 
@@ -35,5 +36,5 @@ typedef struct TestVmSystem {
     ArrayBuf(SyscallRecord) syscalls;
 } TestVmSystem;
 
-TestVmSystem new_test_vm_system(void);
-void free_test_vm_system(TestVmSystem system);
+TestVmSystem test_vm_system_new(void);
+void test_vm_system_free(TestVmSystem system);

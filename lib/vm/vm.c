@@ -222,7 +222,6 @@ static ControlFlow op_ret(Vm* vm, Word* start, Byteword len) {
 }
 
 static ControlFlow op_sca(Vm* vm, Word* dst, Word val) {
-    eprintf("dbg: op_sca with val: %d\n", (int)val.as_int);
     *dst = val;
     return FLOW_CONTINUE;
 }

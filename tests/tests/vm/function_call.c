@@ -1,44 +1,32 @@
 #include "tests/common.h"
 
 int main(int argc, const char* argv[]) {
-    TestVmSystem vm_system = new_test_vm_system();
+    char const* assembly[] = {
+        "   frm 0",
+        "   cas :foo",
+        "   sys exit %0",
+        "",
+        ":foo",
+        "   res 1",
+        "   sca %0 21",
+        "   sys hi",
+        "   frm 1",
+        "   arg %0",
+        "   cas :bar",
+        "   sys dbg %1",
+        "   sca %0 -1",
+        "   ret %0 1"
+        "",
+        ":bar",
+        "   res 1",
+        "   mov %1 %0",
+        "   adu %0 %0 %1",
+        "   ret %0 1"
+    };
+    Bytecode bytecode = assemble_parts_or_exit(assembly, sizeof(assembly) / sizeof(char*));
+
+    TestVmSystem vm_system = test_vm_system_new();
     TestReporter reporter = test_reporter_new();
-
-    Byteword instructions[] = {
-        [0] =
-            OP_FRM, 0,
-            OP_CAS, [4] = 64, 0, 0, [8] =
-            OP_SYS, SYS_EXIT, 0,
-        
-        [64] =
-            OP_RES, 1,
-            OP_SCA, 0, [68] = 21, 0, 0, 0, [72] =
-            OP_SYS, SYS_HI,
-            OP_FRM, 1,
-            OP_ARG, 0,
-            OP_CAS, [80] = 128, 0, 0, 0, [84] =
-            OP_SYS, SYS_DBG, 1,
-            OP_SCA, 0, [92] = 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, [96] =
-            OP_RET, 0, 1,
-
-        [128] =
-            OP_RES, 1,
-            OP_MOV, 1, 0,
-            OP_ADU, 0, 0, 1,
-            OP_RET, 0, 1,
-    };
-
-    ArrayBuf(Byteword) instruction_buf = array_buf_new(Byteword)();
-    array_buf_extend(Byteword)(
-        &instruction_buf,
-        instructions,
-        sizeof(instructions) / sizeof(Byteword)
-    );
-
-    Bytecode bytecode = {
-        .instructions = instruction_buf,
-        .rodata = array_buf_new(Byteword)(),
-    };
 
     Vm vm = vm_new((VmSystem*)&vm_system, bytecode, (Reporter*)&reporter);
     vm_run(&vm);

@@ -7,7 +7,6 @@ static void crashing_report_start(Reporter* raw, Severity severity, i32 code) {
 }
 
 static void crashing_report_end(Reporter* raw) {
-    *(volatile int*)NULL = 0;
     exit(-1);
 }
 
@@ -19,10 +18,13 @@ static void crashing_report_message(Reporter* raw, StringBuf message) {
 static void crashing_report_souce_code(Reporter* raw, Range source) {
     CrashingReporter* self = (CrashingReporter*)raw;
     LineColumn start = source_text_position(self->source, source.start);
+    LineColumn end = source_text_position(self->source, source.end);
     char const* path = self->source.path ? self->source.path : "<stdin>";
     eprintf(
-        "at %s:%zu:%zu (%zu): %.*s\n",
-        path, start.line + 1, start.column + 1, source.start,
+        "at %s:%zu:%zu-%zu:%zu: %.*s\n",
+        path,
+        start.line + 1, start.column + 1,
+        end.line + 1, end.column + 1,
         (int)(source.end - source.start),
         self->source.text + source.start
     );

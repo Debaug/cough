@@ -84,13 +84,13 @@ static const VmSystemVTable test_vm_system_vtable = {
     .dbg =  test_vm_system_dbg,
 };
 
-TestVmSystem new_test_vm_system(void) {
+TestVmSystem test_vm_system_new(void) {
     return (TestVmSystem){
         .base.vtable = &test_vm_system_vtable,
         .syscalls = array_buf_new(SyscallRecord)(),
     };
 }
 
-void free_test_vm_system(TestVmSystem system) {
+void test_vm_system_free(TestVmSystem system) {
     array_buf_free(SyscallRecord)(&system.syscalls);
 }
