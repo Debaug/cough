@@ -32,3 +32,4 @@ void hash(bool)(         Hasher* hasher, bool        val);
 
 void hash(char)(         Hasher* hasher, char        val);
 void hash(String)(       Hasher* hasher, String      val);
+void hash(StringBuf)(    Hasher* hasher, StringBuf   val);

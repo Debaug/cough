@@ -7,7 +7,7 @@
 #include "ops/hash.h"
 
 typedef union Word {
-    const void* as_ptr;
+    void const* as_ptr;
     void* as_mut_ptr;
     u64 as_uint;
     i64 as_int;
@@ -57,6 +57,12 @@ typedef enum Opcode {
     /// @param dst the destination register (64-bit register).
     /// @param src the value to be written (64-bit immediate).
     OP_SCA,
+    
+    /// @brief `loc` -- load a location into a register.
+    ///
+    /// @param dst the destination register (64-bit register).
+    /// @param src the location to be written (64-bit immediate).
+    OP_LOC,
     
     /// @brief `loa` -- load a value into a register.
     ///
@@ -161,15 +167,6 @@ typedef struct Bytecode {
     ArrayBuf(Byteword) instructions;
 } Bytecode;
 
-typedef struct Mnemonic {
-    alignas(u64) char chars[8];
-} Mnemonic;
-bool eq(Mnemonic)(Mnemonic a, Mnemonic b);
-void hash(Mnemonic)(Hasher* hasher, Mnemonic mnemo);
-
-extern Mnemonic instruction_mnemonics[];
-extern Mnemonic syscall_mnemonics[];
-
 Opcode bytecode_read_opcode(const Byteword** ip);
 Syscall bytecode_read_syscall(const Byteword** ip);
 Byteword bytecode_read_byteword(const Byteword** ip);
@@ -183,14 +180,15 @@ usize bytecode_read_symbol(const Byteword** ip);
 #define bytecode_read_imw bytecode_read_word
 #define bytecode_read_preg bytecode_read_register_index
 #define bytecode_read_reg bytecode_read_register_index
-#define bytecode_read_sym bytecode_read_symbol
+#define bytecode_read_loc bytecode_read_location
 
 void bytecode_write_opcode(Bytecode* bytecode, Opcode opcode);
 void bytecode_write_syscall(Bytecode* bytecode, Syscall syscall);
 void bytecode_write_byteword(Bytecode* bytecode, Byteword byteword);
 void bytecode_write_word(Bytecode* bytecode, Word word);
 void bytecode_write_register_index(Bytecode* bytecode, usize register_index);
-void bytecode_write_symbol(Bytecode* bytecode, usize symbol);
+void bytecode_write_location(Bytecode* bytecode, usize symbol);
+void bytecode_write_location_at(Byteword** ip, usize symbol);
 
 #define bytecode_write(kind) bytecode_write_##kind
 #define bytecode_write_sys bytecode_write_syscall
@@ -198,22 +196,22 @@ void bytecode_write_symbol(Bytecode* bytecode, usize symbol);
 #define bytecode_write_imw bytecode_write_word
 #define bytecode_write_preg bytecode_write_register_index
 #define bytecode_write_reg bytecode_write_register_index
-#define bytecode_write_sym bytecode_write_symbol
+#define bytecode_write_loc bytecode_write_location
 
-#define FOR_INSTRUCTIONS(proc)          \
+#define FOR_OPERATIONS(proc)            \
     proc(OP_NOP, nop)                   \
-    proc(OP_SYS, sys, sys)              \
     proc(OP_FRM, frm, imb)              \
     proc(OP_ARG, arg, reg)              \
-    proc(OP_CAS, cas, sym)              \
+    proc(OP_CAS, cas, loc)              \
     proc(OP_RES, res, imb)              \
     proc(OP_RET, ret, preg, imb)        \
     proc(OP_SCA, sca, preg, imw)        \
+    proc(OP_LOC, loc, preg, loc)        \
     proc(OP_LOA, loa, preg, reg)        \
     proc(OP_STO, sto, reg, reg)         \
     proc(OP_MOV, mov, preg, reg)        \
-    proc(OP_JMP, jmp, sym)              \
-    proc(OP_JNZ, jnz, sym, reg)         \
+    proc(OP_JMP, jmp, loc)              \
+    proc(OP_JNZ, jnz, loc, reg)         \
     proc(OP_EQU, equ, preg, reg, reg)   \
     proc(OP_NEU, neu, preg, reg, reg)   \
     proc(OP_GEU, geu, preg, reg, reg)   \
@@ -227,43 +225,20 @@ void bytecode_write_symbol(Bytecode* bytecode, usize symbol);
     proc(SYS_BYE, bye)          \
     proc(SYS_DBG, dbg, preg)    \
 
-#define FOR_ARGS(proc, ...) \
-    __VA_OPT__(FOR_ARGS1(proc, __VA_ARGS__))
-#define FOR_ARGS1(proc, arg, ...)   \
-    proc(arg __VA_OPT__(,0)) __VA_OPT__(FOR_ARGS2(proc, __VA_ARGS__))
-#define FOR_ARGS2(proc, arg, ...)   \
-    proc(arg __VA_OPT__(,0)) __VA_OPT__(FOR_ARGS3(proc, __VA_ARGS__))
-#define FOR_ARGS3(proc, arg) proc(arg)
+#define FOR_ALL(proc, ...)      \
+    __VA_OPT__(FOR_ALL1(proc, __VA_ARGS__))
+#define FOR_ALL1(proc, a, ...)  \
+    proc(0, a __VA_OPT__(,0)) __VA_OPT__(FOR_ALL2(proc, __VA_ARGS__))
+#define FOR_ALL2(proc, b, ...)  \
+    proc(1, b __VA_OPT__(,0)) __VA_OPT__(FOR_ALL3(proc, __VA_ARGS__))
+#define FOR_ALL3(proc, c, ...)  \
+    proc(2, c)
 
-#define PROCESS_INSTRUCTION_CASE_ARG(kind, ...) \
-    PROCESS_ARG(kind) __VA_OPT__(,)
+typedef struct Mnemonic {
+    alignas(u64) char chars[8];
+} Mnemonic;
+bool eq(Mnemonic)(Mnemonic a, Mnemonic b);
+void hash(Mnemonic)(Hasher* hasher, Mnemonic mnemo);
 
-#define PROCESS_INSTRUCTION_CASE(op, mnemo, ...)                                \
-    case op:                                                                    \
-        OP(                                                                     \
-            mnemo,                                                              \
-            FOR_ARGS(PROCESS_INSTRUCTION_CASE_ARG __VA_OPT__(, __VA_ARGS__))    \
-        );                                                                      \
-        break;                                                                  \
-
-#define PROCESS_INSTRUCTION(opcode) do {        \
-    switch (opcode) {                           \
-    FOR_INSTRUCTIONS(PROCESS_INSTRUCTION_CASE)  \
-    default: INVALID_OPCODE; break;             \
-    }                                           \
-} while(0)
-
-#define PROCESS_SYSCALL_CASE(sys, mnemo, ...)                                   \
-    case sys:                                                                   \
-        SYS(                                                                    \
-            mnemo,                                                              \
-            FOR_ARGS(PROCESS_INSTRUCTION_CASE_ARG __VA_OPT__(, __VA_ARGS__))    \
-        );                                                                      \
-        break;                                                                  \
-
-#define PROCESS_SYSCALL(syscall) do {   \
-    switch (syscall) {                  \
-    FOR_SYSCALLS(PROCESS_SYSCALL_CASE)  \
-    default: INVALID_SYSCALL; break;    \
-    }                                   \
-} while(0)
+extern Mnemonic instruction_mnemonics[OPCODES_LEN];
+extern Mnemonic syscall_mnemonics[SYSCALLS_LEN];

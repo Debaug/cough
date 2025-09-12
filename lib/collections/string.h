@@ -17,6 +17,7 @@ typedef struct StringBuf {
 } StringBuf;
 
 StringBuf string_buf_new(void);
+StringBuf format(char const* restrict fmt, ...);
 void string_buf_free(StringBuf* string);
 
 void string_buf_reserve(StringBuf* string, usize additional);

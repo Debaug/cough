@@ -76,7 +76,7 @@ typedef usize Arg_sym;
     static ControlFlow op_##mnemo(Vm* vm __VA_OPT__(,)  \
         FOR_ARGS(ARG_TYPE __VA_OPT__(,) __VA_ARGS__)    \
     );
-FOR_INSTRUCTIONS(DECL_OP_FN)
+FOR_OPERATIONS(DECL_OP_FN)
 
 #define DECL_SYS_FN(code, mnemo, ...)                   \
     static ControlFlow sys_##mnemo(Vm* vm __VA_OPT__(,) \

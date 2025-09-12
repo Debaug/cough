@@ -56,7 +56,7 @@ typedef enum HashMapSlotOccupancy {
                                                                                 \
     void                                                                        \
     hash_map_free(KEY, VALUE)(                                                  \
-        HashMap(KEY, VALUE) hash_map                                            \
+        HashMap(KEY, VALUE)* hash_map                                           \
     );                                                                          \
                                                                                 \
     const VALUE*                                                                \
@@ -109,7 +109,7 @@ typedef enum HashMapSlotOccupancy {
 
 #define HASH_MAP_MAX_LOAD_FACTOR (0.75)
 
-#define IMPL_NEW_HASH_MAP(KEY, VALUE)                                           \
+#define IMPL_HASH_MAP_NEW(KEY, VALUE)                                           \
     HashMap(KEY, VALUE)                                                         \
     hash_map_new(KEY, VALUE)(void) {                                            \
         return (HashMap(KEY, VALUE)){                                           \
@@ -120,12 +120,12 @@ typedef enum HashMapSlotOccupancy {
         };                                                                      \
     }                                                                           \
 
-#define IMPL_FREE_HASH_MAP(KEY, VALUE)                                          \
+#define IMPL_HASH_MAP_FREE(KEY, VALUE)                                          \
     void                                                                        \
     hash_map_free(KEY, VALUE)(                                                  \
-        HashMap(KEY, VALUE) hash_map                                            \
+        HashMap(KEY, VALUE)* hash_map                                           \
     ) {                                                                         \
-        free(hash_map.values);                                                  \
+        free(hash_map->values);                                                 \
     }                                                                           \
 
 #define IMPL_HASH_MAP_GET(KEY, VALUE)                                           \
@@ -220,7 +220,7 @@ typedef enum HashMapSlotOccupancy {
                                                                                 \
         if (                                                                    \
             slot_index == -1                                                    \
-            && hash_map.len + 1 <= HASH_MAP_MAX_LOAD_FACTOR * hash_map.capacity \
+            || hash_map.len + 1 > HASH_MAP_MAX_LOAD_FACTOR * hash_map.capacity  \
         ) {                                                                     \
             return (HashMapEntry(KEY, VALUE)){                                  \
                 .hash_map = p_hash_map,                                         \
@@ -298,7 +298,7 @@ typedef enum HashMapSlotOccupancy {
         VALUE value                                                             \
     ) {                                                                         \
         usize i = key_hash % hash_map->capacity;                                \
-        for (;; i++) {                                                          \
+        for (;; i = (i + 1 == hash_map->capacity) ? 0 : (i + 1)) {              \
             HashMapSlotOccupancy occupancy = hash_map->occupancies[i];          \
             if (occupancy == HASH_MAP_SLOT_FULL) continue;                      \
                                                                                 \
@@ -331,7 +331,8 @@ typedef enum HashMapSlotOccupancy {
         }                                                                       \
                                                                                 \
         /* reallocate. */                                                       \
-        usize new_capacity = (new_capacity <= 4) ? 8 : 2 * new_capacity;        \
+        usize old_capacity = entry->hash_map->capacity;                         \
+        usize new_capacity = (old_capacity <= 4) ? 8 : 2 * old_capacity;        \
                                                                                 \
         usize values_bufsz = new_capacity * sizeof(VALUE);                      \
         usize values_bufsz_aligned = align_up_size(values_bufsz, alignof(KEY)); \
@@ -340,14 +341,14 @@ typedef enum HashMapSlotOccupancy {
         usize bufsz = values_bufsz_aligned + keys_bufsz + occupancies_bufsz;    \
                                                                                 \
         void* new_buf = malloc(bufsz);                                          \
-        HashMap(KEY, VALUE) hash_map_new = {                                    \
+        HashMap(KEY, VALUE) new_hash_map = {                                    \
             .occupancies = (u8*)(new_buf + values_bufsz_aligned + keys_bufsz),  \
             .keys = (KEY*)(new_buf + values_bufsz_aligned),                     \
             .values = (VALUE*)new_buf,                                          \
             .len = 0,                                                           \
             .capacity = new_capacity,                                           \
         };                                                                      \
-        memset(hash_map_new.occupancies, 0, occupancies_bufsz);                 \
+        memset(new_hash_map.occupancies, 0, occupancies_bufsz);                 \
                                                                                 \
         /* copy over existing entries. */                                       \
         for (usize i = 0; i < entry->hash_map->capacity; i++) {                 \
@@ -361,7 +362,7 @@ typedef enum HashMapSlotOccupancy {
             u64 key_hash = finish_hash(hasher);                                 \
                                                                                 \
             hash_map_insert_in_empty_slot##KEY##_##VALUE(                       \
-                &hash_map_new,                                                  \
+                &new_hash_map,                                                  \
                 key,                                                            \
                 key_hash,                                                       \
                 value                                                           \
@@ -369,8 +370,8 @@ typedef enum HashMapSlotOccupancy {
         }                                                                       \
                                                                                 \
         /* replace hash map. */                                                 \
-        hash_map_free(KEY, VALUE)(*entry->hash_map);                            \
-        *entry->hash_map = hash_map_new;                                        \
+        hash_map_free(KEY, VALUE)(entry->hash_map);                             \
+        *entry->hash_map = new_hash_map;                                        \
                                                                                 \
         /* insert new entry. */                                                 \
         u64 key_hash;                                                           \
@@ -411,8 +412,8 @@ typedef enum HashMapSlotOccupancy {
 
 
 #define IMPL_HASH_MAP(KEY, VALUE)                                               \
-    IMPL_NEW_HASH_MAP(KEY, VALUE)                                               \
-    IMPL_FREE_HASH_MAP(KEY, VALUE)                                              \
+    IMPL_HASH_MAP_NEW(KEY, VALUE)                                               \
+    IMPL_HASH_MAP_FREE(KEY, VALUE)                                              \
                                                                                 \
     IMPL_HASH_MAP_GET(KEY, VALUE)                                               \
     IMPL_HASH_MAP_GET_MUT(KEY, VALUE)                                           \

@@ -38,7 +38,12 @@ IMPL_HASH_INTEGRAL(bool)
 IMPL_HASH_INTEGRAL(char)
 
 void hash(String)(Hasher* hasher, String val) {
+    hash_usize(hasher, val.len);
     for (usize i = 0; i < val.len; i++) {
         hash_char(hasher, val.data[i]);
     }
+}
+
+void hash(StringBuf)(Hasher* hasher, StringBuf val) {
+    hash(String)(hasher, (String){ .data = val.data, .len = val.len });
 }

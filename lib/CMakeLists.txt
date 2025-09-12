@@ -4,9 +4,11 @@ add_subdirectory(alloc)
 add_subdirectory(collections)
 add_subdirectory(diagnostics)
 
-# add_subdirectory(source)
+add_subdirectory(source)
 # add_subdirectory(compiler)
 add_subdirectory(bytecode)
+add_subdirectory(assembler)
+add_subdirectory(emitter)
 # add_subdirectory(vm)
 
 target_compile_options(libcough PRIVATE "-Wno-gnu-alignof-expression")

@@ -1,3 +1,3 @@
 target_sources(libcough PRIVATE
-    bytecode.h bytecode.c
+    assembler.h assembler.c
 )

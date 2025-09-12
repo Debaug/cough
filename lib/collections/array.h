@@ -52,6 +52,7 @@ typedef struct Range {
         usize len                                                               \
     );                                                                          \
 
+DECL_ARRAY_BUF(i32);
 DECL_ARRAY_BUF(usize);
 DECL_ARRAY_BUF(char);
 

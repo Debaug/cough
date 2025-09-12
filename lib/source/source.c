@@ -1,7 +1,7 @@
 #include "source/source.h"
 
 SourceText source_text_new(char const* path, char const* text) {
-    ArrayBuf(usize) line_indices;
+    ArrayBuf(usize) line_indices = array_buf_new(usize)();
     array_buf_push(usize)(&line_indices, 0);
     usize i;
     for (i = 0; text[i] != '\0'; i++) {
@@ -18,7 +18,7 @@ SourceText source_text_new(char const* path, char const* text) {
 }
 
 void source_text_free(SourceText* source) {
-    array_buf_free(char)(&source->line_indices);
+    array_buf_free(usize)(&source->line_indices);
 }
 
 LineColumn source_text_position(SourceText text, usize index) {
@@ -27,7 +27,8 @@ LineColumn source_text_position(SourceText text, usize index) {
 
     usize start = 0;
     usize end = text.line_indices.len;
-    usize line_index;
+    usize line;
+    usize line_start;
     while (true) {
         usize i = (start + end) / 2;
         if (index < text.line_indices.data[i]) {                // (1)
@@ -40,7 +41,8 @@ LineColumn source_text_position(SourceText text, usize index) {
             // we have: index at `i` <= `index` < index at `i + 1`.
             // hence the index at `i` is the index of the start of the searched
             // line.
-            line_index = text.line_indices.data[i];
+            line = i;
+            line_start = text.line_indices.data[i];
             break;
         }
 
@@ -54,5 +56,5 @@ LineColumn source_text_position(SourceText text, usize index) {
         // Hence, by infinite descent, we are guaranteed to break.
     }
 
-    return (LineColumn){ .line = line_index, .column = index - line_index };
+    return (LineColumn){ .line = line, .column = index - line_start };
 }

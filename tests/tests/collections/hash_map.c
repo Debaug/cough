@@ -1,6 +1,6 @@
-#include "collections/hash_map.h"
+#include <assert.h>
 
-#include "tests/common.h"
+#include "collections/hash_map.h"
 
 typedef const char* Person;
 
@@ -58,7 +58,7 @@ int main(int argc, char const* argv[]) {
     assert(value_eq(hash_map_entry_get(Person, i32)(entry), 230));
     assert(value_eq(hash_map_get(Person, i32)(ages, "Ada"), 230));
 
-    hash_map_free(Person, i32)(ages);
+    hash_map_free(Person, i32)(&ages);
 
     return 0;
 }

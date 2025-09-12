@@ -45,15 +45,25 @@ void bytecode_write_byteword(Bytecode* bytecode, Byteword byteword) {
 void bytecode_write_word(Bytecode* bytecode, Word word) {
     ArrayBuf(Byteword) instructions = bytecode->instructions;
     while ((instructions.len * sizeof(Byteword)) % alignof(Word) != 0) {
-        Byteword zero = 0;
-        array_buf_push(Byteword)(&instructions, zero);
+        array_buf_push(Byteword)(&instructions, 0);
     }
     array_buf_extend(Byteword)(
         &instructions,
-        &word,
+        (Byteword const*)&word,
         sizeof(Word) / sizeof(Byteword)
     );
     bytecode->instructions = instructions;
+}
+
+static void bytecode_write_word_at(Byteword** ip, Word word) {
+    // FIXME: better check for alignment
+    while ((uptr)(*ip) % alignof(Word) != 0) {
+        **ip = 0;
+        (*ip)++;
+    }
+    Word* ip_word = (Word*)*ip;
+    *(ip_word++) = word;
+    *ip = (Byteword*)ip_word;
 }
 
 void bytecode_write_register_index(Bytecode* bytecode, usize register_index) {
@@ -61,8 +71,12 @@ void bytecode_write_register_index(Bytecode* bytecode, usize register_index) {
     bytecode_write_byteword(bytecode, (Byteword)register_index);
 }
 
-void bytecode_write_symbol(Bytecode* bytecode, usize symbol) {
+void bytecode_write_location(Bytecode* bytecode, usize symbol) {
     bytecode_write_word(bytecode, (Word){ .as_uint = symbol });
+}
+
+void bytecode_write_location_at(Byteword** ip, usize symbol) {
+    bytecode_write_word_at(ip, (Word){ .as_uint = symbol });
 }
 
 bool eq(Mnemonic)(Mnemonic a, Mnemonic b) {
@@ -73,12 +87,13 @@ void hash(Mnemonic)(Hasher* hasher, Mnemonic mnemo) {
     hash(u64)(hasher, *(const u64*)&mnemo);
 }
 
-#define INSTRUCTION_MNEMONIC(opcode, mnemo, ...) [opcode] = #mnemo,
+#define OPERATION_MNEMONIC(opcode, mnemo, ...) [opcode] = { #mnemo },
 Mnemonic instruction_mnemonics[] = {
-    FOR_INSTRUCTIONS(INSTRUCTION_MNEMONIC)
+    FOR_OPERATIONS(OPERATION_MNEMONIC)
+    [OP_SYS] = { "sys" }
 };
 
-#define SYSCALL_MNEMONIC(syscall, mnemo, ...) [syscall] = #mnemo,
+#define SYSCALL_MNEMONIC(syscall, mnemo, ...) [syscall] = { #mnemo },
 Mnemonic syscall_mnemonics[] = {
     FOR_SYSCALLS(SYSCALL_MNEMONIC)
 };

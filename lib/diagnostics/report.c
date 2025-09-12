@@ -1,11 +1,7 @@
 #include <string.h>
 #include <errno.h>
 
-#include "diagnostics/diagnostics.h"
-
-void print_errno(void) {
-    print_system_error("%s (errno %d)", strerror(errno), errno);
-}
+#include "diagnostics/report.h"
 
 void report_start(Reporter* reporter, Severity severity, int code) {
     (reporter->vtable->start)(reporter, severity, code);

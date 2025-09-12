@@ -1,11 +1,42 @@
 #include <stdlib.h>
 #include <string.h>
+#include <stdarg.h>
+#include <assert.h>
 
 #include "collections/array.h"
 #include "collections/string.h"
+#include "diagnostics/errno.h"
 
 StringBuf string_buf_new(void) {
     return (StringBuf){ .data = NULL, .len = 0, .capacity = 0 };
+}
+
+StringBuf format(char const* fmt, ...) {
+    // FIXME: error handling
+
+    va_list args, args2;
+    va_start(args, fmt);
+    va_copy(args2, args);
+
+    errno = 0;
+    int len = vsnprintf(NULL, 0, fmt, args);
+    if (len < 0) {
+        exit_on_errno(errno);
+        exit(-1);
+    }
+    va_end(args);
+
+    StringBuf buf = string_buf_new();
+    string_buf_reserve(&buf, len);
+    errno = 0;
+    if (vsnprintf(buf.data, buf.capacity, fmt, args2) < 0) {
+        exit_on_errno(errno);
+        exit(-1);
+    }
+    va_end(args2);
+    buf.len = len;
+
+    return buf;
 }
 
 void string_buf_free(StringBuf* string) {
@@ -23,14 +54,19 @@ static ArrayBuf(char) to_array(StringBuf* string) {
 static StringBuf from_array(ArrayBuf(char)* array) {
     return (StringBuf){
         .data = array->data,
-        .len = array->data ? array->data - 1 : 0,
+        .len = array->len != 0 ? array->len - 1 : 0,
         .capacity = array->capacity
     };
 }
 
 void string_buf_reserve(StringBuf* string, usize additional) {
+    if (additional == 0) return;
     ArrayBuf(char) array = to_array(string);
-    array_buf_reserve(char)(&array, additional);
+    usize additional_bytes = (array.len == 0) ? additional + 1 : additional;
+    array_buf_reserve(char)(&array, additional_bytes);
+    if (array.len == 0) {
+        array_buf_push(char)(&array, '\0');
+    }
     *string = from_array(&array);
 }
 
@@ -44,26 +80,27 @@ void string_buf_extend(StringBuf* string, char const* s) {
 }
 
 void string_buf_extend_slice(StringBuf* string, String s) {
+    string_buf_reserve(string, s.len);
     ArrayBuf(char) array = to_array(string);
-    if (array.len == 0) {
-        array_buf_extend(char)(&array, s.data, s.len);
-    } else {
+    if (array.len != 0) {
         array.len -= 1;
-        array_buf_extend(char)(&array, s.data, s.len);
-        array_buf_push(char)(&array, '\0');
     }
+    array_buf_extend(char)(&array, s.data, s.len);
+    array_buf_push(char)(&array, '\0');
+    
     *string = from_array(&array);
 }
 
-Errno read_file(FILE* file, ArrayBuf(char)* dst) {
+Errno read_file(FILE* file, StringBuf* dst) {
     usize len = 0;
     while (!feof(file)) {
-        array_buf_reserve(char)(dst, (len == 0) ? 64 : len);
+        string_buf_reserve(dst, (len == 0) ? 64 : len);
         usize additional =
-            fread(dst->data + dst->len, 1, dst->capacity - dst->len, file);
+            fread(dst->data + dst->len, 1, dst->capacity - dst->len - 1, file);
         if (additional == 0) {
             return errno;
         }
+        dst->data[dst->len + additional] = '\0';
         dst->len += additional;
     }
 

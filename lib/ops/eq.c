@@ -29,5 +29,12 @@ IMPL_EQ_PRIMITIVE(char)
 
 bool eq(String)(String a, String b) {
     if (a.len != b.len) return false;
-    return strncmp(a.data, b.data, a.len);
+    return !strncmp(a.data, b.data, a.len);
+}
+
+bool eq(StringBuf)(StringBuf a, StringBuf b) {
+    return eq(String)(
+        (String){ .data = a.data, .len = a.len },
+        (String){ .data = b.data, .len = b.len }
+    );
 }

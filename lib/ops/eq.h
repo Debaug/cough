@@ -28,3 +28,4 @@ bool eq(f64)(        f64         a,  f64         b);
 
 bool eq(char)(       char        a,  char        b);
 bool eq(String)(     String      a,  String      b);
+bool eq(StringBuf)(  StringBuf   a,  StringBuf   b);
