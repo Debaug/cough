@@ -5,10 +5,10 @@
 #include "tests/common.h"
 
 int main(int argc, char const* argv[]) {
-    char const* source = "() : = := -> => ; + hello fn \n false true";
+    char const* source = "() : = := -> => ; & hello fn \n false true";
     TestReporter reporter = test_reporter_new();
 
-    ArrayBuf(Token) tokens = array_buf_new(Token)();
+    TokenStream tokens;
     tokenize(
         (String){ .data = source, .len = strlen(source) },
         &reporter.base,
@@ -17,9 +17,9 @@ int main(int argc, char const* argv[]) {
 
     assert(reporter.error_codes.len == 0);
 
-    assert(tokens.len == 13);
+    assert(tokens.tokens.len == 13);
     for (usize i = 0; i < 13; i++) {
-        assert(tokens.data[i].kind == i);
+        assert(tokens.tokens.data[i].kind == i);
     }
 
     return 0;

@@ -7,7 +7,7 @@ typedef struct Tokenizer {
     String source;
     usize pos;
     Reporter* reporter;
-    ArrayBuf(Token)* dst;
+    TokenStream* dst;
     bool error;
 } Tokenizer;
 
@@ -36,7 +36,7 @@ static ExactToken punctuation[] = {
     { "=>", TOKEN_ARROW_DOUBLE },
     { ";", TOKEN_SEMICOLON },
 
-    { "+", TOKEN_PLUS },
+    { "&", TOKEN_AMPERSAND },
 };
 
 static void tokenize_punctuation(Tokenizer* tokenizer) {
@@ -62,7 +62,7 @@ static void tokenize_punctuation(Tokenizer* tokenizer) {
         return;
     } else {
         Token token = { .pos = tokenizer->pos, .kind = kind };
-        array_buf_push(Token)(tokenizer->dst, token);
+        array_buf_push(Token)(&tokenizer->dst->tokens, token);
     }
     tokenizer->pos += max_len;
 };
@@ -74,6 +74,7 @@ static ExactToken keywords[] = {
 };
 
 // first character must be alphabetic or `_`
+// return whether an identifier as been tokenized
 static void tokenize_identifier_or_keyword(Tokenizer* tokenizer) {
     usize start = tokenizer->pos;
     // skip first character
@@ -93,8 +94,15 @@ static void tokenize_identifier_or_keyword(Tokenizer* tokenizer) {
             break;
         }
     }
+    if (kind == TOKEN_IDENTIFIER) {
+        hash_map_insert(usize, usize)(
+            &tokenizer->dst->_end_pos,
+            start,
+            tokenizer->pos
+        );
+    }
     Token token = { .kind = kind, .pos = start };
-    array_buf_push(Token)(tokenizer->dst, token);
+    array_buf_push(Token)(&tokenizer->dst->tokens, token);
 }
 
 static void skip_whitespace(Tokenizer* p_tokenizer) {
@@ -109,7 +117,6 @@ static void skip_whitespace(Tokenizer* p_tokenizer) {
     *p_tokenizer = tokenizer;
 }
 
-// true iff should continue
 bool tokenize_one(Tokenizer* tokenizer) {
     skip_whitespace(tokenizer);
     if (tokenizer->pos == tokenizer->source.len) {
@@ -124,14 +131,22 @@ bool tokenize_one(Tokenizer* tokenizer) {
     return true;
 }
 
-bool tokenize(String source, Reporter* reporter, ArrayBuf(Token)* dst) {
+bool tokenize(String source, Reporter* reporter, TokenStream* dst) {
+    TokenStream stream = {
+        .tokens = array_buf_new(Token)(),
+        ._end_pos = hash_map_new(usize, usize)(),
+    };
     Tokenizer tokenizer = {
         .source = source,
         .pos = 0,
         .reporter = reporter,
-        .dst = dst,
+        .dst = &stream,
         .error = false,
     };
     while (tokenize_one(&tokenizer));
-    return !tokenizer.error;
+    if (tokenizer.error) {
+        return false;
+    }
+    *dst = stream;
+    return true;
 }

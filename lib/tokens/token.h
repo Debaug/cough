@@ -1,5 +1,6 @@
 #include "primitives/primitives.h"
 #include "collections/array.h"
+#include "collections/hash_map.h"
 
 typedef enum TokenKind {
     TOKEN_PAREN_LEFT,
@@ -11,7 +12,7 @@ typedef enum TokenKind {
     TOKEN_ARROW_DOUBLE,
     TOKEN_SEMICOLON,
 
-    TOKEN_PLUS,
+    TOKEN_AMPERSAND,
 
     TOKEN_IDENTIFIER,
 
@@ -26,3 +27,11 @@ typedef struct Token {
 } Token;
 
 DECL_ARRAY_BUF(Token)
+
+typedef struct TokenStream {
+    ArrayBuf(Token) tokens;
+    HashMap(usize, usize) _end_pos;
+} TokenStream;
+
+Range token_range(TokenStream stream, Token token);
+void token_stream_free(TokenStream* token_stream);
