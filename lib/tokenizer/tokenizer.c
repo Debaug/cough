@@ -30,10 +30,11 @@ static ExactToken punctuation[] = {
     { "(", TOKEN_PAREN_LEFT },
     { ")", TOKEN_PAREN_RIGHT },
     { ":", TOKEN_COLON },
+    { "::", TOKEN_COLON_COLON },
     { "=", TOKEN_EQUAL },
     { ":=", TOKEN_COLON_EQUAL },
     { "->", TOKEN_ARROW },
-    { "=>", TOKEN_ARROW_DOUBLE },
+    { "=>", TOKEN_DOUBLE_ARROW },
     { ";", TOKEN_SEMICOLON },
 
     { "&", TOKEN_AMPERSAND },

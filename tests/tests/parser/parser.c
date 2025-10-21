@@ -1,0 +1,54 @@
+#include "tokenizer/tokenizer.h"
+#include "parser/parser.h"
+
+#include "tests/common.h"
+
+int main(int argc, char const *argv[]) {
+    char const* source_raw = ""
+        "constant_fn :: fn x: Bool -> Bool => true;\n"
+    ;
+    String source = {
+        .data = source_raw,
+        .len = strlen(source_raw),
+    };
+
+    TestReporter reporter = test_reporter_new();
+
+    TokenStream tokens;
+    assert(tokenize(source, &reporter.base, &tokens));
+    
+    Ast ast;
+    assert(parse(source, tokens, &reporter.base, &ast));
+    assert(reporter.error_codes.len == 0);
+
+    assert(ast.root.global_constants.len == 1);
+    {
+        ConstantDef constant = ast.root.global_constants.data[0];
+        assert(constant.name.range.start == 0);
+        assert(constant.name.range.end == 11);
+        assert(!constant.explicitly_typed);
+        {
+            Expression value = ast.expressions.data[constant.value];
+            assert(value.kind == EXPRESSION_FUNCTION);
+            {
+                Pattern input = value.as.function.input;
+                assert(input.kind == PATTERN_VARIABLE);
+                assert(input.as.variable.name.range.start == 18);
+                assert(input.as.variable.name.range.end == 19);
+                assert(input.as.variable.explicitly_typed);
+                assert(input.as.variable.type_name.kind == TYPE_NAME_IDENTIFIER);
+                assert(input.as.variable.type_name.range.start == 21);
+                assert(input.as.variable.type_name.range.end == 25);
+            }
+            {
+                Expression output = ast.expressions.data[value.as.function.output];
+                assert(output.kind == EXPRESSION_LITERAL_BOOL);
+                assert(output.as.literal_bool == true);
+            }
+            assert(value.range.start == 15);
+            assert(value.range.end == 41);
+        }
+    }
+
+    return 0;
+}

@@ -1,3 +1,5 @@
+#pragma once
+
 #include "primitives/primitives.h"
 #include "collections/array.h"
 #include "collections/hash_map.h"
@@ -6,10 +8,11 @@ typedef enum TokenKind {
     TOKEN_PAREN_LEFT,
     TOKEN_PAREN_RIGHT,
     TOKEN_COLON,
+    TOKEN_COLON_COLON,
     TOKEN_EQUAL,
     TOKEN_COLON_EQUAL,
     TOKEN_ARROW,
-    TOKEN_ARROW_DOUBLE,
+    TOKEN_DOUBLE_ARROW,
     TOKEN_SEMICOLON,
 
     TOKEN_AMPERSAND,
@@ -33,5 +36,7 @@ typedef struct TokenStream {
     HashMap(usize, usize) _end_pos;
 } TokenStream;
 
-Range token_range(TokenStream stream, Token token);
 void token_stream_free(TokenStream* token_stream);
+
+Range token_range(TokenStream stream, Token token);
+Range token_range_range(TokenStream stream, Range range);

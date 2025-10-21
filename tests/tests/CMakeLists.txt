@@ -11,6 +11,8 @@ cough_test(test_hash_map collections/hash_map.c)
 
 cough_test(test_tokenizer tokenizer/tokenizer.c)
 
+cough_test(test_parser parser/parser.c)
+
 cough_test(test_assembler assembler/assembler.c)
 
 cough_test(test_vm_function_call vm/function_call.c)

@@ -1,3 +1,5 @@
+#pragma once
+
 #include "diagnostics/report.h"
 #include "source/source.h"
 #include "tokens/token.h"

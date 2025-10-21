@@ -11,10 +11,11 @@ static usize token_len[] = {
     [TOKEN_PAREN_LEFT] = 1,
     [TOKEN_PAREN_RIGHT] = 1,
     [TOKEN_COLON] = 1,
+    [TOKEN_COLON_COLON] = 2,
     [TOKEN_EQUAL] = 1,
     [TOKEN_COLON_EQUAL] = 2,
     [TOKEN_ARROW] = 2,
-    [TOKEN_ARROW_DOUBLE] = 2,
+    [TOKEN_DOUBLE_ARROW] = 2,
     [TOKEN_SEMICOLON] = 1,
 
     [TOKEN_AMPERSAND] = 1,
@@ -38,4 +39,13 @@ Range token_range(TokenStream stream, Token token) {
         break;
     }
     return (Range){ token.pos, end_pos };
+}
+
+Range token_range_range(TokenStream stream, Range range) {
+    usize start = stream.tokens.data[range.start].pos;
+    if (range.end <= range.start) {
+        return (Range){ start, start };
+    }
+    usize end = token_range(stream, stream.tokens.data[range.end - 1]).end;
+    return (Range){ start, end };
 }

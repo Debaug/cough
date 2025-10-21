@@ -10,6 +10,8 @@ add_subdirectory(tokenizer)
 add_subdirectory(bytecode)
 add_subdirectory(assembler)
 add_subdirectory(emitter)
+add_subdirectory(ast)
+add_subdirectory(parser)
 add_subdirectory(vm)
 
 target_compile_options(libcough PRIVATE "-Wno-gnu-alignof-expression")
