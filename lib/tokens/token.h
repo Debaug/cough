@@ -32,6 +32,7 @@ typedef struct Token {
 DECL_ARRAY_BUF(Token)
 
 typedef struct TokenStream {
+    String source;
     ArrayBuf(Token) tokens;
     HashMap(usize, usize) _end_pos;
 } TokenStream;

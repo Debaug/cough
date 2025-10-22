@@ -134,6 +134,7 @@ bool tokenize_one(Tokenizer* tokenizer) {
 
 bool tokenize(String source, Reporter* reporter, TokenStream* dst) {
     TokenStream stream = {
+        .source = source,
         .tokens = array_buf_new(Token)(),
         ._end_pos = hash_map_new(usize, usize)(),
     };

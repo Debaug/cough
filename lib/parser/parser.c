@@ -58,13 +58,12 @@ static Result parse_type_name(Parser* parser, TypeName* dst);
 static Result parse_identifier(Parser* parser, Identifier* dst);
 
 bool parse(
-    String source,
     TokenStream tokens,
     Reporter* reporter,
     Ast* dst
 ) {
     Parser parser = {
-        .source = source,
+        .source = tokens.source,
         .tokens = tokens,
         .pos = 0,
         .reporter = reporter,

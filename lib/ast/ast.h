@@ -12,6 +12,7 @@ typedef struct Module {
 } Module;
 
 typedef struct Ast {
+    String source;
     TypeRegistry types;
     ScopeGraph scopes;
     ArrayBuf(Expression) expressions;

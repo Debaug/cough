@@ -18,7 +18,7 @@ int main(int argc, char const *argv[]) {
     assert(tokenize(source, &reporter.base, &tokens));
     
     Ast ast;
-    assert(parse(source, tokens, &reporter.base, &ast));
+    assert(parse(tokens, &reporter.base, &ast));
     assert(reporter.error_codes.len == 0);
 
     assert(ast.root.global_constants.len == 1);

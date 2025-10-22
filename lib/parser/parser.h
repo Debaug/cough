@@ -5,7 +5,6 @@
 #include "ast/ast.h"
 
 bool parse(
-    String source,
     TokenStream tokens,
     Reporter* reporter,
     Ast* dst
