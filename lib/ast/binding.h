@@ -9,7 +9,7 @@ typedef struct VariableBinding {
 
 typedef struct ConstantBinding {
     TypeId type;
-    ExpressionId value;
+    Expression const* value;
 } ConstantBinding;
 
 typedef struct TypeOrConstantBinding {

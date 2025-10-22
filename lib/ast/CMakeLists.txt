@@ -3,4 +3,5 @@ target_sources(libcough PRIVATE
     type.h type.c
     binding.h binding.c
     expression.h expression.c
+    storage.h storage.c
 )

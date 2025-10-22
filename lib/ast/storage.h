@@ -1,6 +1,5 @@
 #pragma once
 
-#include "alloc/arena_stack.h"
 #include "collections/array.h"
 
 typedef void* Allocation;

@@ -15,6 +15,8 @@ typedef struct Ast {
     TypeRegistry types;
     ScopeGraph scopes;
     ArrayBuf(Expression) expressions;
-    
     Module root;
+    AstStorage storage;
 } Ast;
+
+void ast_free(Ast* ast);

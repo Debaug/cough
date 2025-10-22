@@ -6,6 +6,7 @@ typedef struct Parser {
     usize pos;
     Reporter* reporter;
     ArrayBuf(Expression) expressions;
+    AstStorage storage;
 } Parser;
 
 static bool parser_match(Parser* parser, TokenKind kind, Token* dst) {
@@ -41,9 +42,15 @@ static void parser_skip_until(Parser* parser, TokenKind kind) {
     }
 }
 
+static ExpressionId box_expression(Parser* parser, Expression expression) {
+    usize id = parser->expressions.len;
+    array_buf_push(Expression)(&parser->expressions, expression);
+    return id;
+}
+
 static Result parse_module(Parser* parser, Module* dst);
 static Result parse_constant(Parser* parser, ConstantDef* dst);
-static Result parse_expression(Parser* parser, ExpressionId* dst);
+static Result parse_expression(Parser* parser, Expression* dst);
 // head token must be `fn`
 static Result parse_function(Parser* parser, Function* dst, Range* range);
 static Result parse_pattern(Parser* parser, Pattern* dst);
@@ -62,14 +69,17 @@ bool parse(
         .pos = 0,
         .reporter = reporter,
         .expressions = array_buf_new(Expression)(),
+        .storage = ast_storage_new(),
     };
     Module module;
     parse_module(&parser, &module);
+    ast_store(&parser.storage, parser.expressions.data);
     *dst = (Ast){
         .scopes = scope_graph_new(),
         .types = type_registry_new(),
         .expressions = parser.expressions,
-        .root = module
+        .root = module,
+        .storage = parser.storage,
     };
     return reporter_error_count(reporter) == 0;
 }
@@ -100,7 +110,7 @@ static Result parse_constant(Parser* parser, ConstantDef* dst) {
     if (!parser_match(parser, TOKEN_COLON_COLON, NULL)) {
         return ERROR;
     }
-    ExpressionId value;
+    Expression value;
     if (parse_expression(parser, &value) != SUCCESS) {
         return ERROR;
     }
@@ -110,24 +120,23 @@ static Result parse_constant(Parser* parser, ConstantDef* dst) {
     *dst = (ConstantDef){
         .name = name,
         .explicitly_typed = false,
-        .value = value,
+        .value = box_expression(parser, value),
     };
     return SUCCESS;
 }
 
-static Result parse_expression(Parser* parser, ExpressionId* dst_id) {
+static Result parse_expression(Parser* parser, Expression* dst) {
     if (parser->tokens.tokens.len == parser->pos) {
         // FIXME: report error
         return ERROR;
     }
     Token head = parser->tokens.tokens.data[parser->pos];
-    Expression dst = {};
     Result result = SUCCESS;
     switch (head.kind) {
     case TOKEN_FN:
-        dst.kind = EXPRESSION_FUNCTION;
+        dst->kind = EXPRESSION_FUNCTION;
         if (
-            parse_function(parser, &dst.as.function, &dst.range)
+            parse_function(parser, &dst->as.function, &dst->range)
             != SUCCESS
         ) {
             return ERROR;
@@ -135,23 +144,21 @@ static Result parse_expression(Parser* parser, ExpressionId* dst_id) {
         break;
 
     case TOKEN_FALSE:
-        dst.kind = EXPRESSION_LITERAL_BOOL;
-        dst.as.literal_bool = false;
-        dst.range = token_range(parser->tokens, head);
+        dst->kind = EXPRESSION_LITERAL_BOOL;
+        dst->as.literal_bool = false;
+        dst->range = token_range(parser->tokens, head);
         parser->pos++;
         break;
     case TOKEN_TRUE:
-        dst.kind = EXPRESSION_LITERAL_BOOL;
-        dst.as.literal_bool = true;
-        dst.range = token_range(parser->tokens, head);
+        dst->kind = EXPRESSION_LITERAL_BOOL;
+        dst->as.literal_bool = true;
+        dst->range = token_range(parser->tokens, head);
         parser->pos++;
         break;
 
     default:
         return ERROR;
     }
-    *dst_id = parser->expressions.len;
-    array_buf_push(Expression)(&parser->expressions, dst);
     return SUCCESS;
 }
 
@@ -171,7 +178,7 @@ static Result parse_function(Parser* parser, Function* dst, Range* range) {
     if (!parser_match(parser, TOKEN_DOUBLE_ARROW, NULL)) {
         return ERROR;
     }
-    ExpressionId output;
+    Expression output;
     if (parse_expression(parser, &output) != SUCCESS) {
         return ERROR;
     }
@@ -180,7 +187,7 @@ static Result parse_function(Parser* parser, Function* dst, Range* range) {
         .input = input,
         .explicit_output_type = true,
         .output_type_name = output_type,
-        .output = output,
+        .output = box_expression(parser, output),
     };
     *range = token_range_range(parser->tokens, (Range){ start, end });
     return SUCCESS;
