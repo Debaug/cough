@@ -4,11 +4,16 @@
 
 #include "primitives/primitives.h"
 #include "diagnostics/errno.h"
+#include "collections/array.h"
 
 typedef struct String {
     char const* data;
     usize len;
 } String;
+
+#define STRING_LITERAL(str) ((String){ .data = str, .len = sizeof(str) - 1 })
+
+String string_slice(String string, Range range);
 
 typedef struct StringBuf {
     char* data;

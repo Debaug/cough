@@ -1,16 +1,14 @@
 #include "tokenizer/tokenizer.h"
 #include "parser/parser.h"
+#include "analyzer/analyzer.h"
 
 #include "tests/common.h"
 
 int main(int argc, char const *argv[]) {
-    char const* source_raw = ""
-        "constant_fn :: fn x: Bool -> Bool => true;\n"
+    char const source_raw[] =
+        "constant_fn :: fn _: Bool -> Bool => true;\n"
     ;
-    String source = {
-        .data = source_raw,
-        .len = strlen(source_raw),
-    };
+    String source = STRING_LITERAL(source_raw);
 
     TestReporter reporter = test_reporter_new();
 
@@ -19,6 +17,9 @@ int main(int argc, char const *argv[]) {
     
     Ast ast;
     assert(parse(tokens, &reporter.base, &ast));
+    assert(reporter.error_codes.len == 0);
+
+    assert(analyze(&ast, &reporter.base));
     assert(reporter.error_codes.len == 0);
 
     assert(ast.root.global_constants.len == 1);
@@ -39,6 +40,7 @@ int main(int argc, char const *argv[]) {
                 assert(input.as.variable.type_name.kind == TYPE_NAME_IDENTIFIER);
                 assert(input.as.variable.type_name.range.start == 21);
                 assert(input.as.variable.type_name.range.end == 25);
+                assert(input.as.variable.type == TYPE_BOOL);
             }
             {
                 Expression output = ast.expressions.data[value.as.function.output];

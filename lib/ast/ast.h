@@ -14,7 +14,7 @@ typedef struct Module {
 typedef struct Ast {
     String source;
     TypeRegistry types;
-    ScopeGraph scopes;
+    BindingRegistry bindings;
     ArrayBuf(Expression) expressions;
     Module root;
     AstStorage storage;

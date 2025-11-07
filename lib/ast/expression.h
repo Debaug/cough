@@ -2,17 +2,12 @@
 
 #include "collections/array.h"
 #include "ast/type.h"
+#include "ast/binding_id.h"
 
 typedef struct Identifier {
+    String string;
     Range range;
 } Identifier;
-
-typedef struct BindingId {
-    usize id : sizeof(usize) - 1;
-    bool is_variable : 1;
-} BindingId;
-
-DECL_ARRAY_BUF(BindingId);
 
 typedef enum TypeNameKind {
     TYPE_NAME_IDENTIFIER
@@ -67,18 +62,30 @@ typedef struct Function {
     bool explicit_output_type;
     TypeName output_type_name;
     TypeId output_type;
+    ScopeId output_scope;
     ExpressionId output;
 } Function;
 
 typedef struct VariableRef {
-    Identifier identifier;
+    Identifier name;
     BindingId binding;
 } VariableRef;
+
+typedef enum BinaryOperator {
+    OPERATION_FUNCTION_CALL,
+} BinaryOperator;
+
+typedef struct BinaryOperation {
+    BinaryOperator operator;
+    ExpressionId operand0;
+    ExpressionId operand1;
+} BinaryOperation;
 
 typedef enum ExpressionKind {
     EXPRESSION_VARIABLE,
     EXPRESSION_FUNCTION,
     EXPRESSION_LITERAL_BOOL,
+    EXPRESSION_BINARY_OPERATION,
 } ExpressionKind;
 
 typedef struct Expression {
@@ -87,6 +94,7 @@ typedef struct Expression {
         VariableRef variable;
         Function function;
         bool literal_bool;
+        BinaryOperation binary_operation;
     } as;
     Range range;
     TypeId type;

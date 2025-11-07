@@ -7,6 +7,13 @@
 #include "collections/string.h"
 #include "diagnostics/errno.h"
 
+String string_slice(String string, Range range) {
+    return (String){
+        .data = string.data + range.start,
+        .len = range.end - range.start,
+    };
+}
+
 StringBuf string_buf_new(void) {
     return (StringBuf){ .data = NULL, .len = 0, .capacity = 0 };
 }

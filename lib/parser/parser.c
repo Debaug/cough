@@ -74,7 +74,7 @@ bool parse(
     parse_module(&parser, &module);
     ast_store(&parser.storage, parser.expressions.data);
     *dst = (Ast){
-        .scopes = scope_graph_new(),
+        .bindings = binding_registry_new(),
         .types = type_registry_new(),
         .expressions = parser.expressions,
         .root = module,
@@ -119,7 +119,9 @@ static Result parse_constant(Parser* parser, ConstantDef* dst) {
     *dst = (ConstantDef){
         .name = name,
         .explicitly_typed = false,
+        .type = TYPE_INVALID,
         .value = box_expression(parser, value),
+        .binding = BINDING_ID_INVALID,
     };
     return SUCCESS;
 }
@@ -131,6 +133,7 @@ static Result parse_expression(Parser* parser, Expression* dst) {
     }
     Token head = parser->tokens.tokens.data[parser->pos];
     Result result = SUCCESS;
+    dst->type = TYPE_INVALID;
     switch (head.kind) {
     case TOKEN_FN:
         dst->kind = EXPRESSION_FUNCTION;
@@ -155,7 +158,20 @@ static Result parse_expression(Parser* parser, Expression* dst) {
         parser->pos++;
         break;
 
+    case TOKEN_IDENTIFIER:
+        dst->kind = EXPRESSION_VARIABLE;
+        Identifier name;
+        // can't fail
+        parse_identifier(parser, &name);
+        dst->as.variable = (VariableRef){
+            .name = name,
+            .binding = BINDING_ID_INVALID,
+        };
+        dst->range = name.range;
+        break;
+
     default:
+        // FIXME: report error
         return ERROR;
     }
     return SUCCESS;
@@ -186,6 +202,7 @@ static Result parse_function(Parser* parser, Function* dst, Range* range) {
         .input = input,
         .explicit_output_type = true,
         .output_type_name = output_type,
+        .output_type = TYPE_INVALID,
         .output = box_expression(parser, output),
     };
     *range = token_range_range(parser->tokens, (Range){ start, end });
@@ -212,9 +229,12 @@ static Result parse_pattern(Parser* parser, Pattern* dst) {
             .name = identifier,
             .explicitly_typed = true,
             .type_name = type_name,
+            .type = TYPE_INVALID,
+            .binding = BINDING_ID_INVALID,
         },
         .explicitly_typed = true,
         .type_name = type_name,
+        .type = TYPE_INVALID,
         .range = token_range_range(parser->tokens, (Range){ start, end }),
     };
     return SUCCESS;
@@ -238,8 +258,10 @@ static Result parse_identifier(Parser* parser, Identifier* dst) {
     if (!parser_match(parser, TOKEN_IDENTIFIER, &identifier)) {
         return ERROR;
     }
+    Range range = token_range(parser->tokens, identifier);
     *dst = (Identifier){
-        .range = token_range(parser->tokens, identifier),
+        .string = string_slice(parser->source, range),
+        .range = range,
     };
     return SUCCESS;
 }

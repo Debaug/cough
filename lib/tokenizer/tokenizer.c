@@ -69,6 +69,7 @@ static void tokenize_punctuation(Tokenizer* tokenizer) {
 };
 
 static ExactToken keywords[] = {
+    { .pattern = "let", .kind = TOKEN_LET },
     { .pattern = "fn", .kind = TOKEN_FN },
     { .pattern = "true", .kind = TOKEN_TRUE },
     { .pattern = "false", .kind = TOKEN_FALSE },
@@ -124,7 +125,7 @@ bool tokenize_one(Tokenizer* tokenizer) {
         return false;
     }
     char c = tokenizer->source.data[tokenizer->pos];
-    if (ispunct(c)) {
+    if (ispunct(c) && c != '_') {
         tokenize_punctuation(tokenizer);
     } else if (isalpha(c) || c == '_') {
         tokenize_identifier_or_keyword(tokenizer);

@@ -4,6 +4,7 @@
 #include "collections/hash_map.h"
 
 typedef usize TypeId;
+#define TYPE_INVALID ((TypeId)(-1))
 
 typedef struct FunctionType {
     TypeId input;

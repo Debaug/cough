@@ -19,6 +19,7 @@ typedef enum TokenKind {
 
     TOKEN_IDENTIFIER,
 
+    TOKEN_LET,
     TOKEN_FN,
     TOKEN_FALSE,
     TOKEN_TRUE,

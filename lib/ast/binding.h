@@ -1,68 +1,107 @@
 #pragma once
 
-#include "collections/array.h"
+#include "ast/binding_id.h"
+#include "ast/type.h"
 #include "ast/expression.h"
 
-typedef struct VariableBinding {
+typedef struct TypeBinding {
+    String name;
     TypeId type;
-} VariableBinding;
+} TypeBinding;
 
-typedef struct ConstantBinding {
+typedef struct ValueBinding {
+    String name;
     TypeId type;
-    Expression const* value;
-} ConstantBinding;
+    bool constant;
+} ValueBinding;
 
-typedef struct TypeOrConstantBinding {
-    bool is_type;
-    union {
-        TypeId type;
-        ConstantBinding constant;
-    };
-} TypeOrConstantBinding;
-
-DECL_ARRAY_BUF(VariableBinding)
-DECL_ARRAY_BUF(TypeOrConstantBinding)
+typedef struct ScopeLocation {
+    ScopeId scope_id;
+    usize _pos;
+} ScopeLocation;
 
 typedef enum BindingKind {
     BINDING_TYPE,
-    BINDING_CONSTANT,
-    BINDING_VARIABLE,
+    BINDING_VALUE
 } BindingKind;
 
 typedef struct Binding {
+    BindingId id;
+    ScopeLocation location;
     BindingKind kind;
-    Identifier identifier;
     union {
-        TypeId type;
-        VariableBinding variable;
-        ConstantBinding constant;
+        TypeBinding type;
+        ValueBinding value;
     } as;
 } Binding;
 
-typedef usize ScopeId;
+typedef struct BindingMut {
+    BindingId id;
+    ScopeLocation location;
+    BindingKind kind;
+    union {
+        TypeBinding* type;
+        ValueBinding* value;
+    } as;
+} BindingMut;
 
 typedef struct Scope {
-    ArrayBuf(TypeOrConstantBinding) _types_and_constants;
-    ArrayBuf(VariableBinding) _variables;
+    ScopeLocation _parent; // -1,-1 if no parent
+    ArrayBuf(BindingId) _unordered_bindings;
+    ArrayBuf(BindingId) _sequential_bindings;
 } Scope;
+DECL_ARRAY_BUF(Scope);
 
-DECL_ARRAY_BUF(Scope)
+typedef struct TypeBindingEntry {
+    TypeBinding _data;
+    ScopeLocation _location;
+} TypeBindingEntry;
+DECL_ARRAY_BUF(TypeBindingEntry)
 
-typedef struct ScopeGraph {
+typedef struct ValueBindingEntry {
+    ValueBinding _data;
+    ScopeLocation _location;
+} ValueBindingEntry;
+DECL_ARRAY_BUF(ValueBindingEntry)
+
+typedef struct BindingRegistry {
+    ArrayBuf(TypeBindingEntry) _type_bindings;
+    ArrayBuf(ValueBindingEntry) _value_bindings;
     ArrayBuf(Scope) _scopes;
-} ScopeGraph;
+} BindingRegistry;
 
-ScopeGraph scope_graph_new(void);
-void scope_graph_free(ScopeGraph* graph);
+BindingRegistry binding_registry_new(void);
+void binding_registry_free(BindingRegistry* registry);
 
-typedef struct ScopeNew {
-    Scope* scope;
-    ScopeId id;
-} ScopeNew;
+bool find_binding(
+    BindingRegistry registry,
+    ScopeLocation location,
+    String name,
+    BindingId* dst
+);
 
-ScopeNew scope_new(ScopeGraph* graph);
-Scope const* scope_get(ScopeGraph graph, ScopeId id);
-Scope* scope_get_mut(ScopeGraph* graph, ScopeId);
+ScopeLocation scope_new(BindingRegistry* registry, ScopeLocation parent);
 
-Binding scope_get_binding(Scope const* scope, BindingId id);
-BindingId scope_insert_constant(Scope* scope, Identifier identifier, ConstantBinding constant);
+ScopeLocation scope_end_location(BindingRegistry registry, ScopeId scope);
+
+Binding get_binding(BindingRegistry registry, BindingId id);
+BindingMut get_binding_mut(BindingRegistry* registry, BindingId id);
+
+bool insert_type_binding(
+    BindingRegistry* registry,
+    ScopeId scope,
+    TypeBinding binding,
+    BindingMut* dst
+);
+bool insert_value_binding(
+    BindingRegistry* registry,
+    ScopeId scope,
+    ValueBinding binding,
+    BindingMut* dst
+);
+bool push_value_binding(
+    BindingRegistry* registry,
+    ScopeId scope,
+    ValueBinding binding,
+    BindingMut* dst
+);
