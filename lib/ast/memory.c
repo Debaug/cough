@@ -1,6 +1,6 @@
 #include <string.h>
 
-#include "ast/storage.h"
+#include "ast/memory.h"
 
 IMPL_ARRAY_BUF(Allocation)
 

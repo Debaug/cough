@@ -4,7 +4,7 @@
 #include "ast/type.h"
 #include "ast/binding.h"
 #include "ast/expression.h"
-#include "ast/storage.h"
+#include "ast/memory.h"
 
 typedef struct Module {
     ScopeId global_scope;

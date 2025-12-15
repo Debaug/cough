@@ -5,48 +5,47 @@
 
 int main(int argc, char const *argv[]) {
     char const* assembly[] = {
-        "   res 2",
-        "   sca %0 10",
-        "   sca %1 32",
+        "   res 1",
+        "   sca 10",
+        "   set %0",
+        "   var %0",
+        "   sca 32",
+        "   loc :add",
+        "   cal",
+        "   set %0",
+        "   sys dbg %0",
         "",
-        "   frm 2",
-        "   arg %0",
-        "   arg %1",
-        "   cas :add",
-        "   sys dbg %2",
-        "",
-        "   sca %0 0",
-        "   sys exit %0",
+        "   sca 0",
+        "   sys exit",
         "",
         ":add",
-        "   adu %0 %0 %1",
-        "   ret %0 1"
+        "   adu",
+        "   ret"
     };
     Bytecode bytecode =
         assemble_parts_or_exit(assembly, sizeof(assembly) / sizeof(char*));
 
     Byteword expected[] = {
-            [0] =   OP_RES, 2,
-            [2] =   OP_SCA, 0, [4] = 10, 0, 0, 0,
-            [8] =   OP_SCA, 1, [12] = 32, 0, 0, 0,
+            [0] =   OP_RES, 1,
+            [2] =   OP_SCA, [4] = 10, 0, 0, 0,
+            [8] =   OP_SET, 0,
+            [10] =  OP_VAR, 0,
+            [12] =  OP_SCA, [16] = 32, 0, 0, 0,
+            [20] =  OP_LOC, [24] = 38, 0, 0, 0,
+            [28] =  OP_CAL,
+            [29] =  OP_SET, 0,
+            [31] =  OP_SYS, SYS_DBG, 0,
+            
+            [34] =  OP_SCA, [36] = 0, 0, 0, 0,
+            [40] =  OP_SYS, SYS_EXIT,
 
-            [16] =  OP_FRM, 2,
-            [18] =  OP_ARG, 0,
-            [20] =  OP_ARG, 1,
-            [22] =  OP_CAS, [24] = 43, 0, 0, 0,
-            [28] =  OP_SYS, SYS_DBG, 2,
-
-            [31] =  OP_SCA, 0, [36] = 0, 0, 0, 0,
-            [40] =  OP_SYS,  SYS_EXIT, 0,
-
-        [43] =
-                    OP_ADU, 0, 0, 1,
-            [47] =  OP_RET, 0, 1
+        [42] =
+                    OP_ADU,
+            [43] =  OP_RET
     };
-    usize expected_len = 50;
 
-    assert(bytecode.instructions.len == expected_len);
-    assert(!memcmp(bytecode.instructions.data, expected, expected_len));
+    assert(bytecode.instructions.len == sizeof(expected) / sizeof(Byteword));
+    assert(!memcmp(bytecode.instructions.data, expected, sizeof(expected) / sizeof(Byteword)));
 
     return 0;
 }

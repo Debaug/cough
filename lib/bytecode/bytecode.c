@@ -22,12 +22,12 @@ Word bytecode_read_word(const Byteword** ip) {
     return val;
 }
 
-usize bytecode_read_register_index(const Byteword** ip) {
-    return bytecode_read_byteword(ip);
-}
-
 usize bytecode_read_location(const Byteword** ip) {
     return bytecode_read_word(ip).as_uint;
+}
+
+usize bytecode_read_variable_index(const Byteword** ip) {
+    return bytecode_read_byteword(ip);
 }
 
 void bytecode_write_opcode(Bytecode* bytecode, Opcode opcode) {
@@ -66,17 +66,17 @@ static void bytecode_write_word_at(Byteword** ip, Word word) {
     *ip = (Byteword*)ip_word;
 }
 
-void bytecode_write_register_index(Bytecode* bytecode, usize register_index) {
-    // FIXME: check that the register index fits in a byteword
-    bytecode_write_byteword(bytecode, (Byteword)register_index);
-}
-
 void bytecode_write_location(Bytecode* bytecode, usize symbol) {
     bytecode_write_word(bytecode, (Word){ .as_uint = symbol });
 }
 
 void bytecode_write_location_at(Byteword** ip, usize symbol) {
     bytecode_write_word_at(ip, (Word){ .as_uint = symbol });
+}
+
+void bytecode_write_variable_index(Bytecode* bytecode, usize index) {
+    // FIXME: check that the variable index fits in a byteword
+    bytecode_write_byteword(bytecode, (Byteword)index);
 }
 
 bool eq(Mnemonic)(Mnemonic a, Mnemonic b) {

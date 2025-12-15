@@ -28,9 +28,8 @@ static Result assembler_finish(Assembler* assembler, Bytecode* dst);
 
 static Result parse_imb(Assembler* assembler, EmitArg(imb)* dst);
 static Result parse_imw(Assembler* assembler, EmitArg(imw)* dst);
-static Result parse_preg(Assembler* assembler, EmitArg(preg)* dst);
-static Result parse_reg(Assembler* assembler, EmitArg(reg)* dst);
 static Result parse_loc(Assembler* assembler, EmitArg(loc)* dst);
+static Result parse_var(Assembler* assembler, EmitArg(var)* dst);
 
 static Result parse_symbol_name(
     Assembler* assembler,
@@ -253,7 +252,7 @@ static Result parse_imw(Assembler* assembler, EmitArg(imw)* dst) {
     return SUCCESS;
 }
 
-static Result parse_preg(Assembler* assembler, EmitArg(preg)* dst) {
+static Result parse_var(Assembler* assembler, EmitArg(var)* dst) {
     if (assembler->position == assembler->text.len) {
         invalid_arg(assembler, (Range){
             assembler->position,
@@ -275,10 +274,6 @@ static Result parse_preg(Assembler* assembler, EmitArg(preg)* dst) {
     }
     *dst = index;
     return SUCCESS;
-}
-
-static Result parse_reg(Assembler* assembler, EmitArg(reg)* dst) {
-    return parse_preg(assembler, dst);
 }
 
 static Result parse_loc(Assembler* assembler, EmitArg(loc)* dst) {
@@ -355,14 +350,19 @@ static Result skip_seperator(Assembler* assembler) {
 typedef union Arg {
     EmitArg(imb) as_imb;
     EmitArg(imw) as_imw;
-    EmitArg(preg) as_preg;
-    EmitArg(reg) as_reg;
     EmitArg(loc) as_loc;
+    EmitArg(var) as_var;
 } Arg;
 
 #define PARSE_ARG(idx, kind, ...)                                               \
-    if (skip_seperator(assembler) != SUCCESS) { return ERROR; }                 \
-    if (parse_##kind(assembler, &x##idx.as_##kind) != SUCCESS) { return ERROR; }
+    if (skip_seperator(assembler) != SUCCESS) {                                 \
+        usize pos = assembler->position;                                        \
+        invalid_arg(assembler, (Range){ pos, pos });                            \
+        return ERROR;                                                           \
+    }                                                                           \
+    if (parse_##kind(assembler, &x##idx.as_##kind) != SUCCESS) {                \
+        return ERROR;                                                           \
+    }
 #define EMIT_ARG(idx, kind, ...) , x##idx.as_##kind
 
 static Result assemble_syscall(Assembler* assembler);

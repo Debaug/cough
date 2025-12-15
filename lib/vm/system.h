@@ -10,7 +10,7 @@ typedef struct VmSystemVTable {
     void(*exit)(VmSystem* self, i64 exit_code);
     void(*hi)(VmSystem* self);
     void(*bye)(VmSystem* self);
-    void(*dbg)(VmSystem* self, usize reg_idx, Word reg_val);
+    void(*dbg)(VmSystem* self, usize var_idx, Word var_val);
 } VmSystemVTable;
 
 typedef struct VmSystem {

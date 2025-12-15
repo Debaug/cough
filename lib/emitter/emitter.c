@@ -19,16 +19,14 @@ Emitter emitter_new(void) {
     bytecode_write(imb)(&emitter->_bytecode, x##idx);
 #define IMPL_EMIT_ARG_imw(idx)                                  \
     bytecode_write(imw)(&emitter->_bytecode, x##idx);
-#define IMPL_EMIT_ARG_preg(idx)                                 \
-    bytecode_write(preg)(&emitter->_bytecode, x##idx);
-#define IMPL_EMIT_ARG_reg(idx)                                  \
-    bytecode_write(reg)(&emitter->_bytecode, x##idx);
 #define IMPL_EMIT_ARG_loc(idx)                                  \
     array_buf_push(usize)(                                      \
         &emitter->_symbol_ref_locations,                        \
         emitter->_bytecode.instructions.len                     \
     );                                                          \
     bytecode_write(loc)(&emitter->_bytecode, x##idx);
+#define IMPL_EMIT_ARG_var(idx)                                  \
+    bytecode_write(var)(&emitter->_bytecode, x##idx);
 #define IMPL_EMIT_ARG(idx, kind, ...) IMPL_EMIT_ARG_##kind(idx)
 
 #define IMPL_EMIT(code, mnemo, ...)                             \

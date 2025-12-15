@@ -64,13 +64,13 @@ static void test_vm_system_bye(VmSystem* raw) {
     array_buf_push(SyscallRecord)(&self->syscalls, record);
 }
 
-static void test_vm_system_dbg(VmSystem* raw, usize reg_idx, Word reg_val) {
+static void test_vm_system_dbg(VmSystem* raw, usize var_idx, Word var_val) {
     TestVmSystem* self = (TestVmSystem*)raw;
     SyscallRecord record = {
         .kind = SYS_DBG,
         .as.dbg = {
-            .reg_idx = reg_idx,
-            .reg_val = reg_val,
+            .var_idx = var_idx,
+            .var_val = var_val,
         },
     };
     array_buf_push(SyscallRecord)(&self->syscalls, record);

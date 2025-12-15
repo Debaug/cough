@@ -25,117 +25,81 @@ typedef enum Opcode {
     /// @param syscall The code of the syscall (16-bit immediate).
     OP_SYS,
 
-    /// @brief `frm` -- prepare a new stack frame.
-    ///
-    /// @param argsz The number of 64-bit words reserved for the arguments (16-bit immediate).
-    OP_FRM,
+    // /// @brief `cas` -- static call.
+    // ///
+    // /// @param func the location of the first instruction of the function (64-bit immediate).
+    // /// Is usually a `frm` instruction.
+    // OP_CAS,
 
-    /// @brief `arg` -- specify the next argument.
-    ///
-    /// @param arg the part of the argument (64-bit register).
-    OP_ARG,
+    /// @brief `cal` -- dynamic call.
+    OP_CAL,
 
-    /// @brief `cas` -- static call.
+    /// @brief `res` -- reserve the specified number of 64-bit words as
+    /// additional space of local variables.
     ///
-    /// @param func the location of the first instruction of the function (64-bit immediate).
-    /// Is usually a `frm` instruction.
-    OP_CAS,
-
-    /// @brief `res` -- reserve the specified number of registers as additional stack space.
-    ///
-    /// @param space the number of registers to be added (16-bit immediate).
+    /// @param space the number of words to be added (16-bit immediate).
     OP_RES,
 
     /// @brief `ret` -- return from the current function.
-    ///
-    /// @param val the start of the return value (register).
-    /// @param len the number of registers of the return value (16-bit immediate).
     OP_RET,
 
-    /// @brief `sca` -- load a 64-bit constant into a register.
+    /// @brief `sca` -- push a 64-bit constant to the expression stack.
     ///
-    /// @param dst the destination register (64-bit register).
-    /// @param src the value to be written (64-bit immediate).
+    /// @param val the value to be written (64-bit immediate).
     OP_SCA,
     
-    /// @brief `loc` -- load a location into a register.
+    /// @brief `loc` -- push a location to the expression stack.
     ///
-    /// @param dst the destination register (64-bit register).
-    /// @param src the location to be written (64-bit immediate).
+    /// @param val the location to be written (64-bit immediate).
     OP_LOC,
+
+    /// @brief `var` -- push a 64-bit value from a local variable to the
+    /// expression stack.
+    ///
+    /// @param var the index of the variable.
+    OP_VAR,
+
+    /// @brief `set` -- move the value from the top of the stack to a local
+    /// variable.
+    ///
+    /// @param var the index of the variable.
+    OP_SET,
     
-    /// @brief `loa` -- load a value into a register.
-    ///
-    /// @param dst the destination register (64-bit register).
-    /// @param src the pointer to the source 64-bit value (64-bit register).
-    OP_LOA,
-
-    /// @brief `sto` -- store a value from a register.
-    ///
-    /// @param dst the pointer to the destination memory location (64-bit register).
-    /// @param src the source 64-bit value (64-bit register).
-    OP_STO,
-
-    /// @brief `mov` -- copy the value from a register to another.
-    ///
-    /// @param dst the destination register (64-bit register).
-    /// @param src the source 64-bit value (64-bit register).
-    OP_MOV,
+    /// @brief `pop` -- removes the value at the top of the stack.
+    OP_POP,
 
     /// @brief `jmp` -- jump to the specified memory location.
     ///
     /// @param loc The location of the instruction to jump to.
     OP_JMP,
 
-    /// @brief `jnz` -- jump to the specified memory location a register is non-zero.
+    /// @brief `jnz` -- pops the stack jump to the specified memory location if
+    /// the popped value is non-zero.
     ///
     /// @param loc The location of the instruction to jump to.
-    /// @param reg The register to check.
     OP_JNZ,
 
-    /// @brief `equ` -- check if two `UInt`'s are equal.
-    ///
-    /// Writes `true` to `dst` if `op1 == op2`. Otherwise, writes `false`.
-    ///
-    /// @param dst The destination register (64-bit register).
-    /// @param op1 The first operand register (64-bit register).
-    /// @param op2 The second operand register (64-bit register).
+    /// @brief `equ` -- check if two `UInt`'s are equal. Pops the two values at
+    /// the top of the stack, and pops `1` if they are equal, and `0` otherwise.
     OP_EQU,
 
-    /// @brief `neu` -- check if two `UInt`'s are distinct.
-    ///
-    /// Writes `true` to `dst` if `op1 != op2`. Otherwise, writes `false`.
-    ///
-    /// @param dst The destination register (64-bit register).
-    /// @param op1 The first operand register (64-bit register).
-    /// @param op2 The second operand register (64-bit register).
+    /// @brief `equ` -- check if two `UInt`'s are different. Pops the two
+    /// values at the top of the stack, and pops `1` if they are equal, and `0`
+    /// otherwise.
     OP_NEU,
 
-    /// @brief `geu` -- check if one `UInt` is not less than another.
-    ///
-    /// Writes `true` to `dst` if `op1 >= op2`. Otherwise, writes `false`.
-    ///
-    /// @param dst The destination register (64-bit register).
-    /// @param op1 The first operand register (64-bit register).
-    /// @param op2 The second operand register (64-bit register).
+    /// @brief `equ` -- check if one `UInt` is greater than another. Pops the
+    /// two values at the top of the stack, and pops `1` if the lower one is
+    /// greater or equal to the second one, and `0` otherwise.
     OP_GEU,
 
-    /// @brief `gtu` -- check if two `UInt`'s are equal.
-    ///
-    /// Writes `true` to `dst` if `op1 > op2`. Otherwise, writes `false`.
-    ///
-    /// @param dst The destination register (64-bit register).
-    /// @param op1 The first operand register (64-bit register).
-    /// @param op2 The second operand register (64-bit register).
+    /// @brief `equ` -- check if one `UInt` is greater than another. Pops the
+    /// two values at the top of the stack, and pops `1` if the lower one is
+    /// greater than the second one, and `0` otherwise.
     OP_GTU,
 
-    /// @brief `adu` -- add two `UInt`s together.
-    ///
-    /// This operation currently simply wraps around on overflow.
-    ///
-    /// @param dst the destination register (64-bit register).
-    /// @param op1 the first source operand (64-bit register).
-    /// @param op2 the second source operand (64-bit register).
+    /// @brief `adu` -- add two `UInt`s together. Pops the two values at the
+    /// top of the stack and pushes their sum.
     OP_ADU,
 
     OPCODES_LEN,
@@ -145,16 +109,15 @@ typedef enum Syscall {
     SYS_NOP,
 
     /// @brief `sys exit` -- exit the program with the specified exit code.
-    ///
-    /// @param exit_code the exit code (64-bit register).
     SYS_EXIT,
 
     SYS_HI,
     SYS_BYE,
 
-    /// @brief `sys dbg` -- print the content of a register as a `UInt`.
+    /// @brief `sys dbg` -- print the content of a 64-bit local variable as a
+    /// `UInt`.
     ///
-    /// @param reg the register (64-bit register).
+    /// @param var the variable.
     SYS_DBG,
 
     SYSCALLS_LEN,
@@ -171,22 +134,21 @@ Opcode bytecode_read_opcode(const Byteword** ip);
 Syscall bytecode_read_syscall(const Byteword** ip);
 Byteword bytecode_read_byteword(const Byteword** ip);
 Word bytecode_read_word(const Byteword** ip);
-usize bytecode_read_register_index(const Byteword** ip);
 usize bytecode_read_location(const Byteword** ip);
+usize bytecode_read_variable_index(const Byteword** ip);
 
 #define bytecode_read(kind) bytecode_read_##kind
 #define bytecode_read_sys bytecode_read_syscall
 #define bytecode_read_imb bytecode_read_byteword
 #define bytecode_read_imw bytecode_read_word
-#define bytecode_read_preg bytecode_read_register_index
-#define bytecode_read_reg bytecode_read_register_index
 #define bytecode_read_loc bytecode_read_location
+#define bytecode_read_var bytecode_read_variable_index
 
 void bytecode_write_opcode(Bytecode* bytecode, Opcode opcode);
 void bytecode_write_syscall(Bytecode* bytecode, Syscall syscall);
 void bytecode_write_byteword(Bytecode* bytecode, Byteword byteword);
 void bytecode_write_word(Bytecode* bytecode, Word word);
-void bytecode_write_register_index(Bytecode* bytecode, usize register_index);
+void bytecode_write_variable_index(Bytecode* bytecode, usize variable_index);
 void bytecode_write_location(Bytecode* bytecode, usize symbol);
 void bytecode_write_location_at(Byteword** ip, usize symbol);
 
@@ -194,36 +156,33 @@ void bytecode_write_location_at(Byteword** ip, usize symbol);
 #define bytecode_write_sys bytecode_write_syscall
 #define bytecode_write_imb bytecode_write_byteword
 #define bytecode_write_imw bytecode_write_word
-#define bytecode_write_preg bytecode_write_register_index
-#define bytecode_write_reg bytecode_write_register_index
 #define bytecode_write_loc bytecode_write_location
+#define bytecode_write_var bytecode_write_variable_index
 
-#define FOR_OPERATIONS(proc)            \
-    proc(OP_NOP, nop)                   \
-    proc(OP_FRM, frm, imb)              \
-    proc(OP_ARG, arg, reg)              \
-    proc(OP_CAS, cas, loc)              \
-    proc(OP_RES, res, imb)              \
-    proc(OP_RET, ret, preg, imb)        \
-    proc(OP_SCA, sca, preg, imw)        \
-    proc(OP_LOC, loc, preg, loc)        \
-    proc(OP_LOA, loa, preg, reg)        \
-    proc(OP_STO, sto, reg, reg)         \
-    proc(OP_MOV, mov, preg, reg)        \
-    proc(OP_JMP, jmp, loc)              \
-    proc(OP_JNZ, jnz, loc, reg)         \
-    proc(OP_EQU, equ, preg, reg, reg)   \
-    proc(OP_NEU, neu, preg, reg, reg)   \
-    proc(OP_GEU, geu, preg, reg, reg)   \
-    proc(OP_GTU, gtu, preg, reg, reg)   \
-    proc(OP_ADU, adu, preg, reg, reg)   \
+#define FOR_OPERATIONS(proc)    \
+    proc(OP_NOP, nop)           \
+    proc(OP_CAL, cal)           \
+    proc(OP_RES, res, imb)      \
+    proc(OP_RET, ret)           \
+    proc(OP_SCA, sca, imw)      \
+    proc(OP_LOC, loc, loc)      \
+    proc(OP_VAR, var, var)      \
+    proc(OP_SET, set, var)      \
+    proc(OP_POP, pop)           \
+    proc(OP_JMP, jmp, loc)      \
+    proc(OP_JNZ, jnz, loc)      \
+    proc(OP_EQU, equ)           \
+    proc(OP_NEU, neu)           \
+    proc(OP_GEU, geu)           \
+    proc(OP_GTU, gtu)           \
+    proc(OP_ADU, adu)           \
 
 #define FOR_SYSCALLS(proc)      \
     proc(SYS_NOP, nop)          \
-    proc(SYS_EXIT, exit, reg)   \
+    proc(SYS_EXIT, exit)        \
     proc(SYS_HI, hi)            \
     proc(SYS_BYE, bye)          \
-    proc(SYS_DBG, dbg, preg)    \
+    proc(SYS_DBG, dbg, var)     \
 
 #define FOR_ALL(proc, ...)      \
     __VA_OPT__(FOR_ALL1(proc, __VA_ARGS__))

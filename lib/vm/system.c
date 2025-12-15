@@ -16,14 +16,14 @@ static void sys_hi(VmSystem* self) {
     eprintf("[sys hi]   Cough says hi!\n");
 }
 
-void sys_bye(VmSystem* self) {
+static void sys_bye(VmSystem* self) {
     eprintf("[sys bye]  Cough says bye!\n");
 }
 
-void sys_dbg(VmSystem* self, usize reg_idx, Word reg_val) {
+static void sys_dbg(VmSystem* self, usize var_idx, Word var_val) {
     eprintf(
         "[sys dbg]  %zu: %" PRIu64 " (0x%" PRIx64 ")\n",
-        reg_idx, reg_val.as_uint, reg_val.as_uint
+        var_idx, var_val.as_uint, var_val.as_uint
     );
 }
 

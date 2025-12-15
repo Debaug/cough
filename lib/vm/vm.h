@@ -4,34 +4,32 @@
 #include "vm/system.h"
 #include "diagnostics/report.h"
 
-typedef struct VmStack {
+typedef struct VmValueStack {
     Word* data;
-    Word* fp;
-    Word* sp;
-    Word* ap;
-    usize capacity;
-} VmStack;
+    Word* top;
+    usize capacity; // in words
+} VmValueStack;
 
-VmStack vm_stack_new(void);
-void vm_stack_free(VmStack* stack);
+typedef struct VmFrame {
+    Byteword const* return_ip;
+    usize return_local_variables; // offset in bytes
+    // local variables go here
+} VmFrame;
 
-/// @brief
-/// @param stack the stack.
-/// @param additional additional registers (counted from `sp`).
-void vm_stack_reserve(VmStack* stack, usize additional_registers);
-
-typedef struct VmComparison {
-    bool eq;
-    bool gt;
-} VmComparison;
+typedef struct VmFrameStack {
+    void* data;
+    void* top;
+    Word* local_variables;  // points to the variable 0 (after the frame metadata)
+    usize capacity;         // in bytes
+} VmFrameStack;
 
 typedef struct Vm {
     VmSystem* system;
     Reporter* reporter;
     Bytecode bytecode;
-    const Byteword* ip;
-    VmStack stack;
-    VmComparison comparison;
+    Byteword const* ip;
+    VmValueStack value_stack;
+    VmFrameStack frames;
 } Vm;
 
 // the VM is not responsible for destroying the bytecode

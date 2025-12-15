@@ -22,9 +22,8 @@ bool emit_symbol_location(Emitter* emitter, SymbolIndex symbol_index);
 #define EmitArg(kind) EmitArg_##kind
 typedef Byteword    EmitArg(imb);
 typedef Word        EmitArg(imw);
-typedef usize       EmitArg(preg);
-typedef usize       EmitArg(reg);
 typedef SymbolIndex EmitArg(loc);
+typedef usize       EmitArg(var);
 
 #define DECL_EMIT_ARG(idx, kind, ...)                       \
     EmitArg(kind) x##idx __VA_OPT__(,)

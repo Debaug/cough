@@ -2,26 +2,28 @@
 
 int main(int argc, const char* argv[]) {
     char const* assembly[] = {
-        "   frm 0",
-        "   cas :foo",
-        "   sys exit %0",
+        "   loc :foo",
+        "   cal",
+        "   sys exit",
         "",
         ":foo",
         "   res 1",
-        "   sca %0 21",
         "   sys hi",
-        "   frm 1",
-        "   arg %0",
-        "   cas :bar",
-        "   sys dbg %1",
-        "   sca %0 -1",
-        "   ret %0 1"
+        "   sca 21",
+        "   loc :bar",
+        "   cal",
+        "   set %0",
+        "   sys dbg %0",
+        "   sca -1",
+        "   ret",
         "",
         ":bar",
         "   res 1",
-        "   mov %1 %0",
-        "   adu %0 %0 %1",
-        "   ret %0 1"
+        "   set %0",
+        "   var %0",
+        "   var %0",
+        "   adu",
+        "   ret",
     };
     Bytecode bytecode = assemble_parts_or_exit(assembly, sizeof(assembly) / sizeof(char*));
 
@@ -36,8 +38,8 @@ int main(int argc, const char* argv[]) {
     assert(vm_system.syscalls.data[0].kind == SYS_HI);
 
     assert(vm_system.syscalls.data[1].kind == SYS_DBG);
-    assert(vm_system.syscalls.data[1].as.dbg.reg_idx == 1);
-    assert(vm_system.syscalls.data[1].as.dbg.reg_val.as_uint == 42);
+    assert(vm_system.syscalls.data[1].as.dbg.var_idx == 0);
+    assert(vm_system.syscalls.data[1].as.dbg.var_val.as_uint == 42);
 
     assert(vm_system.syscalls.data[2].kind == SYS_EXIT);
     assert(vm_system.syscalls.data[2].as.exit.exit_code == -1);

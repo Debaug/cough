@@ -1,57 +1,76 @@
 #include <stdio.h>
 #include <inttypes.h>
 #include <assert.h>
+#include <string.h>
 
 #include "alloc/alloc.h"
 #include "vm/vm.h"
 #include "vm/diagnostics.h"
 
-VmStack vm_stack_new(void) {
-    Word* data = malloc_or_exit(8 * sizeof(Word));
-    return (VmStack){
-        .data = data,
-        .fp = data,
-        .sp = data,
-        .ap = data,
+Vm vm_new(VmSystem* system, Bytecode bytecode, Reporter* reporter) {
+    Word* value_stack_data = malloc_or_exit(8 * sizeof(Word));
+    VmValueStack value_stack = {
+        .data = value_stack_data,
+        .top = value_stack_data,
         .capacity = 8,
     };
-}
 
-void vm_stack_free(VmStack* stack) {
-    free(stack->data);
-}
+    VmFrame* frame_data = malloc_or_exit(64);
+    VmFrameStack frames = {
+        .data = frame_data,
+        .top = frame_data,
+        .local_variables = frame_data,
+        .capacity = 64,
+    };
 
-void vm_stack_reserve(VmStack* stack, usize additional_registers) {
-    usize size = stack->sp - stack->data;
-    usize min_new_capacity = size + additional_registers;
-    if (stack->capacity >= min_new_capacity) return;
-
-    usize multiplied_capacity = 1.5 * stack->capacity;
-    usize new_capacity = (multiplied_capacity > min_new_capacity) ? multiplied_capacity : min_new_capacity;
-
-    usize fp_offset = stack->fp - stack->data;
-    usize sp_offset = stack->sp - stack->data;
-    usize ap_offset = stack->ap - stack->data;
-
-    stack->data = realloc_or_exit(stack->data, new_capacity * sizeof(Word));
-
-    stack->fp = stack->data + fp_offset;
-    stack->sp = stack->data + sp_offset;
-    stack->ap = stack->data + ap_offset;
-}
-
-Vm vm_new(VmSystem* system, Bytecode bytecode, Reporter* reporter) {
     return (Vm){
         .system = system,
         .reporter = reporter,
         .bytecode = bytecode,
         .ip = bytecode.instructions.data,
-        .stack = vm_stack_new(),
+        .value_stack = value_stack,
+        .frames = frames,
     };
 }
 
 void vm_free(Vm* vm) {
-    vm_stack_free(&vm->stack);
+    free(vm->value_stack.data);
+    free(vm->frames.data);
+}
+
+static void push(Vm* vm, Word value) {
+    VmValueStack stack = vm->value_stack;
+    usize len = stack.top - stack.data;
+    if (len == stack.capacity) {
+        stack.capacity *= 2;
+        stack.data = realloc_or_exit(stack.data, stack.capacity * sizeof(Word));
+        stack.top = stack.data + len;
+        vm->value_stack = stack;
+    }
+    *(vm->value_stack.top++) = value;
+}
+
+static Word pop(Vm* vm) {
+    return *(--vm->value_stack.top);
+}
+
+// reserves `size` bytes after `vm->stack.local_variables`.
+static void* frames_alloc(Vm* vm, usize size) {
+    VmFrameStack frames = vm->frames;
+    usize len = frames.top - frames.data;
+    usize min_capacity = len + size;
+    if (frames.capacity >= min_capacity) {
+        vm->frames.top += size;
+        return frames.top;
+    }
+    usize new_capacity = (2 * frames.capacity >= min_capacity) ? 2 * frames.capacity : min_capacity;
+    usize var_offset = (void*)frames.local_variables - frames.data;
+    frames.data = realloc_or_exit(frames.data, frames.capacity);
+    frames.top = frames.data + len + size;
+    frames.local_variables = frames.data + var_offset;
+    frames.capacity = new_capacity;
+    vm->frames = frames;
+    return frames.data + len;
 }
 
 typedef enum ControlFlow {
@@ -64,9 +83,8 @@ static ControlFlow run_one(Vm* vm);
 #define Arg(mnemo) Arg_##mnemo
 typedef Byteword    Arg(imb);
 typedef Word        Arg(imw);
-typedef Word*       Arg(preg);
-typedef Word        Arg(reg);
 typedef usize       Arg(loc);
+typedef usize       Arg(var);
 
 #define DECL_ARG(idx, mnemo, ...) , Arg(mnemo) x##idx
 
@@ -92,24 +110,6 @@ void vm_run(Vm* vm) {
     }
 }
 
-typedef struct VmFrameCapture {
-    const Byteword* ip;
-    u64 fp_offset;
-} VmFrameCapture;
-#define VM_FRAME_CAPTURE_REGISTERS (sizeof(VmFrameCapture) / sizeof(Word))
-
-static VmFrameCapture vm_capture_frame(Vm vm) {
-    return (VmFrameCapture){
-        .ip = vm.ip,
-        .fp_offset = vm.stack.fp - vm.stack.data,
-    };
-}
-
-static void vm_restore_frame_capture(Vm* vm, VmFrameCapture capture) {
-    vm->ip = capture.ip;
-    vm->stack.fp = vm->stack.data + capture.fp_offset;
-}
-
 static Opcode fetch_op(Vm* vm) {
     return bytecode_read_opcode(&vm->ip);
 }
@@ -126,16 +126,12 @@ static Word fetch_imw(Vm* vm) {
     return bytecode_read_word(&vm->ip);
 }
 
-static Word* fetch_preg(Vm* vm) {
-    return vm->stack.fp + fetch_imb(vm);
-}
-
-static Word fetch_reg(Vm* vm) {
-    return *fetch_preg(vm);
-}
-
 static usize fetch_loc(Vm* vm) {
     return bytecode_read_location(&vm->ip);
+}
+
+static usize fetch_var(Vm* vm) {
+    return bytecode_read_variable_index(&vm->ip);
 }
 
 static ControlFlow run_one(Vm* vm) {
@@ -177,72 +173,54 @@ static ControlFlow op_nop(Vm* vm) {
     return FLOW_CONTINUE;
 }
 
-static ControlFlow op_frm(Vm* vm, Byteword nargs) {
-    vm_stack_reserve(&vm->stack, VM_FRAME_CAPTURE_REGISTERS + nargs);
-
-    VmFrameCapture capture = vm_capture_frame(*vm);
-    *((VmFrameCapture*)vm->stack.sp) = capture;
-    vm->stack.ap = vm->stack.sp + VM_FRAME_CAPTURE_REGISTERS;
-
-    return FLOW_CONTINUE;
-}
-
-static ControlFlow op_arg(Vm* vm, Word val) {
-    *(vm->stack.ap++) = val;
-    return FLOW_CONTINUE;
-}
-
-static ControlFlow op_cas(Vm* vm, usize func) {
-    VmFrameCapture* capture = (VmFrameCapture*)vm->stack.sp;
-    capture->ip = vm->ip;
-
-    vm->ip = vm->bytecode.instructions.data + func;
-    vm->stack.fp = vm->stack.sp + VM_FRAME_CAPTURE_REGISTERS;
-    vm->stack.sp = vm->stack.ap;
+static ControlFlow op_cal(Vm* vm) {
+    usize loc = pop(vm).as_uint;
+    VmFrame frame = {
+        .return_ip = vm->ip,
+        .return_local_variables = (void*)vm->frames.local_variables - vm->frames.data,
+    };
+    *(VmFrame*)frames_alloc(vm, sizeof(frame)) = frame;
+    vm->frames.local_variables = vm->frames.top;
+    vm->ip = vm->bytecode.instructions.data + loc;
     return FLOW_CONTINUE;
 }
 
 static ControlFlow op_res(Vm* vm, Byteword nregs) {
-    vm_stack_reserve(&vm->stack, nregs);
-    vm->stack.sp += nregs;
+    Word* local_variables = frames_alloc(vm, nregs * sizeof(Word));
+    memset(local_variables, 0, nregs * sizeof(Word));
     return FLOW_CONTINUE;
 }
 
-static ControlFlow op_ret(Vm* vm, Word* start, Byteword len) {
-    VmFrameCapture* capture = (VmFrameCapture*)(vm->stack.fp - VM_FRAME_CAPTURE_REGISTERS);
-    vm_restore_frame_capture(vm, *capture);
-    vm->stack.sp = (Word*)capture;
-
-    // correct as sp < value: value[..] won't be overwritten.
-    for (size_t i = 0; i < len; i++) {
-        vm->stack.sp[i] = start[i];
-    }
-
+static ControlFlow op_ret(Vm* vm) {
+    VmFrame* frame = (VmFrame*)vm->frames.local_variables - 1;
+    vm->frames.top = (void*)frame;
+    vm->frames.local_variables = (Word*)(vm->frames.data + frame->return_local_variables);
+    vm->ip = frame->return_ip;
     return FLOW_CONTINUE;
 }
 
-static ControlFlow op_sca(Vm* vm, Word* dst, Word val) {
-    *dst = val;
+static ControlFlow op_sca(Vm* vm, Word val) {
+    push(vm, val);
     return FLOW_CONTINUE;
 }
 
-static ControlFlow op_loc(Vm* vm, Word* dst, usize val) {
-    dst->as_uint = val;
+static ControlFlow op_loc(Vm* vm, usize val) {
+    push(vm, (Word){ .as_uint = val });
     return FLOW_CONTINUE;
 }
 
-static ControlFlow op_loa(Vm* vm, Word* dst, Word src) {
-    *dst = *(const Word*)src.as_ptr;
+static ControlFlow op_var(Vm* vm, usize var_index) {
+    push(vm, vm->frames.local_variables[var_index]);
     return FLOW_CONTINUE;
 }
 
-static ControlFlow op_sto(Vm* vm, Word dst, Word src) {
-    *(Word*)dst.as_mut_ptr = src;
+static ControlFlow op_set(Vm* vm, usize var_index) {
+    vm->frames.local_variables[var_index] = pop(vm);
     return FLOW_CONTINUE;
 }
 
-static ControlFlow op_mov(Vm* vm, Word* dst, Word src) {
-    *dst = src;
+static ControlFlow op_pop(Vm* vm) {
+    pop(vm);
     return FLOW_CONTINUE;
 }
 
@@ -251,35 +229,31 @@ static ControlFlow op_jmp(Vm* vm, usize dst) {
     return FLOW_CONTINUE;
 }
 
-static ControlFlow op_jnz(Vm* vm, usize dst, Word test) {
-    if (test.as_uint != 0) {
+static ControlFlow op_jnz(Vm* vm, usize dst) {
+    if (pop(vm).as_uint != 0) {
         vm->ip = vm->bytecode.instructions.data + dst;
     }
     return FLOW_CONTINUE;
 }
 
-static ControlFlow op_equ(Vm* vm, Word* dst, Word op1, Word op2) {
-    dst->as_uint = op1.as_uint == op2.as_uint;
-    return FLOW_CONTINUE;
-}
+// LHS is upper value, RHS is lower value
+#define IMPL_OP_COMPARE(mnemo, type, op)                        \
+    static ControlFlow op_##mnemo(Vm* vm) {                     \
+        push(vm, (Word){                                        \
+            .as_uint = pop(vm).as_##type op pop(vm).as_##type   \
+        });                                                     \
+        return FLOW_CONTINUE;                                   \
+    }
 
-static ControlFlow op_neu(Vm* vm, Word* dst, Word op1, Word op2) {
-    dst->as_uint = op1.as_uint != op2.as_uint;
-    return FLOW_CONTINUE;
-}
+IMPL_OP_COMPARE(equ, uint, ==);
+IMPL_OP_COMPARE(neu, uint, !=);
+IMPL_OP_COMPARE(geu, uint, <=);
+IMPL_OP_COMPARE(gtu, uint, <);
 
-static ControlFlow op_geu(Vm* vm, Word* dst, Word op1, Word op2) {
-    dst->as_uint = op1.as_uint >= op2.as_uint;
-    return FLOW_CONTINUE;
-}
-
-static ControlFlow op_gtu(Vm* vm, Word* dst, Word op1, Word op2) {
-    dst->as_uint = op1.as_uint > op2.as_uint;
-    return FLOW_CONTINUE;
-}
-
-static ControlFlow op_adu(Vm* vm, Word* dst, Word op1, Word op2) {
-    dst->as_uint = op1.as_uint + op2.as_uint;
+static ControlFlow op_adu(Vm* vm) {
+    push(vm, (Word){
+        .as_uint = pop(vm).as_uint + pop(vm).as_uint
+    });
     return FLOW_CONTINUE;
 }
 static ControlFlow sys_nop(Vm* vm) {
@@ -287,8 +261,8 @@ static ControlFlow sys_nop(Vm* vm) {
     return FLOW_CONTINUE;
 }
 
-static ControlFlow sys_exit(Vm* vm, Word exit_code) {
-    (vm->system)->vtable->exit(vm->system, exit_code.as_int);
+static ControlFlow sys_exit(Vm* vm) {
+    (vm->system)->vtable->exit(vm->system, pop(vm).as_int);
     return FLOW_EXIT;
 }
 
@@ -302,8 +276,8 @@ static ControlFlow sys_bye(Vm* vm) {
     return FLOW_CONTINUE;
 }
 
-static ControlFlow sys_dbg(Vm* vm, Word* reg) {
-    usize idx = reg - vm->stack.fp;
-    (vm->system)->vtable->dbg(vm->system, idx, *reg);
+static ControlFlow sys_dbg(Vm* vm, usize var_index) {
+    Word val = vm->frames.local_variables[var_index];
+    (vm->system)->vtable->dbg(vm->system, var_index, val);
     return FLOW_CONTINUE;
 }

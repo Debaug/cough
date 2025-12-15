@@ -24,8 +24,8 @@ typedef struct SyscallRecord {
             i64 exit_code;
         } exit;
         struct {
-            usize reg_idx;
-            Word reg_val;
+            usize var_idx;
+            Word var_val;
         } dbg;
     } as;
 } SyscallRecord;

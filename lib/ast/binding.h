@@ -3,6 +3,7 @@
 #include "ast/binding_id.h"
 #include "ast/type.h"
 #include "ast/expression.h"
+// #include "ast/value.h"
 
 typedef struct TypeBinding {
     String name;
@@ -12,6 +13,7 @@ typedef struct TypeBinding {
 typedef struct ValueBinding {
     String name;
     TypeId type;
+    // ValueId value_id;
     bool constant;
 } ValueBinding;
 
