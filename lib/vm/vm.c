@@ -15,7 +15,7 @@ Vm vm_new(VmSystem* system, Bytecode bytecode, Reporter* reporter) {
         .capacity = 8,
     };
 
-    VmFrame* frame_data = malloc_or_exit(64);
+    void* frame_data = malloc_or_exit(64);
     VmFrameStack frames = {
         .data = frame_data,
         .top = frame_data,
