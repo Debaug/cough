@@ -8,19 +8,7 @@ int main(int argc, char const *argv[]) {
     char const source_raw[] =
         "constant_fn :: fn _: Bool -> Bool => true;\n"
     ;
-    String source = STRING_LITERAL(source_raw);
-
-    TestReporter reporter = test_reporter_new();
-
-    TokenStream tokens;
-    assert(tokenize(source, &reporter.base, &tokens));
-    
-    Ast ast;
-    assert(parse(tokens, &reporter.base, &ast));
-    assert(reporter.error_codes.len == 0);
-
-    assert(analyze(&ast, &reporter.base));
-    assert(reporter.error_codes.len == 0);
+    Ast ast = source_to_ast(STRING_LITERAL(source_raw));
 
     assert(ast.root.global_constants.len == 1);
     {

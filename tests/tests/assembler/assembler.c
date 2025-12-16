@@ -23,7 +23,7 @@ int main(int argc, char const *argv[]) {
         "   ret"
     };
     Bytecode bytecode =
-        assemble_parts_or_exit(assembly, sizeof(assembly) / sizeof(char*));
+        assembly_to_bytecode(assembly, sizeof(assembly) / sizeof(char*));
 
     Byteword expected[] = {
             [0] =   OP_RES, 1,

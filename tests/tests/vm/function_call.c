@@ -25,7 +25,7 @@ int main(int argc, const char* argv[]) {
         "   adu",
         "   ret",
     };
-    Bytecode bytecode = assemble_parts_or_exit(assembly, sizeof(assembly) / sizeof(char*));
+    Bytecode bytecode = assembly_to_bytecode(assembly, sizeof(assembly) / sizeof(char*));
 
     TestVmSystem vm_system = test_vm_system_new();
     TestReporter reporter = test_reporter_new();

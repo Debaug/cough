@@ -63,8 +63,8 @@ static bool find_binding_in_scope(
         Binding binding = get_binding(registry, id);
         String binding_name;
         switch (binding.kind) {
-        case BINDING_TYPE: name = binding.as.type.name; break;
-        case BINDING_VALUE: name = binding.as.value.name; break;
+        case BINDING_TYPE: binding_name = binding.as.type.name; break;
+        case BINDING_VALUE: binding_name = binding.as.value.name; break;
         }
         if (eq(String)(name, binding_name)) {
             *dst = id;
@@ -248,15 +248,14 @@ bool insert_value_binding(
 
 bool push_value_binding(
     BindingRegistry* registry,
-    ScopeId scope,
+    ScopeLocation* location,
     ValueBinding binding,
     BindingMut* dst
 ) {
     BindingMut slot;
-    ScopeLocation location = { .scope_id = scope, ._pos = -1 };
     if (!alloc_binding_entry(
         registry,
-        location,
+        *location,
         binding.name,
         true,
         BINDING_VALUE,
@@ -266,5 +265,6 @@ bool push_value_binding(
     }
     *slot.as.value = binding;
     if (dst) *dst = slot;
+    location->_pos++;
     return true;
 }

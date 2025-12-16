@@ -1,22 +1,10 @@
-#include "tokenizer/tokenizer.h"
-#include "parser/parser.h"
-#include "analyzer/analyzer.h"
-
 #include "tests/common.h"
 
 int main(int argc, char const *argv[]) {
-    char const source_raw[] = 
+    char const source[] = 
         "identity :: fn x: Bool -> Bool => x;\n"
     ;
-    String source = STRING_LITERAL(source_raw);
-
-    TestReporter reporter = test_reporter_new();
-
-    TokenStream tokens;
-    assert(tokenize(source, &reporter.base, &tokens));
-    Ast ast;
-    assert(parse(tokens, &reporter.base, &ast));
-    assert(analyze(&ast, &reporter.base));
+    Ast ast = source_to_ast(STRING_LITERAL(source));
 
     // we don't check everything -- a more thorough test is conducted
     // by `ast/constant_fn`.
@@ -40,7 +28,12 @@ int main(int argc, char const *argv[]) {
     assert(x_binding.kind == BINDING_VALUE);
     assert(eq(String)(x_binding.as.value.name, STRING_LITERAL("x")));
     assert(x_binding.as.value.type == TYPE_BOOL);
-    assert(!x_binding.as.value.constant);
+    assert(x_binding.as.value.store.kind == VALUE_STORE_VARIABLE);
+
+    Expression output = ast.expressions.data[identity.output];
+    assert(output.kind == EXPRESSION_VARIABLE);
+    assert(eq(String)(output.as.variable.name.string, STRING_LITERAL("x")));
+    assert(output.as.variable.binding == x_binding_id);
 
     return 0;
 }

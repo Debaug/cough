@@ -8,6 +8,7 @@ typedef struct Analyzer {
     BindingRegistry* bindings;
     ScopeLocation scope_location;
     Expression* expressions;
+    usize* function_variable_space;
     AstStorage* storage;
 } Analyzer;
 
@@ -19,6 +20,7 @@ static Analyzer with_scope_location(Analyzer analyzer, ScopeLocation scope_locat
         .bindings = analyzer.bindings,
         .scope_location = scope_location,
         .expressions = analyzer.expressions,
+        .function_variable_space = analyzer.function_variable_space,
         .storage = analyzer.storage,
     };
 }
@@ -49,6 +51,7 @@ bool analyze(Ast* ast, Reporter* reporter) {
         .bindings = &ast->bindings,
         .scope_location = scope_end_location(ast->bindings, ROOT_SCOPE_ID),
         .expressions = ast->expressions.data,
+        .function_variable_space = NULL,
         .storage = &ast->storage,
     };
 
@@ -61,15 +64,16 @@ static void analyze_module(Analyzer* parent, Module* module) {
     module->global_scope = global_scope.scope_id;
     Analyzer analyzer = with_scope_location(*parent, global_scope);
     for (usize i = 0; i < module->global_constants.len; i++) {
-        ConstantDef* constant_def = module->global_constants.data + i;
+        ConstantDef* constant_def = &module->global_constants.data[i];
         register_constant_def(&analyzer, constant_def);
     }
     for (usize i = 0; i < module->global_constants.len; i++) {
-        ConstantDef* constant_def = module->global_constants.data + i;
+        ConstantDef* constant_def = &module->global_constants.data[i];
         type_constant_def(&analyzer, constant_def);
     }
     for (usize i = 0; i < module->global_constants.len; i++) {
-
+        ConstantDef* constant_def = &module->global_constants.data[i];
+        analyze_constant_def(&analyzer, constant_def);
     }
     return;
 }
@@ -78,7 +82,10 @@ static void register_constant_def(Analyzer* analyzer, ConstantDef* constant_def)
     ValueBinding binding = {
         .name = constant_def->name.string,
         .type = TYPE_INVALID,
-        .constant = true,
+        .store = {
+            .kind = VALUE_STORE_CONSTANT,
+            .as.constant = constant_def->value,
+        },
     };
     BindingMut slot;
     if (!insert_value_binding(
@@ -148,6 +155,7 @@ static void analyze_function_signature(Analyzer* analyzer, Function* function) {
         scope_new(analyzer->bindings, analyzer->scope_location);
     Analyzer function_analyzer =
         with_scope_location(*analyzer, output_scope);
+    function_analyzer.function_variable_space = &function->variable_space;
     analyze_pattern(&function_analyzer, &function->input);
 
     if (!function->explicit_output_type) {
@@ -157,17 +165,21 @@ static void analyze_function_signature(Analyzer* analyzer, Function* function) {
     resolve_type(analyzer, function->output_type_name, &function->output_type);
 }
 
-static void analyze_pattern(Analyzer* analyzer, Pattern* pattern) {
+static void analyze_pattern(Analyzer* parent, Pattern* pattern) {
+    ScopeLocation scope = scope_new(parent->bindings, parent->scope_location);
+    pattern->scope = scope.scope_id;
+    Analyzer analyzer = with_scope_location(*parent, scope);
+
     TypeId inner_type = TYPE_INVALID;
     switch (pattern->kind) {
     case PATTERN_VARIABLE:
-        analyze_variable_def(analyzer, &pattern->as.variable);
+        analyze_variable_def(&analyzer, &pattern->as.variable);
         inner_type = pattern->as.variable.type;
         break;
     }
 
     if (pattern->explicitly_typed) {
-        resolve_type(analyzer, pattern->type_name, &pattern->type);
+        resolve_type(&analyzer, pattern->type_name, &pattern->type);
     } else {
         pattern->type = inner_type;
     }
@@ -192,17 +204,22 @@ static void analyze_variable_def(Analyzer* analyzer, VariableDef* variable_def) 
     ValueBinding binding = {
         .name = variable_def->name.string,
         .type = variable_def->type,
-        .constant = false,
+        .store = {
+            .kind = VALUE_STORE_VARIABLE,
+            .as.variable_index = (*analyzer->function_variable_space)++,
+        },
     };
     BindingMut binding_entry;
-    if (!push_value_binding(analyzer->bindings,
-        analyzer->scope_location.scope_id,
+    if (!push_value_binding(
+        analyzer->bindings,
+        &analyzer->scope_location,
         binding,
         &binding_entry
     )) {
         // TODO: error handling
         return;
     }
+    analyzer->scope_location._pos++;
     variable_def->binding = binding_entry.id;
 }
 
@@ -227,10 +244,6 @@ static void analyze_expression(Analyzer* analyzer, Expression* expression) {
 
     case EXPRESSION_LITERAL_BOOL:
         break;
-
-    case EXPRESSION_BINARY_OPERATION:
-        exit(-1);
-        return;
     }
 }
 
@@ -255,8 +268,13 @@ static void analyze_variable_ref(Analyzer* analyzer, VariableRef* variable_ref) 
 }
 
 static void analyze_function_body(Analyzer* parent, Function* function) {
-    ScopeLocation scope = scope_end_location(*parent->bindings, function->output_scope);
+    ScopeLocation scope = scope_new(
+        parent->bindings,
+        scope_end_location(*parent->bindings, function->input.scope)
+    );
+    function->output_scope = scope.scope_id;
     Analyzer analyzer = with_scope_location(*parent, scope);
+    analyzer.function_variable_space = &function->variable_space;
     Expression* output = &analyzer.expressions[function->output];
     analyze_expression(&analyzer, output);
     if (output->type != function->output_type) {

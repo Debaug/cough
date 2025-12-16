@@ -3,18 +3,29 @@
 #include "ast/binding_id.h"
 #include "ast/type.h"
 #include "ast/expression.h"
-// #include "ast/value.h"
 
 typedef struct TypeBinding {
     String name;
     TypeId type;
 } TypeBinding;
 
+typedef enum ValueStoreKind {
+    VALUE_STORE_CONSTANT,
+    VALUE_STORE_VARIABLE,
+} ValueStoreKind;
+
+typedef struct ValueStore {
+    ValueStoreKind kind;
+    union {
+        ExpressionId constant;
+        usize variable_index;
+    } as;
+} ValueStore;
+
 typedef struct ValueBinding {
     String name;
     TypeId type;
-    // ValueId value_id;
-    bool constant;
+    ValueStore store;
 } ValueBinding;
 
 typedef struct ScopeLocation {
@@ -103,7 +114,7 @@ bool insert_value_binding(
 );
 bool push_value_binding(
     BindingRegistry* registry,
-    ScopeId scope,
+    ScopeLocation* scope,
     ValueBinding binding,
     BindingMut* dst
 );

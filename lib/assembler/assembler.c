@@ -3,7 +3,6 @@
 #include "assembler/assembler.h"
 #include "collections/hash_map.h"
 #include "emitter/emitter.h"
-#include "diagnostics/crashing.h"
 
 DECL_HASH_MAP(Mnemonic, u8)
 IMPL_HASH_MAP(Mnemonic, u8)
@@ -502,22 +501,4 @@ static void undefined_symbol(Assembler* assembler) {
     report_start(reporter, SEVERITY_ERROR, 5);
     report_message(reporter, format("undefined symbol"));
     report_end(reporter);
-}
-
-Bytecode assemble_parts_or_exit(char const** parts, usize count) {
-    StringBuf text = string_buf_new();
-    for (usize i = 0; i < count; i++) {
-        string_buf_extend(&text, parts[i]);
-        string_buf_push(&text, '\n');
-    }
-    SourceText source = source_text_new(NULL, text.data);
-    CrashingReporter reporter = crashing_reporter_new(source);
-    Bytecode bytecode;
-    // we can ignore the result as we crash on error.
-    assemble(
-        (String){ .data = text.data, .len = text.len },
-        &reporter.base,
-        &bytecode
-    );
-    return bytecode;
 }

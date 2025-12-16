@@ -1,5 +1,7 @@
 #include "tests/common.h"
 
+#include "source/source.h"
+
 IMPL_ARRAY_BUF(SyscallRecord)
 
 static void test_reporter_start(Reporter* raw, Severity severity, i32 code) {
@@ -35,6 +37,55 @@ TestReporter test_reporter_new(void) {
 
 void test_reporter_free(TestReporter reporter) {
     array_buf_free(i32)(&reporter.error_codes);
+}
+
+static void crashing_report_start(Reporter* raw, Severity severity, i32 code) {
+    CrashingReporter* self = (CrashingReporter*)raw;
+    self->severity = severity;
+}
+
+static void crashing_report_end(Reporter* raw) {
+    exit(-1);
+}
+
+static void crashing_report_message(Reporter* raw, StringBuf message) {
+    CrashingReporter* self = (CrashingReporter*)raw;
+    log_diagnostic(self->severity, "%.*s", (int)message.len, message.data);
+}
+
+static void crashing_report_souce_code(Reporter* raw, Range source) {
+    CrashingReporter* self = (CrashingReporter*)raw;
+    LineColumn start = source_text_position(self->source, source.start);
+    LineColumn end = source_text_position(self->source, source.end);
+    char const* path = self->source.path ? self->source.path : "<stdin>";
+    eprintf(
+        "at %s:%zu:%zu-%zu:%zu: %.*s\n",
+        path,
+        start.line + 1, start.column + 1,
+        end.line + 1, end.column + 1,
+        (int)(source.end - source.start),
+        self->source.text + source.start
+    );
+}
+
+static usize crashing_report_error_count(Reporter const* raw) {
+    return 0;
+}
+
+static ReporterVTable const crashing_reporter_vtable = {
+    .start = crashing_report_start,
+    .end = crashing_report_end,
+    .message = crashing_report_message,
+    .source_code = crashing_report_souce_code,
+    .error_count = crashing_report_error_count,
+};
+
+CrashingReporter crashing_reporter_new(SourceText source) {
+    return (CrashingReporter){
+        .base.vtable = &crashing_reporter_vtable,
+        .source = source,
+        .severity = 0,
+    };
 }
 
 static void test_vm_system_nop(VmSystem* raw) {
@@ -93,4 +144,48 @@ TestVmSystem test_vm_system_new(void) {
 
 void test_vm_system_free(TestVmSystem system) {
     array_buf_free(SyscallRecord)(&system.syscalls);
+}
+
+Ast source_to_ast(String text) {
+    SourceText source = source_text_new(NULL, text.data);
+    TokenStream tokens;
+    CrashingReporter reporter = crashing_reporter_new(source);
+    assert(tokenize(text, &reporter.base, &tokens));
+    Ast ast;
+    assert(parse(tokens, &reporter.base, &ast));
+    assert(analyze(&ast, &reporter.base));
+    return ast;
+}
+
+Bytecode source_to_bytecode(String text) {
+    SourceText source = source_text_new(NULL, text.data);
+    TokenStream tokens;
+    CrashingReporter reporter = crashing_reporter_new(source);
+    assert(tokenize(text, &reporter.base, &tokens));
+    Ast ast;
+    assert(parse(tokens, &reporter.base, &ast));
+    assert(analyze(&ast, &reporter.base));
+    Emitter emitter = emitter_new();
+    generate(&ast, &emitter);
+    Bytecode bytecode;
+    assert(emitter_finish(&emitter, &bytecode));
+    return bytecode;
+}
+
+Bytecode assembly_to_bytecode(char const** parts, usize count) {
+    StringBuf text = string_buf_new();
+    for (usize i = 0; i < count; i++) {
+        string_buf_extend(&text, parts[i]);
+        string_buf_push(&text, '\n');
+    }
+    SourceText source = source_text_new(NULL, text.data);
+    CrashingReporter reporter = crashing_reporter_new(source);
+    Bytecode bytecode;
+    // we can ignore the result as we crash on error.
+    assemble(
+        (String){ .data = text.data, .len = text.len },
+        &reporter.base,
+        &bytecode
+    );
+    return bytecode;
 }

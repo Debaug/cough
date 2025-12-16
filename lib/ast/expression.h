@@ -3,6 +3,7 @@
 #include "collections/array.h"
 #include "ast/type.h"
 #include "ast/binding_id.h"
+#include "emitter/emitter.h"
 
 typedef struct Identifier {
     String string;
@@ -55,6 +56,7 @@ typedef struct Pattern {
     TypeName type_name;
     TypeId type;
     Range range;
+    ScopeId scope;
 } Pattern;
 
 typedef struct Function {
@@ -64,6 +66,8 @@ typedef struct Function {
     TypeId output_type;
     ScopeId output_scope;
     ExpressionId output;
+    SymbolIndex symbol;
+    usize variable_space; // in words
 } Function;
 
 typedef struct VariableRef {
@@ -85,7 +89,7 @@ typedef enum ExpressionKind {
     EXPRESSION_VARIABLE,
     EXPRESSION_FUNCTION,
     EXPRESSION_LITERAL_BOOL,
-    EXPRESSION_BINARY_OPERATION,
+    // EXPRESSION_BINARY_OPERATION,
 } ExpressionKind;
 
 typedef struct Expression {

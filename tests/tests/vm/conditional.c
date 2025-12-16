@@ -27,7 +27,7 @@ int main(int argc, const char* argv[]) {
         "   sys bye",
         "   ret",
     };
-    Bytecode bytecode = assemble_parts_or_exit(assembly, sizeof(assembly) / sizeof(char*));
+    Bytecode bytecode = assembly_to_bytecode(assembly, sizeof(assembly) / sizeof(char*));
 
     Vm vm = vm_new((VmSystem*)&vm_system, bytecode, (Reporter*)&reporter);
     vm_run(&vm);
