@@ -17,6 +17,7 @@ typedef struct Range {
 #define array_buf_reserve(T)    array_buf_reserve_##T
 #define array_buf_push(T)       array_buf_push_##T
 #define array_buf_extend(T)     array_buf_extend_##T
+#define array_buf_pop(T)        array_buf_pop_##T
 
 #define DECL_ARRAY_BUF(T)                                                       \
     typedef struct ArrayBuf(T) {                                                \
@@ -51,6 +52,11 @@ typedef struct Range {
         T const* values,                                                        \
         usize len                                                               \
     );                                                                          \
+    \
+    T   \
+    array_buf_pop(T)(       \
+        ArrayBuf(T)* array  \
+    );                      \
 
 DECL_ARRAY_BUF(i32);
 DECL_ARRAY_BUF(usize);
@@ -82,13 +88,13 @@ DECL_ARRAY_BUF(char);
     ) {                                                                         \
         Buf buf = {                                                             \
             .data = (void*)array->data,                                         \
-            .size = array->len * sizeof(T),                                    \
-            .capacity = array->capacity * sizeof(T),                                \
+            .size = array->len * sizeof(T),                                     \
+            .capacity = array->capacity * sizeof(T),                            \
         };                                                                      \
-        buf_reserve(&buf, additional * sizeof(T));                           \
+        buf_reserve(&buf, additional * sizeof(T));                              \
         array->data = (T*)buf.data;                                             \
-        array->len = buf.size / sizeof(T);                                       \
-        array->capacity = buf.capacity / sizeof(T);                                  \
+        array->len = buf.size / sizeof(T);                                      \
+        array->capacity = buf.capacity / sizeof(T);                             \
     }                                                                           \
 
 #define IMPL_ARRAY_BUF_PUSH(T)                                                  \
@@ -109,18 +115,27 @@ DECL_ARRAY_BUF(char);
     ) {                                                                         \
         Buf buf = {                                                             \
             .data = (void*)array->data,                                         \
-            .size = array->len * sizeof(T),                                    \
-            .capacity = array->capacity * sizeof(T),                                \
+            .size = array->len * sizeof(T),                                     \
+            .capacity = array->capacity * sizeof(T),                            \
         };                                                                      \
-        buf_extend_or_grow(&buf, values, len * sizeof(T), 1);                  \
+        buf_extend_or_grow(&buf, values, len * sizeof(T), 1);                   \
         array->data = (T*)buf.data;                                             \
-        array->len = buf.size / sizeof(T);                                       \
-        array->capacity = buf.capacity / sizeof(T);                                  \
-    }                                        \
+        array->len = buf.size / sizeof(T);                                      \
+        array->capacity = buf.capacity / sizeof(T);                             \
+    }                                                                           \
+
+#define IMPL_ARRAY_BUF_POP(T)                                                   \
+    T                                                                           \
+    array_buf_pop(T)(                                                           \
+        ArrayBuf(T)* array                                                      \
+    ) {                                                                         \
+        return array->data[--array->len];                                       \
+    }
 
 #define IMPL_ARRAY_BUF(T)                                                       \
     IMPL_ARRAY_BUF_NEW(T)                                                       \
     IMPL_ARRAY_BUF_FREE(T)                                                      \
     IMPL_ARRAY_BUF_RESERVE(T)                                                   \
     IMPL_ARRAY_BUF_PUSH(T)                                                      \
-    IMPL_ARRAY_BUF_EXTEND(T)                                                    \
+    IMPL_ARRAY_BUF_EXTEND(T)    \
+    IMPL_ARRAY_BUF_POP(T)                                                \

@@ -20,10 +20,10 @@ SymbolIndex emit_new_symbol(Emitter* emitter);
 bool emit_symbol_location(Emitter* emitter, SymbolIndex symbol_index);
 
 #define EmitArg(kind) EmitArg_##kind
-typedef Byteword    EmitArg(imb);
-typedef Word        EmitArg(imw);
-typedef SymbolIndex EmitArg(loc);
-typedef usize       EmitArg(var);
+#define EmitArg_imb Byteword
+#define EmitArg_imw Word
+#define EmitArg_loc SymbolIndex
+#define EmitArg_var usize
 
 #define DECL_EMIT_ARG(idx, kind, ...)                       \
     EmitArg(kind) x##idx __VA_OPT__(,)

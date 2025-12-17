@@ -81,10 +81,10 @@ typedef enum ControlFlow {
 static ControlFlow run_one(Vm* vm);
 
 #define Arg(mnemo) Arg_##mnemo
-typedef Byteword    Arg(imb);
-typedef Word        Arg(imw);
-typedef usize       Arg(loc);
-typedef usize       Arg(var);
+#define Arg_imb Byteword
+#define Arg_imw Word
+#define Arg_loc usize
+#define Arg_var usize
 
 #define DECL_ARG(idx, mnemo, ...) , Arg(mnemo) x##idx
 

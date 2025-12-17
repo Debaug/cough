@@ -37,5 +37,6 @@ typedef struct TypeRegistry {
 TypeRegistry type_registry_new(void);
 void type_registry_free(TypeRegistry* type_registry);
 
+Type get_type(TypeRegistry registry, TypeId type);
 TypeId register_type(TypeRegistry* registry, Type type);
 TypeId get_or_register_function_type(TypeRegistry* registry, FunctionType type);

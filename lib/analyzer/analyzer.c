@@ -9,6 +9,7 @@ typedef struct Analyzer {
     ScopeLocation scope_location;
     Expression* expressions;
     usize* function_variable_space;
+    usize function_id;
     AstStorage* storage;
 } Analyzer;
 
@@ -21,6 +22,7 @@ static Analyzer with_scope_location(Analyzer analyzer, ScopeLocation scope_locat
         .scope_location = scope_location,
         .expressions = analyzer.expressions,
         .function_variable_space = analyzer.function_variable_space,
+        .function_id = analyzer.function_id,
         .storage = analyzer.storage,
     };
 }
@@ -33,6 +35,7 @@ static void analyze_function_signature(Analyzer* analyzer, Function* function);
 static void analyze_pattern(Analyzer* analyzer, Pattern* pattern);
 static void analyze_variable_def(Analyzer* analyzer, VariableDef* variable_def);
 static void analyze_expression(Analyzer* analyzer, Expression* expression);
+static void analyze_binary_operation(Analyzer* analyzer, BinaryOperation* binary_operation, TypeId* dst);
 static void analyze_variable_ref(Analyzer* analyzer, VariableRef* variable_ref);
 static void analyze_function_body(Analyzer* analyzer, Function* function);
 static void resolve_type(Analyzer* analyzer, TypeName name, TypeId* dst);
@@ -52,6 +55,7 @@ bool analyze(Ast* ast, Reporter* reporter) {
         .scope_location = scope_end_location(ast->bindings, ROOT_SCOPE_ID),
         .expressions = ast->expressions.data,
         .function_variable_space = NULL,
+        .function_id = 0,
         .storage = &ast->storage,
     };
 
@@ -156,6 +160,7 @@ static void analyze_function_signature(Analyzer* analyzer, Function* function) {
     Analyzer function_analyzer =
         with_scope_location(*analyzer, output_scope);
     function_analyzer.function_variable_space = &function->variable_space;
+    function_analyzer.function_id = function->function_id;
     analyze_pattern(&function_analyzer, &function->input);
 
     if (!function->explicit_output_type) {
@@ -206,7 +211,10 @@ static void analyze_variable_def(Analyzer* analyzer, VariableDef* variable_def) 
         .type = variable_def->type,
         .store = {
             .kind = VALUE_STORE_VARIABLE,
-            .as.variable_index = (*analyzer->function_variable_space)++,
+            .as.variable = {
+                .index = (*analyzer->function_variable_space)++,
+                .function_id = analyzer->function_id,
+            },
         },
     };
     BindingMut binding_entry;
@@ -219,7 +227,6 @@ static void analyze_variable_def(Analyzer* analyzer, VariableDef* variable_def) 
         // TODO: error handling
         return;
     }
-    analyzer->scope_location._pos++;
     variable_def->binding = binding_entry.id;
 }
 
@@ -243,7 +250,36 @@ static void analyze_expression(Analyzer* analyzer, Expression* expression) {
         break;
 
     case EXPRESSION_LITERAL_BOOL:
+        expression->type = TYPE_BOOL;
         break;
+
+    case EXPRESSION_BINARY_OPERATION:
+        analyze_binary_operation(analyzer, &expression->as.binary_operation, &expression->type);
+    }
+}
+
+static void analyze_binary_operation(
+    Analyzer* analyzer,
+    BinaryOperation* binary_operation,
+    TypeId* dst
+) {
+    Expression* lhs = &analyzer->expressions[binary_operation->operand_left];
+    Expression* rhs = &analyzer->expressions[binary_operation->operand_right];
+    analyze_expression(analyzer, lhs);
+    analyze_expression(analyzer, rhs);
+
+    switch (binary_operation->operator) {
+    case OPERATION_FUNCTION_CALL:;
+        Type lhs_type = get_type(*analyzer->types, lhs->type);
+        if (lhs_type.kind != TYPE_FUNCTION) {
+            // TODO: error handling
+            log_error("tried to call non-function value");
+            exit(-1);
+        }
+        if (lhs_type.as.function.input != rhs->type) {
+            // TODO: error handling
+        }
+        *dst = lhs_type.as.function.output;
     }
 }
 
@@ -264,6 +300,13 @@ static void analyze_variable_ref(Analyzer* analyzer, VariableRef* variable_ref) 
         // TODO: error handling
         return;
     }
+    if (binding.as.value.store.kind == VALUE_STORE_VARIABLE) {
+        if (binding.as.value.store.as.variable.function_id != analyzer->function_id) {
+            // TODO: error handling
+            log_error("variable accessed outside of function");
+            exit(-1);
+        }
+    }
     variable_ref->binding = binding_id;
 }
 
@@ -275,6 +318,7 @@ static void analyze_function_body(Analyzer* parent, Function* function) {
     function->output_scope = scope.scope_id;
     Analyzer analyzer = with_scope_location(*parent, scope);
     analyzer.function_variable_space = &function->variable_space;
+    analyzer.function_id = function->function_id;
     Expression* output = &analyzer.expressions[function->output];
     analyze_expression(&analyzer, output);
     if (output->type != function->output_type) {

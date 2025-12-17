@@ -23,6 +23,10 @@ void type_registry_free(TypeRegistry* type_registry) {
     array_buf_free(Type)(&type_registry->_types);
 }
 
+Type get_type(TypeRegistry registry, TypeId type) {
+    return registry._types.data[type];
+}
+
 TypeId register_type(TypeRegistry* registry, Type type) {
     TypeId id = registry->_types.len;
     array_buf_push(Type)(&registry->_types, type);

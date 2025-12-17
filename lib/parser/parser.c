@@ -6,6 +6,7 @@ typedef struct Parser {
     usize pos;
     Reporter* reporter;
     ArrayBuf(Expression) expressions;
+    ArrayBuf(usize) functions;
     AstStorage storage;
 } Parser;
 
@@ -50,7 +51,10 @@ static ExpressionId box_expression(Parser* parser, Expression expression) {
 
 static Result parse_module(Parser* parser, Module* dst);
 static Result parse_constant(Parser* parser, ConstantDef* dst);
-static Result parse_expression(Parser* parser, Expression* dst);
+// range may be NULL
+static Result parse_expression(Parser* parser, ExpressionId* dst, Range* range);
+// parser must not be exhausted
+static Result parse_expression_head(Parser* parser, ExpressionId* dst, Range* dst_range);
 // head token must be `fn`
 static Result parse_function(Parser* parser, Function* dst, Range* range);
 static Result parse_pattern(Parser* parser, Pattern* dst);
@@ -68,15 +72,18 @@ bool parse(
         .pos = 0,
         .reporter = reporter,
         .expressions = array_buf_new(Expression)(),
+        .functions = array_buf_new(usize)(),
         .storage = ast_storage_new(),
     };
     Module module;
     parse_module(&parser, &module);
     ast_store(&parser.storage, parser.expressions.data);
+    ast_store(&parser.storage, parser.functions.data);
     *dst = (Ast){
         .bindings = binding_registry_new(),
         .types = type_registry_new(),
         .expressions = parser.expressions,
+        .functions = parser.functions,
         .root = module,
         .storage = parser.storage,
     };
@@ -109,8 +116,8 @@ static Result parse_constant(Parser* parser, ConstantDef* dst) {
     if (!parser_match(parser, TOKEN_COLON_COLON, NULL)) {
         return ERROR;
     }
-    Expression value;
-    if (parse_expression(parser, &value) != SUCCESS) {
+    ExpressionId value;
+    if (parse_expression(parser, &value, NULL) != SUCCESS) {
         return ERROR;
     }
     if (!parser_match(parser, TOKEN_SEMICOLON, NULL)) {
@@ -120,25 +127,74 @@ static Result parse_constant(Parser* parser, ConstantDef* dst) {
         .name = name,
         .explicitly_typed = false,
         .type = TYPE_INVALID,
-        .value = box_expression(parser, value),
+        .value = value,
         .binding = BINDING_ID_INVALID,
     };
     return SUCCESS;
 }
 
-static Result parse_expression(Parser* parser, Expression* dst) {
-    if (parser->tokens.tokens.len == parser->pos) {
-        // FIXME: report error
+static Result parse_expression(Parser* parser, ExpressionId* dst, Range* range_dst) {
+    if (parser->pos == parser->tokens.tokens.len) {
         return ERROR;
     }
+
+    ExpressionId expr;
+    Range range;
+    parse_expression_head(parser, &expr, &range);
+
+    // parse function calls
+    while (true) {
+        if (parser->pos == parser->tokens.tokens.len) {
+            break;
+        }
+        if (parser->tokens.tokens.data[parser->pos].kind != TOKEN_PAREN_LEFT) {
+            break;
+        }
+        Range argument_range = range;
+        ExpressionId argument;
+        if (parse_expression(parser, &argument, &argument_range) != SUCCESS) {
+            return ERROR;
+        }
+        range.end = argument_range.end;
+        BinaryOperation function_call = {
+            .operator = OPERATION_FUNCTION_CALL,
+            .operand_left = expr,
+            .operand_right = argument,
+        };
+        expr = box_expression(parser, (Expression){
+            .kind = EXPRESSION_BINARY_OPERATION,
+            .as.binary_operation = function_call,
+            .range = range,
+            .type = TYPE_INVALID,
+        });
+    }
+
+    *dst = expr;
+    if (range_dst) {
+        *range_dst = range;
+    }
+
+    return SUCCESS;
+}
+
+static Result parse_expression_head(Parser* parser, ExpressionId* dst, Range* dst_range) {
     Token head = parser->tokens.tokens.data[parser->pos];
-    Result result = SUCCESS;
-    dst->type = TYPE_INVALID;
+    Expression expr = { .type = TYPE_INVALID };
+
     switch (head.kind) {
+    case TOKEN_PAREN_LEFT:;
+        usize start = parser->pos++;
+        parse_expression(parser, dst, NULL);
+        if (!parser_match(parser, TOKEN_PAREN_RIGHT, NULL)) {
+            return ERROR;
+        }
+        *dst_range = token_range_range(parser->tokens, (Range){ start, parser->pos });
+        return SUCCESS;
+
     case TOKEN_FN:
-        dst->kind = EXPRESSION_FUNCTION;
+        expr.kind = EXPRESSION_FUNCTION;
         if (
-            parse_function(parser, &dst->as.function, &dst->range)
+            parse_function(parser, &expr.as.function, &expr.range)
             != SUCCESS
         ) {
             return ERROR;
@@ -146,34 +202,45 @@ static Result parse_expression(Parser* parser, Expression* dst) {
         break;
 
     case TOKEN_FALSE:
-        dst->kind = EXPRESSION_LITERAL_BOOL;
-        dst->as.literal_bool = false;
-        dst->range = token_range(parser->tokens, head);
+        expr.kind = EXPRESSION_LITERAL_BOOL;
+        expr.as.literal_bool = false;
+        expr.range = token_range(parser->tokens, head);
         parser->pos++;
         break;
     case TOKEN_TRUE:
-        dst->kind = EXPRESSION_LITERAL_BOOL;
-        dst->as.literal_bool = true;
-        dst->range = token_range(parser->tokens, head);
+        expr.kind = EXPRESSION_LITERAL_BOOL;
+        expr.as.literal_bool = true;
+        expr.range = token_range(parser->tokens, head);
         parser->pos++;
         break;
 
     case TOKEN_IDENTIFIER:
-        dst->kind = EXPRESSION_VARIABLE;
+        expr.kind = EXPRESSION_VARIABLE;
         Identifier name;
         // can't fail
         parse_identifier(parser, &name);
-        dst->as.variable = (VariableRef){
+        expr.as.variable = (VariableRef){
             .name = name,
             .binding = BINDING_ID_INVALID,
         };
-        dst->range = name.range;
+        expr.range = name.range;
         break;
 
     default:
         // FIXME: report error
         return ERROR;
     }
+
+    ExpressionId id = parser->expressions.len;
+    if (expr.kind == EXPRESSION_FUNCTION) {
+        expr.as.function.function_id = parser->functions.len;
+        array_buf_push(usize)(&parser->functions, id);
+    }
+    array_buf_push(Expression)(&parser->expressions, expr);
+
+    *dst = id;
+    *dst_range = expr.range;
+
     return SUCCESS;
 }
 
@@ -193,8 +260,8 @@ static Result parse_function(Parser* parser, Function* dst, Range* range) {
     if (!parser_match(parser, TOKEN_DOUBLE_ARROW, NULL)) {
         return ERROR;
     }
-    Expression output;
-    if (parse_expression(parser, &output) != SUCCESS) {
+    ExpressionId output;
+    if (parse_expression(parser, &output, NULL) != SUCCESS) {
         return ERROR;
     }
     usize end = parser->pos;
@@ -203,7 +270,7 @@ static Result parse_function(Parser* parser, Function* dst, Range* range) {
         .explicit_output_type = true,
         .output_type_name = output_type,
         .output_type = TYPE_INVALID,
-        .output = box_expression(parser, output),
+        .output = output,
     };
     *range = token_range_range(parser->tokens, (Range){ start, end });
     return SUCCESS;

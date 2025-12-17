@@ -16,6 +16,7 @@ typedef struct Ast {
     TypeRegistry types;
     BindingRegistry bindings;
     ArrayBuf(Expression) expressions;
+    ArrayBuf(usize) functions;  // expression IDs
     Module root;
     AstStorage storage;
 } Ast;

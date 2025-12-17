@@ -14,11 +14,16 @@ typedef enum ValueStoreKind {
     VALUE_STORE_VARIABLE,
 } ValueStoreKind;
 
+typedef struct VariableStore {
+    usize index;
+    usize function_id;
+} VariableStore;
+
 typedef struct ValueStore {
     ValueStoreKind kind;
     union {
         ExpressionId constant;
-        usize variable_index;
+        VariableStore variable;
     } as;
 } ValueStore;
 

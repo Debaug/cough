@@ -67,6 +67,7 @@ typedef struct Function {
     ScopeId output_scope;
     ExpressionId output;
     SymbolIndex symbol;
+    usize function_id;
     usize variable_space; // in words
 } Function;
 
@@ -81,15 +82,15 @@ typedef enum BinaryOperator {
 
 typedef struct BinaryOperation {
     BinaryOperator operator;
-    ExpressionId operand0;
-    ExpressionId operand1;
+    ExpressionId operand_left;
+    ExpressionId operand_right;
 } BinaryOperation;
 
 typedef enum ExpressionKind {
     EXPRESSION_VARIABLE,
     EXPRESSION_FUNCTION,
     EXPRESSION_LITERAL_BOOL,
-    // EXPRESSION_BINARY_OPERATION,
+    EXPRESSION_BINARY_OPERATION,
 } ExpressionKind;
 
 typedef struct Expression {
